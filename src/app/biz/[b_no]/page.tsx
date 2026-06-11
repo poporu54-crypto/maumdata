@@ -711,24 +711,15 @@ async function triggerBackgroundSync(
           [npsInfo.npsSbscrbNmps, npsInfo.newAcqsNmps || 0, npsInfo.lossSbscrbNmps || 0, bNo]
         );
         
-        // history 테이블의 모든 연도 종업원 수를 국민연금 인원 기준으로 비율 스케일링하여 갱신 (일관성 유지)
-        if (localBiz.history && localBiz.history.length > 0) {
-          const latestHist = localBiz.history[localBiz.history.length - 1];
-          const latestRev = latestHist.revenue || 1;
-          const actualEmp = npsInfo.npsSbscrbNmps;
-
-          for (const h of localBiz.history) {
-            const revRatio = h.revenue / latestRev;
-            const boundedRatio = Math.max(0.7, Math.min(1.3, revRatio));
-            const scaledEmp = h.year === latestHist.year 
-              ? actualEmp 
-              : Math.max(1, Math.round(actualEmp * boundedRatio));
-            
-            await query(
-              "UPDATE business_history SET employees = $1 WHERE b_no = $2 AND year = $3",
-              [scaledEmp, bNo, h.year]
-            );
-          }
+        // history 테이블의 최신 연도 종업원 수도 같이 갱신
+        const latestHistYear = localBiz.history && localBiz.history.length > 0
+          ? localBiz.history[localBiz.history.length - 1].year
+          : null;
+        if (latestHistYear) {
+          await query(
+            "UPDATE business_history SET employees = $1 WHERE b_no = $2 AND year = $3",
+            [npsInfo.npsSbscrbNmps, bNo, latestHistYear]
+          );
         }
         console.log(`[Background Sync] NPS count updated for ${bNo} to ${npsInfo.npsSbscrbNmps}`);
       } else {
@@ -914,15 +905,10 @@ async function getUnifiedBusinessData(bNo: string): Promise<{
     
     if (financeDetail && financeDetail.length > 0) {
       history = financeDetail.map((fd) => {
-        const baseEmployees = Math.max(5, Math.round(fd.revenue * 0.15));
-        const employees = scale.includes("대기업") 
-          ? baseEmployees * 4 
-          : (scale.includes("중견기업") ? baseEmployees * 2.5 : baseEmployees);
-
         return {
           year: fd.year,
           revenue: fd.revenue,
-          employees: Math.round(employees),
+          employees: 0, // 과거 연도 직원수 공식 추정치 전면 제거 (데이터 미제공)
           operatingIncome: fd.operatingIncome,
           netIncome: fd.netIncome,
           totalAssets: fd.totalAssets,
@@ -976,21 +962,8 @@ async function getUnifiedBusinessData(bNo: string): Promise<{
       business.npsSbscrbNmps = npsInfo.npsSbscrbNmps;
       business.newAcqsNmps = npsInfo.newAcqsNmps;
       business.lossSbscrbNmps = npsInfo.lossSbscrbNmps;
-      
-      // 국민연금 실제 인원이 확인된 경우, 과거 연도 직원수 추정치도 국민연금 최신 인원 기준으로 보정하여 일관성 유지
-      if (business.history && business.history.length > 0) {
-        const latestHist = business.history[business.history.length - 1];
-        const latestRev = latestHist.revenue || 1;
-        const actualEmp = npsInfo.npsSbscrbNmps;
-
-        business.history.forEach((h) => {
-          const revRatio = h.revenue / latestRev;
-          const boundedRatio = Math.max(0.7, Math.min(1.3, revRatio));
-          h.employees = h.year === latestHist.year
-            ? actualEmp
-            : Math.max(1, Math.round(actualEmp * boundedRatio));
-        });
-      }
+      const latestHist = business.history[business.history.length - 1];
+      if (latestHist) latestHist.employees = npsInfo.npsSbscrbNmps;
     }
   } else if (ftcInfo) {
     // 3.2. 금융위에는 없으나 공정위 통신판매업 데이터가 있는 경우 (쇼핑몰/소상공인)
@@ -1266,6 +1239,10 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
   const renderEmployeeChart = (customWidth = 300, customHeight = 120, customBarWidth = 32) => {
     if (!business || !business.history || business.history.length === 0) return null;
     const history = business.history;
+    
+    // 유효한 과거 고용 인원 데이터가 실제로 존재하는지 검증 (과거 가짜 직원 추정치를 제외하고 실제 데이터만 있을 때만 차트 렌더링)
+    const validEmpCount = history.filter(d => d.employees > 0).length;
+    if (validEmpCount < 2) return null;
     const width = customWidth;
     const height = customHeight;
     const padding = 25;
@@ -1842,22 +1819,43 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                     {/* 차트 2: 근로자 수 차트 */}
                     <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                        <span style={{ fontWeight: 700, color: "var(--color-text-sub)", fontSize: "0.95rem" }}>고용 직원 수 변화</span>
+                        <span style={{ fontWeight: 700, color: "var(--color-text-sub)", fontSize: "0.95rem" }}>
+                          {business.npsLinked ? "실시간 고용 근로 현황" : "고용 직원 수 변화"}
+                        </span>
                         <span style={{ color: "var(--color-text-desc)", fontWeight: 700, fontSize: "0.9rem" }}>
-                          상시근로자 기준
+                          {business.npsLinked ? "국민연금 연동" : "상시근로자 기준"}
                         </span>
                       </div>
                       <div style={{
                         height: "150px",
                         backgroundColor: "var(--bg-color-main)",
                         borderRadius: "14px",
-                        padding: "12px",
+                        padding: "20px",
                         display: "flex",
-                        alignItems: "center",
+                        flexDirection: "column",
                         justifyContent: "center",
-                        border: "1px solid var(--color-border)"
+                        border: "1px solid var(--color-border)",
+                        boxSizing: "border-box"
                       }}>
-                        {renderEmployeeChart()}
+                        {renderEmployeeChart() || (
+                          business.npsLinked ? (
+                            <div style={{ display: "flex", flexDirection: "column", gap: "8px", textAlign: "center" }}>
+                              <div style={{ fontSize: "0.82rem", color: "var(--color-text-desc)", fontWeight: 700 }}>
+                                국민연금 가입 상시 근로자
+                              </div>
+                              <div style={{ fontSize: "1.8rem", fontWeight: 800, color: "var(--color-primary)" }}>
+                                {business.npsSbscrbNmps?.toLocaleString()}명
+                              </div>
+                              <div style={{ fontSize: "0.8rem", color: "var(--color-text-sub)", fontWeight: 600 }}>
+                                당월 신규 취득: <span style={{ color: "var(--color-success)", fontWeight: 700 }}>+{business.newAcqsNmps}명</span> | 상실: <span style={{ color: "var(--color-danger)", fontWeight: 700 }}>-{business.lossSbscrbNmps}명</span>
+                              </div>
+                            </div>
+                          ) : (
+                            <div style={{ textAlign: "center", color: "var(--color-text-desc)", fontSize: "0.9rem" }}>
+                              고용 정보 미연동 기업
+                            </div>
+                          )
+                        )}
                       </div>
                     </div>
                   </div>
