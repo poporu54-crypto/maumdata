@@ -1,0 +1,412 @@
+[
+  {
+    "b_no": "1378651839",
+    "b_nm": "지윤 주식회사(JiYoon Co.Ltd.)",
+    "p_nm": "박상욱",
+    "start_dt": "20150122",
+    "b_adr": "인천광역시 서구 원창동 393번지 73호",
+    "b_sector": "IT 솔루션, 사이트 개발, E커머스",
+    "b_type": "정보통신업",
+    "corp_no": "",
+    "dart_code": "",
+    "description": "웹 사이트 개발, E커머스 플랫폼 구축 및 맞춤형 IT 솔루션을 전문적으로 공급하는 혁신 IT 기업입니다.",
+    "credit_rating": "AA-",
+    "industry_rank": "상위 8%",
+    "is_sme": "중소기업 (소기업)",
+    "listing_status": "비상장",
+    "homepage": "https://jiyoon.co.kr",
+    "main_biz": "IT 솔루션, 사이트 개발, E커머스 유통",
+    "is_audited": false,
+    "history": [
+      {
+        "year": 2023,
+        "revenue": 1,
+        "employees": 2
+      },
+      {
+        "year": 2024,
+        "revenue": 2,
+        "employees": 3
+      },
+      {
+        "year": 2025,
+        "revenue": 3,
+        "employees": 9
+      }
+    ],
+    "npsSbscrbNmps": 9,
+    "npsLinked": true
+  },
+  {
+    "b_no": "1208801280",
+    "b_nm": "비바리퍼블리카 (Toss)",
+    "p_nm": "이승건",
+    "start_dt": "20130423",
+    "b_adr": "서울특별시 강남구 테헤란로 142 (역삼동, 아크플레이스 12층)",
+    "b_sector": "정보통신업",
+    "b_type": "소프트웨어 개발 및 공급업",
+    "corp_no": "1101115119080",
+    "dart_code": "00877660",
+    "description": "금융의 모든 순간을 쉽고 간편하게 혁신하는 핀테크 플랫폼 토스(Toss)를 서비스하는 유니콘 기업입니다.",
+    "credit_rating": "AA",
+    "industry_rank": "상위 2%",
+    "is_sme": "중견기업",
+    "listing_status": "비상장",
+    "homepage": "https://toss.im",
+    "main_biz": "핀테크 서비스 및 소프트웨어 개발",
+    "is_audited": true,
+    "history": [
+      {
+        "year": 2023,
+        "revenue": 13707,
+        "operatingIncome": -2065,
+        "netIncome": -2166,
+        "totalAssets": 38394,
+        "totalLiabilities": 30098,
+        "totalEquity": 8296,
+        "employees": 980
+      },
+      {
+        "year": 2024,
+        "revenue": 19556,
+        "operatingIncome": 907,
+        "netIncome": 213,
+        "totalAssets": 57546,
+        "totalLiabilities": 48574,
+        "totalEquity": 8973,
+        "employees": 1050
+      },
+      {
+        "year": 2025,
+        "revenue": 26983,
+        "operatingIncome": 3360,
+        "netIncome": 2018,
+        "totalAssets": 102079,
+        "totalLiabilities": 90860,
+        "totalEquity": 11219,
+        "employees": 1828
+      }
+    ],
+    "npsSbscrbNmps": 1828,
+    "npsLinked": true
+  },
+  {
+    "b_no": "2208162517",
+    "b_nm": "네이버 주식회사 (NAVER)",
+    "p_nm": "최수연",
+    "start_dt": "19990602",
+    "b_adr": "경기도 성남시 분당구 불정로 6 (정자동, 네이버그린팩토리)",
+    "b_sector": "정보통신업",
+    "b_type": "포털 및 기타 인터넷 정보매개 서비스업",
+    "corp_no": "1101111707178",
+    "dart_code": "00266961",
+    "description": "대한민국 최대의 인터넷 검색 포털 NAVER를 운영하며 인공지능, 로봇공학, 웹툰 등 다각적 IT 사업을 영위하고 있습니다.",
+    "credit_rating": "AAA",
+    "industry_rank": "상위 0.1%",
+    "is_sme": "대기업 (공시대상기업집단)",
+    "listing_status": "코스피 상장 (035420)",
+    "homepage": "https://www.navercorp.com",
+    "main_biz": "포털 및 기타 인터넷 정보매개 서비스업",
+    "is_audited": true,
+    "history": [
+      {
+        "year": 2023,
+        "revenue": 96706,
+        "operatingIncome": 14888,
+        "netIncome": 9850,
+        "totalAssets": 357378,
+        "totalLiabilities": 114998,
+        "totalEquity": 242380,
+        "employees": 4300
+      },
+      {
+        "year": 2024,
+        "revenue": 107377,
+        "operatingIncome": 19793,
+        "netIncome": 19320,
+        "totalAssets": 381679,
+        "totalLiabilities": 111670,
+        "totalEquity": 270009,
+        "employees": 4600
+      },
+      {
+        "year": 2025,
+        "revenue": 120350,
+        "operatingIncome": 22081,
+        "netIncome": 18187,
+        "totalAssets": 410845,
+        "totalLiabilities": 121315,
+        "totalEquity": 289530,
+        "employees": 5112
+      }
+    ],
+    "npsSbscrbNmps": 5112,
+    "npsLinked": true
+  },
+  {
+    "b_no": "1208147521",
+    "b_nm": "주식회사 카카오 (Kakao)",
+    "p_nm": "정신아",
+    "start_dt": "19950216",
+    "b_adr": "제주특별자치도 제주시 첨단로 242 (영평동)",
+    "b_sector": "정보통신업",
+    "b_type": "포털 및 기타 인터넷 정보매개 서비스업",
+    "corp_no": "1101111129497",
+    "dart_code": "00258801",
+    "description": "카카오톡 메신저를 기반으로 금융, 교통, 엔터테인먼트 등 국민 일상의 모든 영역을 디지털로 연결하는 모바일 플랫폼 기업입니다.",
+    "credit_rating": "AA+",
+    "industry_rank": "상위 0.5%",
+    "is_sme": "대기업 (공시대상기업집단)",
+    "listing_status": "코스피 상장 (035720)",
+    "homepage": "https://www.kakaocorp.com",
+    "main_biz": "포털 및 기타 인터넷 정보매개 서비스업",
+    "is_audited": true,
+    "history": [
+      {
+        "year": 2023,
+        "revenue": 75570,
+        "operatingIncome": 4609,
+        "netIncome": -18167,
+        "totalAssets": 251800,
+        "totalLiabilities": 113214,
+        "totalEquity": 138586,
+        "employees": 3500
+      },
+      {
+        "year": 2024,
+        "revenue": 78717,
+        "operatingIncome": 4602,
+        "netIncome": -1619,
+        "totalAssets": 257730,
+        "totalLiabilities": 118301,
+        "totalEquity": 139429,
+        "employees": 3700
+      },
+      {
+        "year": 2025,
+        "revenue": 80991,
+        "operatingIncome": 7320,
+        "netIncome": 5180,
+        "totalAssets": 277835,
+        "totalLiabilities": 125586,
+        "totalEquity": 152249,
+        "employees": 3848
+      }
+    ],
+    "npsSbscrbNmps": 3848,
+    "npsLinked": true
+  },
+  {
+    "b_no": "2018121515",
+    "b_nm": "주식회사 에스씨케이컴퍼니 (Starbucks)",
+    "p_nm": "손정현",
+    "start_dt": "19970924",
+    "b_adr": "서울특별시 중구 퇴계로 100 (회현동2가, 스테이트타워남산 9층)",
+    "b_sector": "음식점업",
+    "b_type": "커피 전문점 운영",
+    "corp_no": "1101111461667",
+    "dart_code": "00676450",
+    "description": "글로벌 커피 브랜드 스타벅스(Starbucks)의 국내 직영 매장들을 안정적으로 운영하고 고유의 라이프스타일 경험을 전달합니다.",
+    "credit_rating": "AA",
+    "industry_rank": "상위 1%",
+    "is_sme": "대기업",
+    "listing_status": "비상장",
+    "homepage": "https://www.starbucks.co.kr",
+    "main_biz": "음식점업 (커피 전문점 운영)",
+    "is_audited": true,
+    "history": [
+      {
+        "year": 2023,
+        "revenue": 29200,
+        "employees": 21500
+      },
+      {
+        "year": 2024,
+        "revenue": 31000,
+        "employees": 22200
+      },
+      {
+        "year": 2025,
+        "revenue": 33200,
+        "employees": 22737
+      }
+    ],
+    "npsSbscrbNmps": 22737,
+    "npsLinked": true
+  },
+  {
+    "b_no": "1028105450",
+    "b_nm": "삼양식품 주식회사",
+    "p_nm": "김정수",
+    "start_dt": "19610915",
+    "b_adr": "서울특별시 성북구 오패산로 3 (하월곡동)",
+    "b_sector": "제조업",
+    "b_type": "면류, 마카로니 및 유사식품 제조업",
+    "corp_no": "1101110034308",
+    "dart_code": "00126955",
+    "description": "불닭볶음면 등의 대히트작을 통해 전 세계에 K-Food 열풍을 선도하고 있는 대한민국 정통 종합식품기업입니다.",
+    "credit_rating": "AA-",
+    "industry_rank": "상위 3%",
+    "is_sme": "중견기업",
+    "listing_status": "코스피 상장 (003230)",
+    "homepage": "https://www.samyangfoods.com",
+    "main_biz": "면류, 마카로니 및 유사식품 제조업",
+    "is_audited": true,
+    "history": [
+      {
+        "year": 2023,
+        "revenue": 11929,
+        "operatingIncome": 1475,
+        "netIncome": 1266,
+        "totalAssets": 11703,
+        "totalLiabilities": 5935,
+        "totalEquity": 5768,
+        "employees": 1900
+      },
+      {
+        "year": 2024,
+        "revenue": 17280,
+        "operatingIncome": 3446,
+        "netIncome": 2713,
+        "totalAssets": 15948,
+        "totalLiabilities": 7667,
+        "totalEquity": 8280,
+        "employees": 2020
+      },
+      {
+        "year": 2025,
+        "revenue": 23518,
+        "operatingIncome": 5242,
+        "netIncome": 3887,
+        "totalAssets": 21965,
+        "totalLiabilities": 9250,
+        "totalEquity": 12715,
+        "employees": 794
+      }
+    ],
+    "npsSbscrbNmps": 794,
+    "npsLinked": true
+  },
+  {
+    "b_no": "1098114886",
+    "b_nm": "대상(주)",
+    "p_nm": "임정배",
+    "start_dt": "19560131",
+    "b_adr": "서울특별시 종로구 창경궁로 120 종로플레이스",
+    "b_sector": "기타 서비스업",
+    "b_type": "일반기업",
+    "corp_no": "1101110327125",
+    "dart_code": "00121941",
+    "description": "대상(주)은(는) 금융위원회 공시 정보가 등록된 대한민국 공식 일반기업입니다.",
+    "credit_rating": "BBB+",
+    "industry_rank": "상위 25%",
+    "is_sme": "일반기업",
+    "listing_status": "비상장",
+    "homepage": "www.daesang.co.kr",
+    "main_biz": "기타 서비스업",
+    "is_audited": true,
+    "corpEnm": "DAESANG CORPORATION",
+    "crno": "1101110327125",
+    "basDt": "",
+    "enpTlno": "02-2220-9500",
+    "enpFxno": "02-2220-9870",
+    "enpPncd": "03130",
+    "enpStacNm": "12월 결산",
+    "enpMainBizNm": "",
+    "history": [
+      {
+        "year": 2023,
+        "revenue": 41075,
+        "employees": 6161,
+        "operatingIncome": 1237,
+        "netIncome": 686,
+        "totalAssets": 33344,
+        "totalLiabilities": 19906,
+        "totalEquity": 13437
+      },
+      {
+        "year": 2024,
+        "revenue": 42551,
+        "employees": 6383,
+        "operatingIncome": 1769,
+        "netIncome": 967,
+        "totalAssets": 35098,
+        "totalLiabilities": 20622,
+        "totalEquity": 14476
+      },
+      {
+        "year": 2025,
+        "revenue": 44013,
+        "employees": 6602,
+        "operatingIncome": 1693,
+        "netIncome": -3031,
+        "totalAssets": 34791,
+        "totalLiabilities": 23822,
+        "totalEquity": 10969
+      }
+    ]
+  },
+  {
+    "b_no": "1388103238",
+    "b_nm": "(주)오뚜기",
+    "p_nm": "함영준, 황성만",
+    "start_dt": "19710603",
+    "b_adr": "경기도 안양시 동안구  흥안대로 405",
+    "b_sector": "기타 서비스업",
+    "b_type": "일반기업",
+    "corp_no": "1341110002258",
+    "dart_code": "00141529",
+    "description": "(주)오뚜기은(는) 금융위원회 공시 정보가 등록된 대한민국 공식 일반기업입니다.",
+    "credit_rating": "BBB+",
+    "industry_rank": "상위 25%",
+    "is_sme": "일반기업",
+    "listing_status": "비상장",
+    "homepage": "www.otoki.com",
+    "main_biz": "기타 서비스업",
+    "is_audited": true,
+    "corpEnm": "OTOKI CORPORATION",
+    "crno": "1341110002258",
+    "basDt": "",
+    "enpTlno": "031-421-2122",
+    "enpFxno": "02) 528 -1970",
+    "enpPncd": "14060",
+    "enpStacNm": "12월 결산",
+    "enpMainBizNm": "",
+    "history": [
+      {
+        "year": 2023,
+        "revenue": 34545,
+        "employees": 5182,
+        "operatingIncome": 2549,
+        "netIncome": 1617,
+        "totalAssets": 34965,
+        "totalLiabilities": 14329,
+        "totalEquity": 20635
+      },
+      {
+        "year": 2024,
+        "revenue": 35391,
+        "employees": 5309,
+        "operatingIncome": 2220,
+        "netIncome": 1376,
+        "totalAssets": 35974,
+        "totalLiabilities": 14159,
+        "totalEquity": 21815
+      },
+      {
+        "year": 2025,
+        "revenue": 36745,
+        "employees": 3240,
+        "operatingIncome": 1773,
+        "netIncome": 721,
+        "totalAssets": 36411,
+        "totalLiabilities": 14383,
+        "totalEquity": 22028
+      }
+    ],
+    "npsLinked": true,
+    "npsSbscrbNmps": 3240,
+    "newAcqsNmps": 0,
+    "lossSbscrbNmps": 0
+  }
+]

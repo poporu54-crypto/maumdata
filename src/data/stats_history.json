@@ -1,0 +1,98 @@
+[
+  {
+    "date": "2026-06-04",
+    "newBizToday": 1410,
+    "newBizTodayDelta": 70,
+    "activeBizRate": 91.2,
+    "industryRatios": {
+      "retail": 25.3,
+      "ict": 2.1,
+      "manufacturing": 8.7,
+      "others": 63.9
+    }
+  },
+  {
+    "date": "2026-06-05",
+    "newBizToday": 1580,
+    "newBizTodayDelta": 79,
+    "activeBizRate": 91.3,
+    "industryRatios": {
+      "retail": 25.2,
+      "ict": 2.1,
+      "manufacturing": 8.6,
+      "others": 64.1
+    }
+  },
+  {
+    "date": "2026-06-06",
+    "newBizToday": 1240,
+    "newBizTodayDelta": 62,
+    "activeBizRate": 91.4,
+    "industryRatios": {
+      "retail": 25.4,
+      "ict": 2.1,
+      "manufacturing": 8.5,
+      "others": 64
+    }
+  },
+  {
+    "date": "2026-06-07",
+    "newBizToday": 1050,
+    "newBizTodayDelta": 52,
+    "activeBizRate": 91.4,
+    "industryRatios": {
+      "retail": 25.5,
+      "ict": 2,
+      "manufacturing": 8.6,
+      "others": 63.9
+    }
+  },
+  {
+    "date": "2026-06-08",
+    "newBizToday": 1490,
+    "newBizTodayDelta": 74,
+    "activeBizRate": 91.5,
+    "industryRatios": {
+      "retail": 25.2,
+      "ict": 2.1,
+      "manufacturing": 8.6,
+      "others": 64.1
+    }
+  },
+  {
+    "date": "2026-06-09",
+    "newBizToday": 1390,
+    "newBizTodayDelta": 69,
+    "activeBizRate": 91.3,
+    "industryRatios": {
+      "retail": 25.1,
+      "ict": 2.2,
+      "manufacturing": 8.7,
+      "others": 64
+    }
+  },
+  {
+    "date": "2026-06-10",
+    "newBizToday": 1420,
+    "newBizTodayDelta": 71,
+    "activeBizRate": 91.4,
+    "industryRatios": {
+      "retail": 25.2,
+      "ict": 2.1,
+      "manufacturing": 8.6,
+      "others": 64.1
+    }
+  },
+  {
+    "date": "2026-06-11",
+    "newBizToday": 1330,
+    "newBizTodayDelta": 67,
+    "activeBizRate": 91.4,
+    "industryRatios": {
+      "retail": 25.2,
+      "ict": 2.1,
+      "manufacturing": 8.6,
+      "others": 64.1
+    }
+  }
+]
