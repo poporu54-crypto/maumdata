@@ -1129,6 +1129,17 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
 
 
 
+  const formatMoney = (val: number) => {
+    const isNegative = val < 0;
+    const absVal = Math.abs(val);
+    if (absVal >= 10000) {
+      const jo = absVal / 10000;
+      const formatted = jo % 1 === 0 ? jo.toFixed(0) : jo.toFixed(1);
+      return `${isNegative ? "-" : ""}${formatted}조`;
+    }
+    return `${isNegative ? "-" : ""}${absVal.toLocaleString()}억`;
+  };
+
   const formatDate = (dateStr: string) => {
     if (!dateStr || dateStr.length !== 8) return dateStr || "-";
     return `${dateStr.slice(0, 4)}년 ${dateStr.slice(4, 6)}월 ${dateStr.slice(6, 8)}일`;
@@ -1217,7 +1228,7 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
           <g key={`rev-${i}`}>
             <circle cx={p.x} cy={p.y} r="4.5" fill="var(--color-primary)" stroke="var(--bg-color-card)" strokeWidth="1.5" />
             <text x={p.x} y={p.y - 8} textAnchor="middle" fontSize="9.5" fontWeight="700" fill="var(--color-text-main)">
-              {p.val >= 10000 ? `${(p.val / 10000).toFixed(1)}조` : `${p.val}억`}
+              {formatMoney(p.val)}
             </text>
             <text x={p.x} y={height - 6} textAnchor="middle" fontSize="9" fontWeight="600" fill="var(--color-text-desc)">
               {p.year}년
@@ -2017,26 +2028,26 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                             <tr style={{ borderBottom: "1px solid var(--color-border)" }}>
                               <td style={{ padding: "12px 16px", textAlign: "left", fontWeight: 600 }}>자산 총계</td>
                               {business?.history.map((h, i) => (
-                                <td key={i} style={{ padding: "12px 16px", color: "var(--color-text-main)", fontWeight: 600 }}>{h.totalAssets.toLocaleString()}억</td>
+                                <td key={i} style={{ padding: "12px 16px", color: "var(--color-text-main)", fontWeight: 600 }}>{formatMoney(h.totalAssets)}</td>
                               ))}
                             </tr>
                             <tr style={{ borderBottom: "1px solid var(--color-border)" }}>
                               <td style={{ padding: "12px 16px", textAlign: "left", color: "var(--color-text-sub)" }}>부채 총계</td>
                               {business?.history.map((h, i) => (
-                                <td key={i} style={{ padding: "12px 16px", color: "var(--color-text-sub)" }}>{h.totalLiabilities.toLocaleString()}억</td>
+                                <td key={i} style={{ padding: "12px 16px", color: "var(--color-text-sub)" }}>{formatMoney(h.totalLiabilities)}</td>
                               ))}
                             </tr>
                             <tr style={{ borderBottom: "1px solid var(--color-border)" }}>
                               <td style={{ padding: "12px 16px", textAlign: "left", color: "var(--color-text-sub)" }}>자본 총계</td>
                               {business?.history.map((h, i) => (
-                                <td key={i} style={{ padding: "12px 16px", color: "var(--color-text-sub)" }}>{h.totalEquity.toLocaleString()}억</td>
+                                <td key={i} style={{ padding: "12px 16px", color: "var(--color-text-sub)" }}>{formatMoney(h.totalEquity)}</td>
                               ))}
                             </tr>
                             <tr style={{ borderBottom: "1px solid var(--color-border)", backgroundColor: "rgba(49, 130, 246, 0.02)" }}>
                               <td style={{ padding: "12px 16px", textAlign: "left", fontWeight: 600, color: "var(--color-primary)" }}>매출액 (영업수익)</td>
                               {business?.history.map((h, i) => (
                                 <td key={i} style={{ padding: "12px 16px", fontWeight: 700, color: "var(--color-primary)" }}>
-                                  {h.revenue >= 10000 ? `${(h.revenue / 10000).toFixed(1)}조` : `${h.revenue.toLocaleString()}억`}
+                                  {formatMoney(h.revenue)}
                                 </td>
                               ))}
                             </tr>
@@ -2044,7 +2055,7 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                               <td style={{ padding: "12px 16px", textAlign: "left", fontWeight: 600 }}>영업이익</td>
                               {business?.history.map((h, i) => (
                                 <td key={i} style={{ padding: "12px 16px", color: h.operatingIncome >= 0 ? "var(--color-success)" : "var(--color-danger)", fontWeight: 600 }}>
-                                  {h.operatingIncome.toLocaleString()}억
+                                  {formatMoney(h.operatingIncome)}
                                 </td>
                               ))}
                             </tr>
@@ -2052,7 +2063,7 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                               <td style={{ padding: "12px 16px", textAlign: "left", color: "var(--color-text-sub)" }}>당기순이익</td>
                               {business?.history.map((h, i) => (
                                 <td key={i} style={{ padding: "12px 16px", color: h.netIncome >= 0 ? "var(--color-text-main)" : "var(--color-danger)" }}>
-                                  {h.netIncome.toLocaleString()}억
+                                  {formatMoney(h.netIncome)}
                                 </td>
                               ))}
                             </tr>
