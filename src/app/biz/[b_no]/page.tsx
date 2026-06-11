@@ -944,14 +944,28 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                   <div style={{ display: "flex", justifyContent: "space-between", paddingBottom: "2px" }}>
                     <span style={{ color: "var(--color-text-sub)", fontWeight: 500 }}>홈페이지</span>
                     {business?.homepage && business.homepage !== "-" ? (
-                      <a href={business.homepage} target="_blank" rel="noopener noreferrer" style={{
-                        fontWeight: 700,
-                        color: "var(--color-primary)",
-                        textDecoration: "underline",
-                        wordBreak: "break-all"
-                      }}>
-                        {business.homepage}
-                      </a>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", justifyContent: "flex-end", maxWidth: "250px", textAlign: "right" }}>
+                        {business.homepage.split(",").map((url, idx, arr) => {
+                          const cleanUrl = url.trim();
+                          if (!cleanUrl) return null;
+                          const href = cleanUrl.startsWith("http://") || cleanUrl.startsWith("https://") 
+                            ? cleanUrl 
+                            : `http://${cleanUrl}`;
+                          return (
+                            <React.Fragment key={idx}>
+                              <a href={href} target="_blank" rel="noopener noreferrer" style={{
+                                fontWeight: 700,
+                                color: "var(--color-primary)",
+                                textDecoration: "underline",
+                                wordBreak: "break-all"
+                              }}>
+                                {cleanUrl}
+                              </a>
+                              {idx < arr.length - 1 && <span style={{ color: "var(--color-text-desc)" }}>,</span>}
+                            </React.Fragment>
+                          );
+                        })}
+                      </div>
                     ) : (
                       <span style={{ fontWeight: 600, color: "var(--color-text-desc)" }}>-</span>
                     )}
