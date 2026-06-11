@@ -103,15 +103,14 @@ export default function RootLayout({
                     <ul style={{ listStyle: "none", display: "flex", flexDirection: "column", gap: "6px" }}>
                       <li><Link href="/" className="footer-link">사업자 조회</Link></li>
                       <li><Link href="/insights" className="footer-link">데이터 인사이트</Link></li>
-                      <li><a href="https://infuser.odcloud.kr/api/stages/28493/api-docs?1728017570963" target="_blank" rel="noopener noreferrer" className="footer-link">공공 API 명세</a></li>
+                      <li><Link href="/stats/market-area" className="footer-link">국가 통계 및 상권 분석</Link></li>
                     </ul>
                   </div>
                   <div>
                     <div style={{ fontWeight: 600, color: "var(--color-text-sub)", marginBottom: "8px" }}>법적 고지</div>
                     <ul style={{ listStyle: "none", display: "flex", flexDirection: "column", gap: "6px" }}>
-                      <li><a href="#" className="footer-link">이용약관</a></li>
-                      <li><a href="#" className="footer-link">개인정보처리방침</a></li>
-                      <li><a href="#" className="footer-link">면책고지</a></li>
+                      <li><Link href="/terms" className="footer-link">이용약관</Link></li>
+                      <li><Link href="/privacy" className="footer-link">개인정보처리방침</Link></li>
                     </ul>
                   </div>
                 </div>
