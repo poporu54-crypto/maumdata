@@ -110,11 +110,7 @@ export default async function MainPage() {
           }}>
             실시간 많이 찾는 기업
           </h3>
-          <div style={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: "10px"
-          }}>
+          <div className="quick-links-scroll">
             {quickLinks.map((link) => (
               <Link
                 key={link.no}
