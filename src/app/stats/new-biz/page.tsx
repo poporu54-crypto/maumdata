@@ -1,10 +1,9 @@
 import React from "react";
 import { Metadata } from "next";
 import Link from "next/link";
-import fs from "fs";
-import path from "path";
 import DateSelector from "@/components/DateSelector";
 import { HistoryEntry } from "@/lib/statScheduler";
+import { getStatsHistory } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -25,16 +24,12 @@ export default async function NewBizStatsPage({ searchParams }: PageProps) {
   const { date } = await searchParams;
   const queryDate = date ? decodeURIComponent(date).trim() : "";
 
-  // 1. 히스토리 파일 읽기
+  // 1. Neon DB에서 히스토리 데이터 비동기 조회
   let history: HistoryEntry[] = [];
   try {
-    const filePath = path.join(process.cwd(), "src/data/stats_history.json");
-    if (fs.existsSync(filePath)) {
-      const fileData = fs.readFileSync(filePath, "utf-8");
-      history = JSON.parse(fileData);
-    }
+    history = await getStatsHistory();
   } catch (err) {
-    console.error("Failed to load history data:", err);
+    console.error("Failed to load history data from Neon DB:", err);
   }
 
   // 날짜 오름차순 정렬
@@ -44,11 +39,9 @@ export default async function NewBizStatsPage({ searchParams }: PageProps) {
   // 대상 날짜의 엔트리 조회
   let activeEntry = history.find(h => h.date === queryDate);
   if (!activeEntry && history.length > 0) {
-    // 지정 날짜가 없으면 가장 최신 데이터 지정
     activeEntry = history[history.length - 1];
   }
 
-  // 데이터가 아예 없을 시의 폴백
   if (!activeEntry) {
     activeEntry = {
       date: "2026-06-11",
@@ -105,6 +98,7 @@ export default async function NewBizStatsPage({ searchParams }: PageProps) {
 
         {/* 타이틀 헤더 */}
         <div style={{ marginBottom: "32px" }}>
+          <Link href="/" className="back-link">➔ 메인 화면으로 돌아가기</Link>
           <h1 style={{
             fontSize: "1.8rem",
             fontWeight: 800,
@@ -266,7 +260,7 @@ export default async function NewBizStatsPage({ searchParams }: PageProps) {
                   textAlign: "left"
                 }}>
                   <th style={{ padding: "12px 20px", color: "var(--color-text-sub)", fontWeight: 700 }}>권역명</th>
-                  <th style={{ padding: "12px 20px", color: "var(--color-text-sub)", fontWeight: 700, textAlign: "right" }}>가중 비중</th>
+                  <th style={{ padding: "12px 20px", color: "var(--color-text-desc)", stroke: "none", fontWeight: 700, textAlign: "right" }}>가중 비중</th>
                   <th style={{ padding: "12px 20px", color: "var(--color-text-sub)", fontWeight: 700, textAlign: "right" }}>예상 개업 수</th>
                 </tr>
               </thead>

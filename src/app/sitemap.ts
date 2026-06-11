@@ -1,12 +1,7 @@
 import { MetadataRoute } from "next";
-import fs from "fs";
-import path from "path";
+import { getAllBusinesses } from "@/lib/db";
 
-interface BusinessData {
-  b_no: string;
-}
-
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = "https://www.maumdata.com";
   
   // 기본 정적 페이지들
@@ -40,11 +35,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.75,
   }));
 
-  // 로컬 DB 내 사업자 번호 동적 크롤링 경로 수집
+  // Neon DB 내 사업자 번호 동적 크롤링 경로 수집
   try {
-    const filePath = path.join(process.cwd(), "src/data/businesses.json");
-    const fileContent = fs.readFileSync(filePath, "utf-8");
-    const list = JSON.parse(fileContent) as BusinessData[];
+    const list = await getAllBusinesses();
 
     const bizRoutes = list.map((item) => ({
       url: `${baseUrl}/biz/${item.b_no.replace(/[^0-9]/g, "")}`,

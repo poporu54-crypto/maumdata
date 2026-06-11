@@ -1,8 +1,5 @@
-import fs from "fs";
-import path from "path";
 import { getPortalStats, PortalStats } from "./statApi";
-
-const HISTORY_FILE_PATH = path.join(process.cwd(), "src/data/stats_history.json");
+import { getStatsHistory, upsertStatsHistory } from "./db";
 
 export interface HistoryEntry extends PortalStats {
   date: string; // YYYY-MM-DD (KST)
@@ -10,7 +7,6 @@ export interface HistoryEntry extends PortalStats {
 
 // 오늘 날짜 문자열 반환 (KST 기준 YYYY-MM-DD)
 export function getKSTDateString(dateObj: Date = new Date()): string {
-  // 한국 시간(UTC+9)으로 오프셋을 맞춤
   const kstDate = new Date(dateObj.getTime() + (9 * 60 * 60 * 1000));
   return kstDate.toISOString().split("T")[0];
 }
@@ -24,7 +20,6 @@ function getMsUntilKSTMidnight(): number {
   midnightKSTInUTC.setUTCHours(15, 0, 0, 0); // 오늘 KST 24:00
   
   if (now.getTime() >= midnightKSTInUTC.getTime()) {
-    // 이미 오늘 자정을 지났다면 다음날 자정으로 설정
     midnightKSTInUTC.setUTCDate(midnightKSTInUTC.getUTCDate() + 1);
   }
   
@@ -33,22 +28,12 @@ function getMsUntilKSTMidnight(): number {
 
 /**
  * 오늘 날짜의 스냅샷 데이터가 유실되었거나 최초 생성 시점이라면 즉시 스냅샷을 남깁니다.
- * 메인 SSR 페이지 로딩 등 런타임에 호출되어 데이터 보존성을 높입니다.
  */
 export async function recordSnapshotIfMissing(): Promise<void> {
   try {
     const todayStr = getKSTDateString();
     
-    let history: HistoryEntry[] = [];
-    if (fs.existsSync(HISTORY_FILE_PATH)) {
-      const fileData = fs.readFileSync(HISTORY_FILE_PATH, "utf-8");
-      try {
-        history = JSON.parse(fileData);
-      } catch (pe) {
-        console.error("[Scheduler] JSON parse error in history file, resetting.", pe);
-        history = [];
-      }
-    }
+    const history = await getStatsHistory();
     
     // 오늘 날짜 스냅샷이 이미 기록되어 있으면 스킵
     const exists = history.some(entry => entry.date === todayStr);
@@ -64,20 +49,10 @@ export async function recordSnapshotIfMissing(): Promise<void> {
       ...stats
     };
     
-    history.push(newEntry);
-    
-    // 최근 기록 순으로 정렬하여 파일 갱신
-    history.sort((a, b) => a.date.localeCompare(b.date));
-    
-    const dir = path.dirname(HISTORY_FILE_PATH);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-    
-    fs.writeFileSync(HISTORY_FILE_PATH, JSON.stringify(history, null, 2), "utf-8");
-    console.log(`[Scheduler] Successfully recorded daily stats snapshot for ${todayStr}`);
+    await upsertStatsHistory(newEntry);
+    console.log(`[Scheduler] Successfully recorded daily stats snapshot in Neon DB for ${todayStr}`);
   } catch (error) {
-    console.error("[Scheduler] Failed to record snapshot:", error);
+    console.error("[Scheduler] Failed to record snapshot in Neon DB:", error);
   }
 }
 
@@ -107,21 +82,17 @@ export function startSnapshotScheduler(): void {
 }
 
 /**
- * 최근 N일간의 누적 히스토리 데이터를 반환합니다.
+ * 최근 N일간의 누적 히스토리 데이터를 비동기 조회하여 반환합니다.
  */
-export function getHistoryStats(daysLimit: number = 7): HistoryEntry[] {
+export async function getHistoryStats(daysLimit: number = 7): Promise<HistoryEntry[]> {
   try {
-    if (!fs.existsSync(HISTORY_FILE_PATH)) {
-      return [];
-    }
-    const fileData = fs.readFileSync(HISTORY_FILE_PATH, "utf-8");
-    const history: HistoryEntry[] = JSON.parse(fileData);
+    const history = await getStatsHistory();
     
     // 날짜 오름차순 정렬 후 최근 N일 반환
     const sorted = history.sort((a, b) => a.date.localeCompare(b.date));
     return sorted.slice(-daysLimit);
   } catch (error) {
-    console.error("[Scheduler] Failed to read history stats:", error);
+    console.error("[Scheduler] Failed to read history stats from Neon DB:", error);
     return [];
   }
 }

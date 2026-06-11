@@ -8,8 +8,7 @@ import { getNpsBplcInfo } from "@/lib/npsApi";
 import { getRecentBidsByKeyword } from "@/lib/procurementApi";
 import { getPatentsByCompany } from "@/lib/patentApi";
 import { getRecentDisclosures, getRecentKeyDisclosures } from "@/lib/dartApi";
-import fs from "fs";
-import path from "path";
+import { getBusinessByBNo, getInvalidBusinesses, addInvalidBusiness, upsertBusiness } from "@/lib/db";
 import { validateBizrNo } from "@/lib/bizValidation";
 import { findDartCode } from "@/lib/dartMap";
 
@@ -67,41 +66,19 @@ interface BusinessData {
   }>;
 }
 
-// 로컬 DB에서 사업자 번호로 기업 조회
-function getLocalBusiness(bNo: string): BusinessData | null {
+// 로컬 Neon DB에서 사업자 번호로 기업 조회
+async function getLocalBusiness(bNo: string): Promise<BusinessData | null> {
   try {
-    const cleanBNo = bNo.replace(/[^0-9]/g, "");
-    const filePath = path.join(process.cwd(), "src/data/businesses.json");
-    const fileContent = fs.readFileSync(filePath, "utf-8");
-    const list = JSON.parse(fileContent) as any[];
-    const found = list.find((item) => item.b_no.replace(/[^0-9]/g, "") === cleanBNo);
-    
+    const found = await getBusinessByBNo(bNo);
     if (found) {
-      const historyWithFinance = found.history.map((h: any) => ({
-        year: h.year,
-        revenue: h.revenue || 0,
-        employees: h.employees || 0,
-        operatingIncome: h.operatingIncome || 0,
-        netIncome: h.netIncome || 0,
-        totalAssets: h.totalAssets || 0,
-        totalLiabilities: h.totalLiabilities || 0,
-        totalEquity: h.totalEquity || 0
-      }));
-
       return {
         ...found,
         dataSource: "local",
-        is_sme: found.is_sme || "중소기업",
-        listing_status: found.listing_status || "비상장",
-        homepage: found.homepage || "-",
-        main_biz: found.main_biz || found.b_sector || "-",
-        is_audited: found.is_audited !== false,
-        history: historyWithFinance
-      };
+      } as BusinessData;
     }
     return null;
   } catch (error) {
-    console.error("Local DB read error:", error);
+    console.error("Local DB read error from Neon DB:", error);
     return null;
   }
 }
@@ -228,15 +205,11 @@ async function getUnifiedBusinessData(bNo: string): Promise<{
   }
 
   // 0.1. 미등록 블랙리스트 캐시 검사 (2차 방어)
-  const invalidFilePath = path.join(process.cwd(), "src/data/invalid_businesses.json");
   let invalidList: string[] = [];
   try {
-    if (fs.existsSync(invalidFilePath)) {
-      const invalidContent = fs.readFileSync(invalidFilePath, "utf-8");
-      invalidList = JSON.parse(invalidContent);
-    }
+    invalidList = await getInvalidBusinesses();
   } catch (e) {
-    console.error("Failed to read invalid list:", e);
+    console.error("Failed to read invalid list from Neon DB:", e);
   }
 
   if (invalidList.includes(cleanBNo)) {
@@ -266,19 +239,18 @@ async function getUnifiedBusinessData(bNo: string): Promise<{
   if (isInvalid) {
     // 블랙리스트 캐시 등록
     if (!invalidList.includes(cleanBNo)) {
-      invalidList.push(cleanBNo);
       try {
-        fs.writeFileSync(invalidFilePath, JSON.stringify(invalidList, null, 2), "utf-8");
-        console.log(`Added invalid business number to blacklist: ${cleanBNo}`);
+        await addInvalidBusiness(cleanBNo);
+        console.log(`Added invalid business number to blacklist in Neon DB: ${cleanBNo}`);
       } catch (e) {
-        console.error("Failed to write invalid list:", e);
+        console.error("Failed to write invalid list to Neon DB:", e);
       }
     }
     return { apiStatus, business: null, isInvalid: true };
   }
 
   // 2. 로컬 DB 조회
-  const localBiz = getLocalBusiness(cleanBNo);
+  const localBiz = await getLocalBusiness(cleanBNo);
   
   // 2.1. 비외감 기업(지윤 주식회사 등 소기업)인 경우 로컬 DB 데이터를 최우선적으로 즉시 활용
   if (localBiz && !localBiz.is_audited) {
@@ -445,41 +417,28 @@ async function getUnifiedBusinessData(bNo: string): Promise<{
     business = realBiz;
   }
 
-  // 5. 신규 기업 데이터 로컬 DB 자동 적재 (온디맨드 동기화 및 DART 코드 갱신)
+  // 5. 신규 기업 데이터 Neon DB 자동 적재 (온디맨드 동기화 및 DART 코드 갱신)
   if (business) {
     const isNew = !localBiz;
     const hasNewDartCode = localBiz && !localBiz.dart_code && business.dart_code;
     
     if (isNew || hasNewDartCode) {
-      const localDbPath = path.join(process.cwd(), "src/data/businesses.json");
       try {
-        const fileContent = fs.readFileSync(localDbPath, "utf-8");
-        const currentList = JSON.parse(fileContent) as any[];
-        
         if (isNew) {
-          const alreadyExists = currentList.some(item => item.b_no.replace(/[^0-9]/g, "") === cleanBNo);
-          if (!alreadyExists) {
-            const cachedBiz = {
-              ...business,
-              dataSource: "local"
-            };
-            delete (cachedBiz as any).dataSource;
-            currentList.push(cachedBiz);
-            fs.writeFileSync(localDbPath, JSON.stringify(currentList, null, 2), "utf-8");
-            console.log(`[Cache Sync] Successfully cached new business to DB: ${business.b_nm} (${cleanBNo})`);
-            business.dataSource = "local";
-          }
+          const cachedBiz = {
+            ...business,
+            dataSource: "local"
+          };
+          await upsertBusiness(cachedBiz);
+          console.log(`[Cache Sync] Successfully cached new business to Neon DB: ${business.b_nm} (${cleanBNo})`);
+          business.dataSource = "local";
         } else if (hasNewDartCode) {
-          // 기존 데이터의 DART 고유번호 갱신
-          const targetIndex = currentList.findIndex(item => item.b_no.replace(/[^0-9]/g, "") === cleanBNo);
-          if (targetIndex !== -1) {
-            currentList[targetIndex].dart_code = business.dart_code;
-            fs.writeFileSync(localDbPath, JSON.stringify(currentList, null, 2), "utf-8");
-            console.log(`[Cache Sync] Successfully updated DART code for existing business: ${business.b_nm} (${business.dart_code})`);
-          }
+          localBiz.dart_code = business.dart_code;
+          await upsertBusiness(localBiz);
+          console.log(`[Cache Sync] Successfully updated DART code for existing business in Neon DB: ${business.b_nm} (${business.dart_code})`);
         }
       } catch (e) {
-        console.error("Failed to sync business details to local DB:", e);
+        console.error("[Cache Sync] Failed to update Neon DB cache:", e);
       }
     }
   }

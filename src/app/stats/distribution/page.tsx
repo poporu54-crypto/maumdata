@@ -1,10 +1,9 @@
 import React from "react";
 import { Metadata } from "next";
 import Link from "next/link";
-import fs from "fs";
-import path from "path";
 import DateSelector from "@/components/DateSelector";
 import { HistoryEntry } from "@/lib/statScheduler";
+import { getStatsHistory } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -25,16 +24,12 @@ export default async function DistributionStatsPage({ searchParams }: PageProps)
   const { date } = await searchParams;
   const queryDate = date ? decodeURIComponent(date).trim() : "";
 
-  // 1. 히스토리 파일 로드
+  // 1. Neon DB에서 히스토리 데이터 비동기 조회
   let history: HistoryEntry[] = [];
   try {
-    const filePath = path.join(process.cwd(), "src/data/stats_history.json");
-    if (fs.existsSync(filePath)) {
-      const fileData = fs.readFileSync(filePath, "utf-8");
-      history = JSON.parse(fileData);
-    }
+    history = await getStatsHistory();
   } catch (err) {
-    console.error("Failed to load history data:", err);
+    console.error("Failed to load history data from Neon DB:", err);
   }
 
   // 날짜 정렬
@@ -120,7 +115,6 @@ export default async function DistributionStatsPage({ searchParams }: PageProps)
   const pctSum = parseFloat(calculatedList.reduce((acc, cur) => acc + cur.pct, 0).toFixed(1));
   if (pctSum !== 100) {
     const diff = parseFloat((100 - pctSum).toFixed(1));
-    // 숙박 및 음식점업에서 미세 보정
     const target = calculatedList.find(x => x.code === "0000000I");
     if (target) {
       target.pct = parseFloat((target.pct + diff).toFixed(1));
@@ -136,6 +130,7 @@ export default async function DistributionStatsPage({ searchParams }: PageProps)
 
         {/* 타이틀 헤더 */}
         <div style={{ marginBottom: "32px" }}>
+          <Link href="/" className="back-link">➔ 메인 화면으로 돌아가기</Link>
           <h1 style={{
             fontSize: "1.8rem",
             fontWeight: 800,
