@@ -844,7 +844,8 @@ async function getUnifiedBusinessData(bNo: string): Promise<{
     const npsDiffDays = Math.floor((now.getTime() - npsLastSync.getTime()) / (1000 * 60 * 60 * 24));
     
     const ntsUpdateNeeded = ntsDiffDays >= 10;
-    const npsUpdateNeeded = npsDiffDays >= 30;
+    // 국민연금이 이미 정상 연동된 곳은 30일 주기, 미연동(실패)된 상태인 곳은 1일 주기로 재시도하여 자가 치유를 앞당깁니다.
+    const npsUpdateNeeded = localBiz.npsLinked ? (npsDiffDays >= 30) : (npsDiffDays >= 1);
     
     if (ntsUpdateNeeded || npsUpdateNeeded) {
       // 비동기 백그라운드 쓰레드로 동기화 실행 (await 없이 호출하여 렌더링에 영향을 미치지 않음)

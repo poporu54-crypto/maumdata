@@ -12,21 +12,10 @@ const API_URL = "http://apis.data.go.kr/B552015/NpsBplcInfoInqireServiceV2/getBa
 /**
  * 국민연금공단 V2 API를 통해 사업자등록번호(10자리) 기준의 국민연금 가입 기본 정보(가입자수 등)를 실시간 조회합니다.
  */
-export async function getNpsBplcInfo(bzowrRgstNo: string, companyNm: string): Promise<NpsBplcInfo | null> {
-  const cleanBNo = bzowrRgstNo.replace(/[^0-9]/g, "");
-  const cleanCompanyNm = companyNm
-    .replace(/\(.*?\)/g, "")
-    .replace(/주식회사/g, "")
-    .replace(/\(주\)/g, "")
-    .trim();
-
-  if (cleanBNo.length !== 10 || !cleanCompanyNm) return null;
-
-  // Step 1. 회사명(wkplNm)으로 사업장 검색 목록 조회
-  const encodedName = encodeURIComponent(cleanCompanyNm);
-  const searchUrl = `${API_URL}?serviceKey=${SERVICE_KEY}&pageNo=1&numOfRows=50&dataType=json&wkplNm=${encodedName}`;
-
-  console.log(`[NPS API Step 1] Searching list for: ${cleanCompanyNm} via ${searchUrl}`);
+// 다단계 본사 정밀 매칭을 위해 내부 검색 헬퍼 구현
+async function searchNpsBplcList(queryName: string, targetBNo6: string, limit = 100): Promise<any | null> {
+  const encodedName = encodeURIComponent(queryName);
+  const searchUrl = `${API_URL}?serviceKey=${SERVICE_KEY}&pageNo=1&numOfRows=${limit}&dataType=json&wkplNm=${encodedName}`;
 
   try {
     const response = await fetch(searchUrl, {
@@ -37,11 +26,7 @@ export async function getNpsBplcInfo(bzowrRgstNo: string, companyNm: string): Pr
       cache: "no-store",
     });
 
-    if (!response.ok) {
-      console.error(`NPS Search API HTTP error: ${response.status}`);
-      return null;
-    }
-
+    if (!response.ok) return null;
     const text = await response.text();
     if (text.includes("Forbidden") || (text.includes("<resultCode>") && !text.includes("NORMAL SERVICE"))) {
       return null;
@@ -59,24 +44,77 @@ export async function getNpsBplcInfo(bzowrRgstNo: string, companyNm: string): Pr
 
     const list = Array.isArray(items) ? items : [items];
     
-    // 사업자등록번호 앞 6자리가 일치하는 진짜 아이템 필터링
-    const targetBNo6 = cleanBNo.substring(0, 6);
-    const matched = list.find((item: any) => {
+    // 사업자등록번호 앞 6자리가 매칭되는 리스트 필터링
+    const matchedList = list.filter((item: any) => {
       const apiBNo = (item.bzowrRgstNo || "").replace(/[^0-9]/g, "");
       return apiBNo.startsWith(targetBNo6);
     });
 
-    if (!matched || !matched.seq) {
-      console.warn(`[NPS API Step 1] No matched company found with prefix ${targetBNo6}`);
-      return null;
+    if (matchedList.length === 0) return null;
+
+    // 진짜 본사 매칭 우선순위 선정 규칙:
+    // 1순위: 이름에 일용직/공사용 꼬리말(일용, 현장, 공사, 납품, 용역, /, -)이 포함되지 않은 순수한 레코드
+    const noiseKeywords = ["일용", "현장", "공사", "납품", "용역", "/", "-"];
+    const pureMatches = matchedList.filter((item: any) => {
+      const name = item.wkplNm || "";
+      return !noiseKeywords.some(kw => name.includes(kw));
+    });
+
+    if (pureMatches.length > 0) {
+      // 그중 글자수가 가장 짧은 명칭을 최종 획득 (가장 본사에 가깝고 용역 꼬리말이 없음)
+      pureMatches.sort((a, b) => (a.wkplNm || "").length - (b.wkplNm || "").length);
+      return pureMatches[0];
     }
 
-    const seq = matched.seq;
-    
-    // Step 2. 획득한 고유 seq를 사용하여 상세정보(가입자수) 쿼리
-    const detailUrl = `http://apis.data.go.kr/B552015/NpsBplcInfoInqireServiceV2/getDetailInfoSearchV2?serviceKey=${SERVICE_KEY}&dataType=json&seq=${seq}`;
-    console.log(`[NPS API Step 2] Fetching detail for seq: ${seq}`);
+    // 2순위: 노이즈 필터링 실패 시, 그냥 글자수가 가장 짧은 레코드
+    matchedList.sort((a, b) => (a.wkplNm || "").length - (b.wkplNm || "").length);
+    return matchedList[0];
+  } catch (err) {
+    console.error(`NPS Search Error for ${queryName}:`, err);
+    return null;
+  }
+}
 
+/**
+ * 국민연금공단 V2 API를 통해 사업자등록번호(10자리) 기준의 국민연금 가입 기본 정보(가입자수 등)를 실시간 조회합니다.
+ */
+export async function getNpsBplcInfo(bzowrRgstNo: string, companyNm: string): Promise<NpsBplcInfo | null> {
+  const cleanBNo = bzowrRgstNo.replace(/[^0-9]/g, "");
+  if (cleanBNo.length !== 10 || !companyNm) return null;
+
+  const targetBNo6 = cleanBNo.substring(0, 6);
+  let matchedBplc: any = null;
+
+  // 1단계: 원본 상호명(예: "삼성전자(주)" 또는 "삼성전자주식회사")으로 먼저 정밀 검색 시도
+  const origName = companyNm.trim();
+  if (origName) {
+    matchedBplc = await searchNpsBplcList(origName, targetBNo6, 100);
+  }
+
+  // 2단계: 1단계 실패 시, 수식어 및 괄호를 지운 정규 상호명(예: "삼성전자")으로 넓은 검색 시도 (폴백)
+  if (!matchedBplc) {
+    const cleanCompanyNm = companyNm
+      .replace(/\(.*?\)/g, "")
+      .replace(/주식회사/g, "")
+      .replace(/\(주\)/g, "")
+      .trim();
+    if (cleanCompanyNm && cleanCompanyNm !== origName) {
+      matchedBplc = await searchNpsBplcList(cleanCompanyNm, targetBNo6, 100);
+    }
+  }
+
+  if (!matchedBplc || !matchedBplc.seq) {
+    console.warn(`[NPS API] No matched company found for ${companyNm} (RegNo prefix: ${targetBNo6})`);
+    return null;
+  }
+
+  const seq = matchedBplc.seq;
+  
+  // Step 2. 획득한 고유 seq를 사용하여 상세정보(가입자수) 쿼리
+  const detailUrl = `http://apis.data.go.kr/B552015/NpsBplcInfoInqireServiceV2/getDetailInfoSearchV2?serviceKey=${SERVICE_KEY}&dataType=json&seq=${seq}`;
+  console.log(`[NPS API Step 2] Fetching detail for seq: ${seq}`);
+
+  try {
     const detailResponse = await fetch(detailUrl, {
       method: "GET",
       headers: {
@@ -99,21 +137,20 @@ export async function getNpsBplcInfo(bzowrRgstNo: string, companyNm: string): Pr
 
     if (targetDetail) {
       const pepCnt = parseInt(targetDetail.jnngpCnt || targetDetail.npsSbscrbNmps || "0");
-      
       console.log(`[NPS API Success] Found employee count: ${pepCnt} for seq ${seq}`);
 
       return {
-        wkplNm: targetDetail.wkplNm || matched.wkplNm || "",
+        wkplNm: targetDetail.wkplNm || matchedBplc.wkplNm || "",
         bzowrRgstNo: cleanBNo,
         npsSbscrbNmps: pepCnt,
-        newAcqsNmps: 0, // 상세 API에 미제공 시 디폴트 처리
+        newAcqsNmps: 0,
         lossSbscrbNmps: 0,
       };
     }
 
     return null;
   } catch (error) {
-    console.error("Failed to fetch NPS company info:", error);
+    console.error("Failed to fetch NPS detail info:", error);
     return null;
   }
 }
