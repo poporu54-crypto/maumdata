@@ -816,7 +816,20 @@ async function getUnifiedBusinessData(bNo: string): Promise<{
   
   // 2.1. DB에 이미 온전한 기업 정보가 적재되어 있는 경우 외부 API 호출을 완전히 생략하고 캐시 데이터 즉시 사용
   // (단, 이전에 정보 없음으로 잘못 캐싱된 오염 데이터인 "상호 미등록 사업자"는 제외하고 실시간 재조회)
-  if (localBiz && localBiz.b_nm !== "상호 미등록 사업자") {
+  const isListedOrAudited = 
+    localBiz?.listing_status?.includes("상장") || 
+    localBiz?.b_type?.includes("상장") || 
+    localBiz?.b_type?.includes("대기업") || 
+    localBiz?.b_type?.includes("중견기업") || 
+    localBiz?.is_audited === true;
+
+  const isCacheIncomplete = localBiz && (
+    !localBiz.crno || 
+    localBiz.crno === "-" ||
+    (isListedOrAudited && (!localBiz.history || localBiz.history.length === 0))
+  );
+
+  if (localBiz && localBiz.b_nm !== "상호 미등록 사업자" && !isCacheIncomplete) {
     console.log(`[Cache Hit] Business data loaded directly from Neon DB: ${localBiz.b_nm} (${cleanBNo})`);
     
     // 최종 동기화 시각과 현재 시각 대조하여 백그라운드 비동기 동기화 여부 검토
