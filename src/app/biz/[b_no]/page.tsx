@@ -711,15 +711,24 @@ async function triggerBackgroundSync(
           [npsInfo.npsSbscrbNmps, npsInfo.newAcqsNmps || 0, npsInfo.lossSbscrbNmps || 0, bNo]
         );
         
-        // history 테이블의 최신 연도 종업원 수도 같이 갱신
-        const latestHistYear = localBiz.history && localBiz.history.length > 0
-          ? localBiz.history[localBiz.history.length - 1].year
-          : null;
-        if (latestHistYear) {
-          await query(
-            "UPDATE business_history SET employees = $1 WHERE b_no = $2 AND year = $3",
-            [npsInfo.npsSbscrbNmps, bNo, latestHistYear]
-          );
+        // history 테이블의 모든 연도 종업원 수를 국민연금 인원 기준으로 비율 스케일링하여 갱신 (일관성 유지)
+        if (localBiz.history && localBiz.history.length > 0) {
+          const latestHist = localBiz.history[localBiz.history.length - 1];
+          const latestRev = latestHist.revenue || 1;
+          const actualEmp = npsInfo.npsSbscrbNmps;
+
+          for (const h of localBiz.history) {
+            const revRatio = h.revenue / latestRev;
+            const boundedRatio = Math.max(0.7, Math.min(1.3, revRatio));
+            const scaledEmp = h.year === latestHist.year 
+              ? actualEmp 
+              : Math.max(1, Math.round(actualEmp * boundedRatio));
+            
+            await query(
+              "UPDATE business_history SET employees = $1 WHERE b_no = $2 AND year = $3",
+              [scaledEmp, bNo, h.year]
+            );
+          }
         }
         console.log(`[Background Sync] NPS count updated for ${bNo} to ${npsInfo.npsSbscrbNmps}`);
       } else {
@@ -967,8 +976,21 @@ async function getUnifiedBusinessData(bNo: string): Promise<{
       business.npsSbscrbNmps = npsInfo.npsSbscrbNmps;
       business.newAcqsNmps = npsInfo.newAcqsNmps;
       business.lossSbscrbNmps = npsInfo.lossSbscrbNmps;
-      const latestHist = business.history[business.history.length - 1];
-      if (latestHist) latestHist.employees = npsInfo.npsSbscrbNmps;
+      
+      // 국민연금 실제 인원이 확인된 경우, 과거 연도 직원수 추정치도 국민연금 최신 인원 기준으로 보정하여 일관성 유지
+      if (business.history && business.history.length > 0) {
+        const latestHist = business.history[business.history.length - 1];
+        const latestRev = latestHist.revenue || 1;
+        const actualEmp = npsInfo.npsSbscrbNmps;
+
+        business.history.forEach((h) => {
+          const revRatio = h.revenue / latestRev;
+          const boundedRatio = Math.max(0.7, Math.min(1.3, revRatio));
+          h.employees = h.year === latestHist.year
+            ? actualEmp
+            : Math.max(1, Math.round(actualEmp * boundedRatio));
+        });
+      }
     }
   } else if (ftcInfo) {
     // 3.2. 금융위에는 없으나 공정위 통신판매업 데이터가 있는 경우 (쇼핑몰/소상공인)
