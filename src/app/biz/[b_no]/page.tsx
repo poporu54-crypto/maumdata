@@ -263,17 +263,10 @@ async function getUnifiedBusinessData(bNo: string): Promise<{
   // 2. 로컬 DB 조회
   const localBiz = await getLocalBusiness(cleanBNo);
   
-  // 2.1. 비외감 기업인 경우 로컬 DB 데이터를 최우선 활용 (단, 이전에 정보 없음으로 잘못 캐싱된 오염 데이터는 제외)
-  if (localBiz && !localBiz.is_audited && localBiz.b_nm !== "상호 미등록 사업자") {
-    const npsInfo = await getNpsBplcInfo(cleanBNo, localBiz.b_nm);
-    if (npsInfo && npsInfo.npsSbscrbNmps > 0) {
-      localBiz.npsLinked = true;
-      localBiz.npsSbscrbNmps = npsInfo.npsSbscrbNmps;
-      localBiz.newAcqsNmps = npsInfo.newAcqsNmps;
-      localBiz.lossSbscrbNmps = npsInfo.lossSbscrbNmps;
-      const latestHist = localBiz.history[localBiz.history.length - 1];
-      if (latestHist) latestHist.employees = npsInfo.npsSbscrbNmps;
-    }
+  // 2.1. DB에 이미 온전한 기업 정보가 적재되어 있는 경우 외부 API 호출을 완전히 생략하고 캐시 데이터 즉시 사용
+  // (단, 이전에 정보 없음으로 잘못 캐싱된 오염 데이터인 "상호 미등록 사업자"는 제외하고 실시간 재조회)
+  if (localBiz && localBiz.b_nm !== "상호 미등록 사업자") {
+    console.log(`[Cache Hit] Business data loaded directly from Neon DB: ${localBiz.b_nm} (${cleanBNo})`);
     return { apiStatus, business: localBiz, isInvalid: false };
   }
 
@@ -476,17 +469,18 @@ async function getUnifiedBusinessData(bNo: string): Promise<{
   // 5. 신규 기업 데이터 Neon DB 자동 적재 (온디맨드 동기화 및 DART 코드 갱신)
   if (business) {
     const isNew = !localBiz;
+    const wasUnregistered = localBiz && localBiz.b_nm === "상호 미등록 사업자" && business.b_nm !== "상호 미등록 사업자";
     const hasNewDartCode = localBiz && !localBiz.dart_code && business.dart_code;
     
-    if (isNew || hasNewDartCode) {
+    if (isNew || wasUnregistered || hasNewDartCode) {
       try {
-        if (isNew) {
+        if (isNew || wasUnregistered) {
           const cachedBiz = {
             ...business,
             dataSource: "local"
           };
           await upsertBusiness(cachedBiz);
-          console.log(`[Cache Sync] Successfully cached new business to Neon DB: ${business.b_nm} (${cleanBNo})`);
+          console.log(`[Cache Sync] Successfully cached/updated business to Neon DB: ${business.b_nm} (${cleanBNo})`);
           business.dataSource = "local";
         } else if (hasNewDartCode) {
           localBiz.dart_code = business.dart_code;

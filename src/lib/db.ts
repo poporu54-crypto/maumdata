@@ -75,6 +75,16 @@ export async function getBusinessByBNo(bNo: string) {
     enpStacNm: business.enp_stac_nm || "",
     enpMainBizNm: business.enp_main_biz_nm || "",
     dataSource: business.data_source || "local",
+    mailOrderNo: business.mail_order_no || "",
+    declareOrg: business.declare_org || "",
+    goodsType: business.goods_type || "",
+    sellType: business.sell_type || "",
+    closeDate: business.close_date || "",
+    repEmail: business.rep_email || "",
+    zipCd: business.zip_cd || "",
+    newAcqsNmps: business.new_acqs_nmps || 0,
+    lossSbscrbNmps: business.loss_sbscrb_nmps || 0,
+    telNo: business.tel_no || "",
     history: histResult.rows.map((r: any) => ({
       year: r.year,
       revenue: parseInt(r.revenue || "0", 10),
@@ -135,9 +145,12 @@ export async function upsertBusiness(biz: any) {
       b_no, b_nm, p_nm, start_dt, b_adr, b_sector, b_type, corp_no, dart_code,
       description, credit_rating, industry_rank, is_sme, listing_status, homepage, main_biz,
       is_audited, nps_sbscrb_nmps, nps_linked, corp_enm, crno, enp_tlno, enp_fxno, enp_pncd,
-      enp_stac_nm, enp_main_biz_nm, data_source
+      enp_stac_nm, enp_main_biz_nm, data_source,
+      mail_order_no, declare_org, goods_type, sell_type, close_date, rep_email, zip_cd,
+      new_acqs_nmps, loss_sbscrb_nmps, tel_no
     ) VALUES (
-      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27
+      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27,
+      $28, $29, $30, $31, $32, $33, $34, $35, $36, $37
     ) ON CONFLICT (b_no) DO UPDATE SET
       b_nm = EXCLUDED.b_nm,
       p_nm = EXCLUDED.p_nm,
@@ -164,13 +177,25 @@ export async function upsertBusiness(biz: any) {
       enp_pncd = EXCLUDED.enp_pncd,
       enp_stac_nm = EXCLUDED.enp_stac_nm,
       enp_main_biz_nm = EXCLUDED.enp_main_biz_nm,
-      data_source = EXCLUDED.data_source
+      data_source = EXCLUDED.data_source,
+      mail_order_no = EXCLUDED.mail_order_no,
+      declare_org = EXCLUDED.declare_org,
+      goods_type = EXCLUDED.goods_type,
+      sell_type = EXCLUDED.sell_type,
+      close_date = EXCLUDED.close_date,
+      rep_email = EXCLUDED.rep_email,
+      zip_cd = EXCLUDED.zip_cd,
+      new_acqs_nmps = EXCLUDED.new_acqs_nmps,
+      loss_sbscrb_nmps = EXCLUDED.loss_sbscrb_nmps,
+      tel_no = EXCLUDED.tel_no
   `, [
     clean, biz.b_nm, biz.p_nm, biz.start_dt, biz.b_adr, biz.b_sector, biz.b_type, biz.corp_no || "", biz.dart_code || "",
     biz.description || "", biz.credit_rating || "", biz.industry_rank || "", biz.is_sme || "", biz.listing_status || "",
     biz.homepage || "", biz.main_biz || "", biz.is_audited || false, biz.npsSbscrbNmps || 0, biz.npsLinked || false,
     biz.corpEnm || "", biz.crno || "", biz.enpTlno || "", biz.enpFxno || "", biz.enpPncd || "", biz.enpStacNm || "",
-    biz.enpMainBizNm || "", biz.dataSource || "local"
+    biz.enpMainBizNm || "", biz.dataSource || "local",
+    biz.mailOrderNo || "", biz.declareOrg || "", biz.goodsType || "", biz.sellType || "", biz.closeDate || "", biz.repEmail || "", biz.zipCd || "",
+    biz.newAcqsNmps || 0, biz.lossSbscrbNmps || 0, biz.telNo || ""
   ]);
 
   // 2. 재무이력 갱신 (전체 삭제 후 다시 등록)
