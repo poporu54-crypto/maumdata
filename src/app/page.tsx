@@ -98,7 +98,14 @@ export default async function MainPage() {
           }}>
             실시간 많이 찾는 기업
           </h3>
-          <DragScrollContainer className="quick-links-scroll">
+          <DragScrollContainer 
+            className="quick-links-scroll"
+            style={{
+              display: "flex",
+              flexWrap: "nowrap",
+              overflowX: "auto",
+            }}
+          >
             {quickLinks.map((link) => (
               <Link
                 key={link.no}
