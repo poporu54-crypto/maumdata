@@ -11,6 +11,7 @@ import { getRecentDisclosures, getRecentKeyDisclosures } from "@/lib/dartApi";
 import { getBusinessByBNo, getInvalidBusinesses, addInvalidBusiness, upsertBusiness } from "@/lib/db";
 import { validateBizrNo } from "@/lib/bizValidation";
 import { findDartCode } from "@/lib/dartMap";
+import { getFtcMailOrderInfo } from "@/lib/ftcApi";
 
 // Local Business Type 정의
 interface BusinessData {
@@ -373,48 +374,84 @@ async function getUnifiedBusinessData(bNo: string): Promise<{
       const latestHist = business.history[business.history.length - 1];
       if (latestHist) latestHist.employees = npsInfo.npsSbscrbNmps;
     }
-  } else if (localBiz) {
-    // 3.1. 금융위 API 호출 실패 시, 외감 기업(네이버 등)은 로컬 DB 데이터를 Fallback으로 안전 지원
-    const npsInfo = await getNpsBplcInfo(cleanBNo, localBiz.b_nm);
-    if (npsInfo && npsInfo.npsSbscrbNmps > 0) {
-      localBiz.npsLinked = true;
-      localBiz.npsSbscrbNmps = npsInfo.npsSbscrbNmps;
-      localBiz.newAcqsNmps = npsInfo.newAcqsNmps;
-      localBiz.lossSbscrbNmps = npsInfo.lossSbscrbNmps;
-      const latestHist = localBiz.history[localBiz.history.length - 1];
-      if (latestHist) latestHist.employees = npsInfo.npsSbscrbNmps;
-    }
-    business = localBiz;
   } else {
-    // 4. 로컬 DB와 금융위 API에 없는 경우, 국세청/국민연금 실제 팩트 기반 데이터만 리턴 (가짜 데이터 금지)
-    const realBiz: BusinessData = {
-      b_no: cleanBNo,
-      b_nm: "상호 미등록 사업자",
-      p_nm: "-",
-      start_dt: "-",
-      b_adr: "주소 정보 없음 (공시 비대상)",
-      b_sector: "미등록 업종",
-      b_type: "소상공인/개인사업자",
-      description: `국세청 실시간 계속사업자 상태가 검증된 개인 사업자등록번호(${cleanBNo})입니다.`,
-      credit_rating: "-",
-      industry_rank: "-",
-      dataSource: "estimated",
-      is_sme: "소상공인",
-      listing_status: "비상장",
-      homepage: "-",
-      main_biz: "-",
-      is_audited: false,
-      history: [],
-    };
+    // 3.5. 금융위 API에 없는 경우, 공정위 통신판매사업자 API 추가 조회 시도 (쇼핑몰 등 소상공인 실재 데이터 확보)
+    const ftcInfo = await getFtcMailOrderInfo(cleanBNo);
+    if (ftcInfo) {
+      const npsInfo = await getNpsBplcInfo(cleanBNo, ftcInfo.cmpNm);
+      business = {
+        b_no: cleanBNo,
+        b_nm: ftcInfo.cmpNm,
+        p_nm: ftcInfo.rprsNm,
+        start_dt: ftcInfo.rcptDt,
+        b_adr: ftcInfo.repAddr || "주소 정보 없음 (공시 비대상)",
+        b_sector: "전자상거래 소매업 (통신판매업)",
+        b_type: "소상공인 (통신판매업자)",
+        description: `공정거래위원회에 정식 등록된 통신판매사업자(${ftcInfo.cmpNm})입니다. 신고일자: ${ftcInfo.rcptDt.replace(/(\d{4})(\d{2})(\d{2})/, "$1년 $2월 $3일")}.`,
+        credit_rating: "-",
+        industry_rank: "-",
+        dataSource: "public",
+        is_sme: "소상공인",
+        listing_status: "비상장",
+        homepage: ftcInfo.wbsitAddr && ftcInfo.wbsitAddr !== "-" ? ftcInfo.wbsitAddr : "-",
+        main_biz: "전자상거래업",
+        is_audited: false,
+        
+        enpTlno: ftcInfo.telNo,
+        enpPncd: ftcInfo.zipCd,
+        
+        history: []
+      };
+      
+      if (npsInfo && npsInfo.npsSbscrbNmps > 0) {
+        business.npsLinked = true;
+        business.npsSbscrbNmps = npsInfo.npsSbscrbNmps;
+        business.newAcqsNmps = npsInfo.newAcqsNmps;
+        business.lossSbscrbNmps = npsInfo.lossSbscrbNmps;
+      }
+    } else if (localBiz) {
+      // 3.6. 공정위 API도 없는 경우 로컬 DB 데이터를 Fallback으로 지원
+      const npsInfo = await getNpsBplcInfo(cleanBNo, localBiz.b_nm);
+      if (npsInfo && npsInfo.npsSbscrbNmps > 0) {
+        localBiz.npsLinked = true;
+        localBiz.npsSbscrbNmps = npsInfo.npsSbscrbNmps;
+        localBiz.newAcqsNmps = npsInfo.newAcqsNmps;
+        localBiz.lossSbscrbNmps = npsInfo.lossSbscrbNmps;
+        const latestHist = localBiz.history[localBiz.history.length - 1];
+        if (latestHist) latestHist.employees = npsInfo.npsSbscrbNmps;
+      }
+      business = localBiz;
+    } else {
+      // 4. 로컬 DB, 금융위, 공정위 모두 정보가 없는 경우 최후 수단으로 미등록 사업자 Fallback
+      const realBiz: BusinessData = {
+        b_no: cleanBNo,
+        b_nm: "상호 미등록 사업자",
+        p_nm: "-",
+        start_dt: "-",
+        b_adr: "주소 정보 없음 (공시 비대상)",
+        b_sector: "미등록 업종",
+        b_type: "소상공인/개인사업자",
+        description: `국세청 실시간 계속사업자 상태가 검증된 개인 사업자등록번호(${cleanBNo})입니다.`,
+        credit_rating: "-",
+        industry_rank: "-",
+        dataSource: "estimated",
+        is_sme: "소상공인",
+        listing_status: "비상장",
+        homepage: "-",
+        main_biz: "-",
+        is_audited: false,
+        history: [],
+      };
 
-    const npsInfo = await getNpsBplcInfo(cleanBNo, "상호 미등록 사업자");
-    if (npsInfo && npsInfo.npsSbscrbNmps > 0) {
-      realBiz.npsLinked = true;
-      realBiz.npsSbscrbNmps = npsInfo.npsSbscrbNmps;
-      realBiz.newAcqsNmps = npsInfo.newAcqsNmps;
-      realBiz.lossSbscrbNmps = npsInfo.lossSbscrbNmps;
+      const npsInfo = await getNpsBplcInfo(cleanBNo, "상호 미등록 사업자");
+      if (npsInfo && npsInfo.npsSbscrbNmps > 0) {
+        realBiz.npsLinked = true;
+        realBiz.npsSbscrbNmps = npsInfo.npsSbscrbNmps;
+        realBiz.newAcqsNmps = npsInfo.newAcqsNmps;
+        realBiz.lossSbscrbNmps = npsInfo.lossSbscrbNmps;
+      }
+      business = realBiz;
     }
-    business = realBiz;
   }
 
   // 5. 신규 기업 데이터 Neon DB 자동 적재 (온디맨드 동기화 및 DART 코드 갱신)
