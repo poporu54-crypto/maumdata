@@ -1,5 +1,5 @@
 const SERVICE_KEY = process.env.DATA_PORTAL_SERVICE_KEY || "";
-const brno = "7295000974";
+const brno = "1221166249";
 const url = `https://apis.data.go.kr/1130000/MllBsDtl_3Service/getMllBsInfoDetail_3?serviceKey=${SERVICE_KEY}&pageNo=1&numOfRows=1&resultType=json&brno=${brno}`;
 
 fetch(url)

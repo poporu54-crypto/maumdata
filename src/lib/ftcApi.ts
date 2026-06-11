@@ -58,14 +58,14 @@ export async function getFtcMailOrderInfo(bNo: string): Promise<FtcMailOrderBusi
       const item = items[0];
       return {
         brno: item.brno || cleanBNo,
-        cmpNm: item.cmpNm || "",
-        rprsNm: item.rprsNm || "",
-        repAddr: item.repAddr || "",
-        rcptDt: item.rcptDt || "",
-        opStateNm: item.opStateNm || "정상영업",
-        telNo: item.telNo || "",
-        zipCd: item.zipCd || "",
-        wbsitAddr: item.wbsitAddr || "",
+        cmpNm: item.bzmnNm || "",
+        rprsNm: item.rprsvNm || "",
+        repAddr: item.lctnAddr || item.lctnRnAddr || "",
+        rcptDt: item.dclrDate || "",
+        opStateNm: item.operSttusCdNm || item.bzmnRgsSttusSeNm || "정상영업",
+        telNo: item.telno && item.telno !== "N/A" ? item.telno : "",
+        zipCd: item.lctnRnOzip && item.lctnRnOzip !== "N/A" ? item.lctnRnOzip : "",
+        wbsitAddr: item.domnCn && item.domnCn !== "N/A" ? item.domnCn : "",
       };
     }
 
