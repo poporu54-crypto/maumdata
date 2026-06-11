@@ -3,7 +3,7 @@ import { Metadata } from "next";
 import Link from "next/link";
 import SearchForm from "@/components/SearchForm";
 import { searchCorpOutline, CorpBasicOutline } from "@/lib/corpApi";
-import { searchBusinesses } from "@/lib/db";
+import { searchBusinesses, query as dbQuery } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -95,13 +95,35 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
     results = Array.from(mergeMap.values());
   }
 
-  // 퀵 서치 링크 추천용
-  const quickLinks = [
-    { name: "지윤 주식회사", no: "1378651839" },
-    { name: "토스 (비바리퍼블리카)", no: "1208801280" },
-    { name: "네이버 (NAVER)", no: "2208162517" },
-    { name: "스타벅스 코리아", no: "2018121515" },
-  ];
+  // 퀵 서치 링크 추천용 (조회수 기준 4개 동적 조회)
+  let quickLinks = [];
+  try {
+    const popularBizRes = await dbQuery(`
+      SELECT b.b_no, b.b_nm, b.brand_name, COUNT(l.id) AS recent_views
+      FROM businesses b
+      LEFT JOIN business_view_logs l ON b.b_no = l.b_no AND l.viewed_at >= NOW() - INTERVAL '24 hours'
+      WHERE b.b_nm != '상호 미등록 사업자'
+      GROUP BY b.b_no, b.b_nm, b.brand_name, b.view_count, b.nps_sbscrb_nmps
+      ORDER BY recent_views DESC, b.view_count DESC, b.nps_sbscrb_nmps DESC
+      LIMIT 4
+    `);
+    
+    quickLinks = popularBizRes.rows.map((row: any) => {
+      let shortName = row.b_nm;
+      if (row.brand_name) {
+        shortName = row.brand_name.split(",")[0].trim();
+      }
+      return { name: shortName, no: row.b_no };
+    });
+  } catch (err) {
+    console.error("Failed to fetch search quick links:", err);
+    quickLinks = [
+      { name: "지윤 주식회사", no: "1378651839" },
+      { name: "토스 (비바리퍼블리카)", no: "1208801280" },
+      { name: "네이버 (NAVER)", no: "2208162517" },
+      { name: "스타벅스 코리아", no: "2018121515" }
+    ];
+  }
 
   return (
     <div className="animate-fade-in" style={{ padding: "24px 0 80px 0" }}>

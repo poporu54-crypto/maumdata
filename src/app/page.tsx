@@ -4,6 +4,7 @@ import { getPortalStats } from "@/lib/statApi";
 import SearchForm from "@/components/SearchForm";
 import StatsDashboard from "@/components/StatsDashboard";
 import { recordSnapshotIfMissing, startSnapshotScheduler } from "@/lib/statScheduler";
+import { query } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -16,15 +17,38 @@ export default async function MainPage() {
   // 서버 사이드에서 실시간 국가 통계 API(전국사업체조사 & 100대 생활업종) 집계 조회
   const stats = await getPortalStats();
 
-  // 퀵 서치 링크
-  const quickLinks = [
-    { name: "지윤 주식회사(JiYoon Co.Ltd.)", no: "1378651839" },
-    { name: "토스 (비바리퍼블리카)", no: "1208801280" },
-    { name: "네이버 (NAVER)", no: "2208162517" },
-    { name: "카카오 (Kakao)", no: "1208147521" },
-    { name: "스타벅스 코리아", no: "2018121515" },
-    { name: "삼양식품", no: "1028105450" },
-  ];
+  // DB에서 조회수 기준 상위 인기 검색 기업 6개 동적 조회
+  let quickLinks = [];
+  try {
+    const popularBizRes = await query(`
+      SELECT b.b_no, b.b_nm, b.brand_name, COUNT(l.id) AS recent_views
+      FROM businesses b
+      LEFT JOIN business_view_logs l ON b.b_no = l.b_no AND l.viewed_at >= NOW() - INTERVAL '24 hours'
+      WHERE b.b_nm != '상호 미등록 사업자'
+      GROUP BY b.b_no, b.b_nm, b.brand_name, b.view_count, b.nps_sbscrb_nmps
+      ORDER BY recent_views DESC, b.view_count DESC, b.nps_sbscrb_nmps DESC
+      LIMIT 6
+    `);
+    
+    quickLinks = popularBizRes.rows.map((row: any) => {
+      let shortName = row.b_nm;
+      if (row.brand_name) {
+        shortName = row.brand_name.split(",")[0].trim();
+      }
+      return { name: shortName, no: row.b_no };
+    });
+  } catch (err) {
+    console.error("Failed to fetch dynamic quick links:", err);
+    // Fallback static links in case of database errors
+    quickLinks = [
+      { name: "지윤", no: "1378651839" },
+      { name: "토스", no: "1208801280" },
+      { name: "네이버", no: "2208162517" },
+      { name: "카카오", no: "1208147521" },
+      { name: "스타벅스", no: "2018121515" },
+      { name: "삼양식품", no: "1028105450" }
+    ];
+  }
 
   return (
     <div className="animate-fade-in" style={{ padding: "24px 0 80px 0" }}>
@@ -233,6 +257,33 @@ export default async function MainPage() {
                 * 기업 상세페이지 하단에서 실시간 확인 가능
               </div>
             </div>
+
+            {/* 서비스 4: 실시간 고용 트렌드 분석 (신설) */}
+            <div className="card" style={{
+              padding: "28px",
+              border: "1px solid var(--color-border)",
+              backgroundColor: "var(--bg-color-card)",
+              display: "flex",
+              flexDirection: "column",
+              gap: "16px",
+              justifyContent: "space-between"
+            }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                <div style={{ fontSize: "2rem" }}>👥</div>
+                <div>
+                  <h4 style={{ fontSize: "1.15rem", fontWeight: 800, color: "var(--color-text-main)", marginBottom: "8px" }}>
+                    실시간 고용 트렌드 분석
+                  </h4>
+                  <p style={{ fontSize: "0.85rem", color: "var(--color-text-desc)", lineHeight: 1.5, margin: 0 }}>
+                    국민연금 실시간 가입 데이터를 연동하여 상시근로자 수 변화, 당월 신규 취득자(입사) 및 상실자(퇴사) 추이를 추적하고 인력 성장률을 분석합니다.
+                  </p>
+                </div>
+              </div>
+              <div style={{ fontSize: "0.85rem", color: "var(--color-primary)", fontWeight: 700 }}>
+                * 기업 상세페이지 하단에서 실시간 확인 가능
+              </div>
+            </div>
+
           </div>
         </div>
 

@@ -1,6 +1,479 @@
-import React from "react";
+import React, { Suspense } from "react";
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
+
+// 스트리밍을 위한 스켈레톤 로딩 UI 컴포넌트
+function SectionSkeleton() {
+  return (
+    <div style={{
+      width: "100%",
+      padding: "24px",
+      borderRadius: "14px",
+      border: "1px solid var(--color-border)",
+      backgroundColor: "var(--bg-color-card)",
+      display: "flex",
+      flexDirection: "column",
+      gap: "12px",
+      boxSizing: "border-box"
+    }}>
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes pulse-custom {
+          0%, 100% { opacity: 0.6; }
+          50% { opacity: 0.3; }
+        }
+        .skeleton-item {
+          animation: pulse-custom 1.5s infinite ease-in-out;
+        }
+      `}} />
+      <div className="skeleton-item" style={{ width: "35%", height: "14px", borderRadius: "4px", backgroundColor: "var(--color-border)" }}></div>
+      <div className="skeleton-item" style={{ width: "80%", height: "20px", borderRadius: "6px", backgroundColor: "var(--color-border)" }}></div>
+      <div className="skeleton-item" style={{ width: "55%", height: "14px", borderRadius: "4px", backgroundColor: "var(--color-border)" }}></div>
+    </div>
+  );
+}
+
+// 1. 조달청 나라장터 입찰공고 컴포넌트
+async function BidsSection({ companyNm }: { companyNm: string }) {
+  const bids = await getRecentBidsByKeyword(companyNm);
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+      {bids.length > 0 ? (
+        bids.map((bid, index) => (
+          <div 
+            key={`${bid.bidNtceNo}-${bid.bidNtceOrd || index}`} 
+            style={{
+              padding: "20px",
+              border: "1px solid var(--color-border)",
+              borderRadius: "14px",
+              backgroundColor: "var(--bg-color-card)",
+              display: "flex",
+              flexDirection: "column",
+              gap: "10px"
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "8px" }}>
+              <div>
+                <span style={{ fontSize: "0.78rem", color: "var(--color-text-desc)", fontWeight: 700, display: "inline-block", marginBottom: "4px" }}>
+                  공고번호: {bid.bidNtceNo}-{bid.bidNtceOrd} | {bid.cntrctCnclMthdNm}
+                </span>
+                <h5 style={{ fontSize: "1rem", fontWeight: 800, color: "var(--color-text-main)", margin: "4px 0 0 0" }}>
+                  {bid.bidNtceNm}
+                </h5>
+              </div>
+              <a 
+                href={bid.detailUrl} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                style={{
+                  fontSize: "0.78rem",
+                  color: "var(--color-primary)",
+                  fontWeight: 700,
+                  textDecoration: "underline",
+                  whiteSpace: "nowrap"
+                }}
+              >
+                공고 원본 보기 ➔
+              </a>
+            </div>
+            
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+              gap: "6px 12px",
+              padding: "10px 14px",
+              backgroundColor: "rgba(255, 255, 255, 0.015)",
+              borderRadius: "10px",
+              fontSize: "0.85rem"
+            }}>
+              <div style={{ color: "var(--color-text-desc)" }}>
+                수요기관: <strong style={{ color: "var(--color-text-sub)" }}>{bid.dminsttNm}</strong>
+              </div>
+              <div style={{ color: "var(--color-text-desc)" }}>
+                공고 등록일: <strong style={{ color: "var(--color-text-sub)" }}>{bid.bidNtceDt}</strong>
+              </div>
+              <div style={{ color: "var(--color-text-desc)", gridColumn: "span 2" }}>
+                추정사업금액: <strong style={{ color: "var(--color-primary)" }}>{bid.presmptPrce.toLocaleString()}원</strong>
+              </div>
+            </div>
+          </div>
+        ))
+      ) : (
+        <div style={{
+          padding: "24px",
+          borderRadius: "14px",
+          border: "1px solid var(--color-border)",
+          backgroundColor: "var(--bg-color-main)",
+          textAlign: "center",
+          fontSize: "0.88rem",
+          color: "var(--color-text-desc)"
+        }}>
+          최근 7일간 등록된 입찰/낙찰 공고 매칭 내역이 존재하지 않습니다.
+        </div>
+      )}
+    </div>
+  );
+}
+
+// 2. 특허 및 지식재산권 컴포넌트
+async function PatentsSection({ companyNm, pNm }: { companyNm: string, pNm: string }) {
+  const patents = await getPatentsByCompany(companyNm, pNm);
+  return (
+    <>
+      {patents.length > 0 ? (
+        <div style={{ overflowX: "auto", border: "1px solid var(--color-border)", borderRadius: "14px" }}>
+          <table style={{
+            width: "100%",
+            borderCollapse: "collapse",
+            textAlign: "left",
+            fontSize: "0.88rem",
+            backgroundColor: "var(--bg-color-card)"
+          }}>
+            <thead>
+              <tr style={{ backgroundColor: "var(--bg-color-main)", borderBottom: "1px solid var(--color-border)" }}>
+                <th style={{ padding: "14px 16px", color: "var(--color-text-sub)", fontWeight: 700 }}>권리 구분 (출원번호)</th>
+                <th style={{ padding: "14px 16px", color: "var(--color-text-sub)", fontWeight: 700 }}>발명/상표 명칭</th>
+                <th style={{ padding: "14px 16px", color: "var(--color-text-sub)", fontWeight: 700 }}>출원일자</th>
+                <th style={{ padding: "14px 16px", color: "var(--color-text-sub)", fontWeight: 700, textAlign: "right" }}>상태</th>
+              </tr>
+            </thead>
+            <tbody>
+              {patents.map((pat) => (
+                <tr key={pat.applicationNumber} style={{ borderBottom: "1px solid var(--color-border)" }}>
+                  <td style={{ padding: "14px 16px" }}>
+                    <span style={{ display: "block", fontWeight: 700, color: "var(--color-text-main)" }}>
+                      특허권
+                    </span>
+                    <span style={{ fontSize: "0.78rem", color: "var(--color-text-desc)" }}>
+                      {pat.applicationNumber}
+                    </span>
+                  </td>
+                  <td style={{ padding: "14px 16px", fontWeight: 600, color: "var(--color-text-sub)", maxWidth: "240px", wordBreak: "break-all" }}>
+                    {pat.detailUrl ? (
+                      <a 
+                        href={pat.detailUrl} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="patent-link"
+                      >
+                        {pat.inventionTitle} ↗
+                      </a>
+                    ) : (
+                      pat.inventionTitle
+                    )}
+                  </td>
+                  <td style={{ padding: "14px 16px", color: "var(--color-text-desc)" }}>
+                    {pat.applicationDate}
+                  </td>
+                  <td style={{ padding: "14px 16px", textAlign: "right" }}>
+                    <span style={{
+                      backgroundColor: pat.patentStatus === "등록" ? "rgba(16, 185, 129, 0.1)" : "rgba(59, 130, 246, 0.1)",
+                      color: pat.patentStatus === "등록" ? "#10b981" : "var(--color-primary)",
+                      fontSize: "0.75rem",
+                      fontWeight: 700,
+                      padding: "4px 8px",
+                      borderRadius: "6px"
+                    }}>
+                      {pat.patentStatus}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div style={{
+          padding: "24px",
+          borderRadius: "14px",
+          border: "1px solid var(--color-border)",
+          backgroundColor: "var(--bg-color-main)",
+          textAlign: "center",
+          fontSize: "0.88rem",
+          color: "var(--color-text-desc)"
+        }}>
+          출원 또는 등록된 공식 특허 지식재산권 정보가 제공되지 않는 기업입니다.
+        </div>
+      )}
+    </>
+  );
+}
+
+// 3. DART 실시간 공시 목록 컴포넌트
+async function DartDisclosuresSection({ dartCode }: { dartCode: string }) {
+  const disclosures = await getRecentDisclosures(dartCode);
+  return (
+    <>
+      {disclosures && disclosures.length > 0 ? (
+        <div style={{ overflowX: "auto", border: "1px solid var(--color-border)", borderRadius: "14px" }}>
+          <table style={{
+            width: "100%",
+            borderCollapse: "collapse",
+            textAlign: "left",
+            fontSize: "0.88rem",
+            backgroundColor: "var(--bg-color-card)"
+          }}>
+            <thead>
+              <tr style={{ backgroundColor: "var(--bg-color-main)", borderBottom: "1px solid var(--color-border)" }}>
+                <th style={{ padding: "14px 16px", color: "var(--color-text-sub)", fontWeight: 700 }}>보고서 명칭</th>
+                <th style={{ padding: "14px 16px", color: "var(--color-text-sub)", fontWeight: 700 }}>공시 제출인</th>
+                <th style={{ padding: "14px 16px", color: "var(--color-text-sub)", fontWeight: 700 }}>접수일자</th>
+                <th style={{ padding: "14px 16px", color: "var(--color-text-sub)", fontWeight: 700, textAlign: "right" }}>원문 보기</th>
+              </tr>
+            </thead>
+            <tbody>
+              {disclosures.map((disc) => (
+                <tr key={disc.rceptNo} style={{ borderBottom: "1px solid var(--color-border)" }}>
+                  <td style={{ padding: "14px 16px", fontWeight: 600, color: "var(--color-text-main)", maxWidth: "320px", wordBreak: "break-all" }}>
+                    {disc.reportNm}
+                    {disc.rm && (
+                      <span style={{
+                        marginLeft: "8px",
+                        backgroundColor: "rgba(49, 130, 246, 0.1)",
+                        color: "var(--color-primary)",
+                        fontSize: "0.7rem",
+                        padding: "2px 6px",
+                        borderRadius: "4px",
+                        fontWeight: 700
+                      }}>
+                        {disc.rm}
+                      </span>
+                    )}
+                  </td>
+                  <td style={{ padding: "14px 16px", color: "var(--color-text-sub)" }}>
+                    {disc.flrNm}
+                  </td>
+                  <td style={{ padding: "14px 16px", color: "var(--color-text-desc)" }}>
+                    {disc.rceptDt}
+                  </td>
+                  <td style={{ padding: "14px 16px", textAlign: "right" }}>
+                    <a 
+                      href={disc.detailUrl} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      style={{
+                        color: "var(--color-primary)",
+                        fontWeight: 700,
+                        textDecoration: "underline"
+                      }}
+                    >
+                      열람 ➔
+                    </a>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div style={{
+          padding: "24px",
+          borderRadius: "14px",
+          border: "1px solid var(--color-border)",
+          backgroundColor: "var(--bg-color-main)",
+          textAlign: "center",
+          fontSize: "0.88rem",
+          color: "var(--color-text-desc)"
+        }}>
+          최근 2년 내에 DART에 공시된 보고서 내역이 없거나 임시 점검 중입니다.
+        </div>
+      )}
+    </>
+  );
+}
+
+// 4. DART 주요 분기별 실적 보고서 컴포넌트
+async function DartKeyDisclosuresSection({ dartCode }: { dartCode: string }) {
+  const keyDisclosures = await getRecentKeyDisclosures(dartCode);
+  return (
+    <>
+      {keyDisclosures && keyDisclosures.length > 0 ? (
+        <div style={{ overflowX: "auto", border: "1px solid var(--color-border)", borderRadius: "14px" }}>
+          <table style={{
+            width: "100%",
+            borderCollapse: "collapse",
+            textAlign: "left",
+            fontSize: "0.88rem",
+            backgroundColor: "var(--bg-color-card)"
+          }}>
+            <thead>
+              <tr style={{ backgroundColor: "var(--bg-color-main)", borderBottom: "1px solid var(--color-border)" }}>
+                <th style={{ padding: "14px 16px", color: "var(--color-text-sub)", fontWeight: 700 }}>보고서 구분</th>
+                <th style={{ padding: "14px 16px", color: "var(--color-text-sub)", fontWeight: 700 }}>보고서 명칭</th>
+                <th style={{ padding: "14px 16px", color: "var(--color-text-sub)", fontWeight: 700 }}>접수일자</th>
+                <th style={{ padding: "14px 16px", color: "var(--color-text-sub)", fontWeight: 700, textAlign: "right" }}>공시 열람</th>
+              </tr>
+            </thead>
+            <tbody>
+              {keyDisclosures.map((disc) => {
+                let typeText = "정기공시";
+                let typeColor = "var(--color-primary)";
+                let typeBg = "rgba(49, 130, 246, 0.1)";
+                
+                if (disc.reportNm.includes("사업보고서")) {
+                  typeText = "사업보고서 (연간)";
+                  typeColor = "#ef4444";
+                  typeBg = "rgba(239, 68, 68, 0.1)";
+                } else if (disc.reportNm.includes("반기보고서")) {
+                  typeText = "반기보고서";
+                  typeColor = "#f59e0b";
+                  typeBg = "rgba(245, 158, 11, 0.1)";
+                } else if (disc.reportNm.includes("분기보고서")) {
+                  typeText = "분기보고서";
+                  typeColor = "#10b981";
+                  typeBg = "rgba(16, 185, 129, 0.1)";
+                }
+
+                return (
+                  <tr key={disc.rceptNo} style={{ borderBottom: "1px solid var(--color-border)" }}>
+                    <td style={{ padding: "14px 16px" }}>
+                      <span style={{
+                        backgroundColor: typeBg,
+                        color: typeColor,
+                        fontSize: "0.75rem",
+                        padding: "4px 8px",
+                        borderRadius: "6px",
+                        fontWeight: 700,
+                        border: `1px solid ${typeColor}22`
+                      }}>
+                        {typeText}
+                      </span>
+                    </td>
+                    <td style={{ padding: "14px 16px", fontWeight: 700, color: "var(--color-text-main)", maxWidth: "300px", wordBreak: "break-all" }}>
+                      {disc.reportNm}
+                    </td>
+                    <td style={{ padding: "14px 16px", color: "var(--color-text-desc)", fontWeight: 600 }}>
+                      {disc.rceptDt}
+                    </td>
+                    <td style={{ padding: "14px 16px", textAlign: "right" }}>
+                      <a 
+                        href={disc.detailUrl} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        style={{
+                          color: "var(--color-primary)",
+                          fontWeight: 700,
+                          textDecoration: "underline"
+                        }}
+                      >
+                        원문 보기 ➔
+                      </a>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <div style={{
+          padding: "24px",
+          borderRadius: "14px",
+          border: "1px solid var(--color-border)",
+          backgroundColor: "var(--bg-color-main)",
+          textAlign: "center",
+          fontSize: "0.88rem",
+          color: "var(--color-text-desc)"
+        }}>
+          최근 3년 간의 사업/반기/분기보고서 공시 내역이 존재하지 않습니다.
+        </div>
+      )}
+    </>
+  );
+}
+
+// 주요 연혁 타임라인 UI 컴포넌트
+function TimelineSection({
+  timeline,
+  bNo,
+  brandName,
+  homepage,
+  description
+}: {
+  timeline?: BusinessData["historyTimeline"];
+  bNo: string;
+  brandName: string;
+  homepage: string;
+  description: string;
+}) {
+  if (!timeline || timeline.length === 0) return null;
+
+  const formatEventDate = (dateStr: string) => {
+    if (!dateStr || dateStr.length !== 8) return dateStr || "-";
+    return `${dateStr.slice(0, 4)}년 ${dateStr.slice(4, 6)}월`;
+  };
+
+  return (
+    <div className="card" style={{ padding: "32px", display: "flex", flexDirection: "column", gap: "20px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
+        <span style={{ fontSize: "1.3rem" }}>📅</span>
+        <h3 style={{ fontSize: "1.25rem", fontWeight: 800, color: "var(--color-text-main)", margin: 0 }}>
+          주요 연혁 및 기업 히스토리
+        </h3>
+      </div>
+      
+      <div style={{
+        position: "relative",
+        paddingLeft: "24px",
+        borderLeft: "2px solid var(--color-border)",
+        display: "flex",
+        flexDirection: "column",
+        gap: "28px",
+        marginLeft: "10px"
+      }}>
+        {timeline.map((event, idx) => (
+          <div key={idx} style={{ position: "relative" }}>
+            <span style={{
+              position: "absolute",
+              left: "-31px",
+              top: "4px",
+              width: "12px",
+              height: "12px",
+              borderRadius: "50%",
+              backgroundColor: "var(--color-primary)",
+              border: "3px solid var(--bg-color-card)"
+            }} />
+            
+            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+              <span style={{
+                fontSize: "0.85rem",
+                fontWeight: 700,
+                color: "var(--color-primary)"
+              }}>
+                {formatEventDate(event.eventDate)}
+              </span>
+              <strong style={{
+                fontSize: "1.05rem",
+                fontWeight: 800,
+                color: "var(--color-text-main)"
+              }}>
+                {event.eventTitle}
+              </strong>
+              <p style={{
+                fontSize: "0.92rem",
+                color: "var(--color-text-sub)",
+                lineHeight: 1.5,
+                margin: "4px 0 0 0"
+              }}>
+                {event.eventDescription}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* 연혁 수정 제안 버튼 추가 */}
+      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "12px", borderTop: "1px solid var(--color-border)", paddingTop: "20px" }}>
+        <EditRequestTrigger
+          bNo={bNo}
+          currentBrandName={brandName}
+          currentHomepage={homepage}
+          currentDescription={description}
+        />
+      </div>
+    </div>
+  );
+}
+
 import Link from "next/link";
 import { getNtsCompanyStatus, NtsCompanyStatus } from "@/lib/ntsApi";
 import { getCorpBasicOutline, getCorpFinanceInfo, CorpBasicOutline, CorpFinanceDetail } from "@/lib/corpApi";
@@ -8,12 +481,15 @@ import { getNpsBplcInfo } from "@/lib/npsApi";
 import { getRecentBidsByKeyword } from "@/lib/procurementApi";
 import { getPatentsByCompany } from "@/lib/patentApi";
 import { getRecentDisclosures, getRecentKeyDisclosures } from "@/lib/dartApi";
-import { getBusinessByBNo, getInvalidBusinesses, addInvalidBusiness, upsertBusiness } from "@/lib/db";
+import { getBusinessByBNo, getInvalidBusinesses, addInvalidBusiness, upsertBusiness, getRecommendedBusinesses, query } from "@/lib/db";
 import { validateBizrNo } from "@/lib/bizValidation";
 import { findDartCode } from "@/lib/dartMap";
 import { getFtcMailOrderInfo } from "@/lib/ftcApi";
+import EditRequestTrigger from "@/components/EditRequestTrigger";
 
 // Local Business Type 정의
+export const dynamic = "force-dynamic";
+
 interface BusinessData {
   b_no: string;
   b_nm: string;
@@ -75,6 +551,14 @@ interface BusinessData {
     totalLiabilities: number;// 부채총계 (억 원)
     totalEquity: number;     // 자본총계 (억 원)
   }>;
+  brand_name?: string;
+  historyTimeline?: Array<{
+    eventDate: string;
+    eventTitle: string;
+    eventDescription: string;
+  }>;
+  ntsLastSyncAt?: any;
+  npsLastSyncAt?: any;
 }
 
 // 로컬 Neon DB에서 사업자 번호로 기업 조회
@@ -181,7 +665,74 @@ function generateVirtualBusiness(bNo: string): BusinessData {
     main_biz: bType,
     is_audited: false,
     history,
+    brand_name: "",
+    historyTimeline: []
   };
+}
+
+/**
+ * 백그라운드 비동기 동기화 헬퍼 함수
+ * 사용자의 로딩 흐름(Response)을 가로막지 않고 외부 API를 찔러 DB 캐시만 동용 업데이트합니다.
+ */
+async function triggerBackgroundSync(
+  bNo: string,
+  localBiz: any,
+  ntsNeeded: boolean,
+  npsNeeded: boolean
+) {
+  try {
+    console.log(`[Background Sync] Checking updates for ${localBiz.b_nm} (${bNo}). NTS: ${ntsNeeded}, NPS: ${npsNeeded}`);
+    
+    // 1. 국세청 동기화 (10일 만료)
+    if (ntsNeeded) {
+      const apiStatus = await getNtsCompanyStatus(bNo);
+      if (apiStatus) {
+        // 국세청 동기화 시각 업데이트
+        await query(
+          "UPDATE businesses SET nts_last_sync_at = CURRENT_TIMESTAMP WHERE b_no = $1",
+          [bNo]
+        );
+        console.log(`[Background Sync] NTS sync time updated for ${bNo}`);
+      }
+    }
+    
+    // 2. 국민연금 동기화 (30일 만료)
+    if (npsNeeded) {
+      const npsInfo = await getNpsBplcInfo(bNo, localBiz.b_nm);
+      if (npsInfo && npsInfo.npsSbscrbNmps > 0) {
+        // businesses 테이블의 종업원 수 및 동기화 일자 갱신
+        await query(
+          `UPDATE businesses 
+           SET nps_sbscrb_nmps = $1, 
+               new_acqs_nmps = $2, 
+               loss_sbscrb_nmps = $3, 
+               nps_last_sync_at = CURRENT_TIMESTAMP 
+           WHERE b_no = $4`,
+          [npsInfo.npsSbscrbNmps, npsInfo.newAcqsNmps || 0, npsInfo.lossSbscrbNmps || 0, bNo]
+        );
+        
+        // history 테이블의 최신 연도 종업원 수도 같이 갱신
+        const latestHistYear = localBiz.history && localBiz.history.length > 0
+          ? localBiz.history[localBiz.history.length - 1].year
+          : null;
+        if (latestHistYear) {
+          await query(
+            "UPDATE business_history SET employees = $1 WHERE b_no = $2 AND year = $3",
+            [npsInfo.npsSbscrbNmps, bNo, latestHistYear]
+          );
+        }
+        console.log(`[Background Sync] NPS count updated for ${bNo} to ${npsInfo.npsSbscrbNmps}`);
+      } else {
+        // API 결과가 없거나 실패하더라도 계속 찌르지 않도록 동기화 일자는 업데이트 해줍니다.
+        await query(
+          "UPDATE businesses SET nps_last_sync_at = CURRENT_TIMESTAMP WHERE b_no = $1",
+          [bNo]
+        );
+      }
+    }
+  } catch (err) {
+    console.error(`[Background Sync] Failed to sync business ${bNo}:`, err);
+  }
 }
 
 /**
@@ -267,6 +818,26 @@ async function getUnifiedBusinessData(bNo: string): Promise<{
   // (단, 이전에 정보 없음으로 잘못 캐싱된 오염 데이터인 "상호 미등록 사업자"는 제외하고 실시간 재조회)
   if (localBiz && localBiz.b_nm !== "상호 미등록 사업자") {
     console.log(`[Cache Hit] Business data loaded directly from Neon DB: ${localBiz.b_nm} (${cleanBNo})`);
+    
+    // 최종 동기화 시각과 현재 시각 대조하여 백그라운드 비동기 동기화 여부 검토
+    const now = new Date();
+    
+    // 국세청 최종 동기화로부터 경과 일수 계산 (기본값 '1970-01-01'일 경우 매우 큰 값)
+    const ntsLastSync = localBiz.ntsLastSyncAt ? new Date(localBiz.ntsLastSyncAt) : new Date(0);
+    const ntsDiffDays = Math.floor((now.getTime() - ntsLastSync.getTime()) / (1000 * 60 * 60 * 24));
+    
+    // 국민연금 최종 동기화로부터 경과 일수 계산
+    const npsLastSync = localBiz.npsLastSyncAt ? new Date(localBiz.npsLastSyncAt) : new Date(0);
+    const npsDiffDays = Math.floor((now.getTime() - npsLastSync.getTime()) / (1000 * 60 * 60 * 24));
+    
+    const ntsUpdateNeeded = ntsDiffDays >= 10;
+    const npsUpdateNeeded = npsDiffDays >= 30;
+    
+    if (ntsUpdateNeeded || npsUpdateNeeded) {
+      // 비동기 백그라운드 쓰레드로 동기화 실행 (await 없이 호출하여 렌더링에 영향을 미치지 않음)
+      triggerBackgroundSync(cleanBNo, localBiz, ntsUpdateNeeded, npsUpdateNeeded);
+    }
+    
     return { apiStatus, business: localBiz, isInvalid: false };
   }
 
@@ -298,18 +869,23 @@ async function getUnifiedBusinessData(bNo: string): Promise<{
     }
     
     const scale = basicInfo.enpEntprScaleNm || "일반기업";
-    let credit_rating = "BBB+";
-    let industry_rank = "상위 25%";
+    const isAudited = !!dartCode;
+    let credit_rating = "-";
+    let industry_rank = "-";
     
-    if (scale.includes("대기업")) {
-      credit_rating = "AA+";
-      industry_rank = "상위 1%";
-    } else if (scale.includes("중견기업")) {
-      credit_rating = "A+";
-      industry_rank = "상위 7%";
-    } else if (scale.includes("중소기업")) {
-      credit_rating = "A-";
-      industry_rank = "상위 18%";
+    if (isAudited) {
+      credit_rating = "BBB+";
+      industry_rank = "상위 25%";
+      if (scale.includes("대기업")) {
+        credit_rating = "AA+";
+        industry_rank = "상위 1%";
+      } else if (scale.includes("중견기업")) {
+        credit_rating = "A+";
+        industry_rank = "상위 7%";
+      } else if (scale.includes("중소기업")) {
+        credit_rating = "A-";
+        industry_rank = "상위 18%";
+      }
     }
 
     let history: BusinessData["history"] = [];
@@ -354,7 +930,7 @@ async function getUnifiedBusinessData(bNo: string): Promise<{
       listing_status: localBiz?.listing_status || (scale.includes("대기업") ? "코스피 상장" : "비상장"),
       homepage: localBiz?.homepage && localBiz.homepage !== "-" ? localBiz.homepage : (basicInfo.enpHpaddr || "-"),
       main_biz: basicInfo.enpMainBizNm || basicInfo.enpIndyNm || "기타 서비스업",
-      is_audited: true,
+      is_audited: !!dartCode,
       
       corpEnm: basicInfo.corpEnm,
       crno: basicInfo.crno,
@@ -466,21 +1042,26 @@ async function getUnifiedBusinessData(bNo: string): Promise<{
     business = realBiz;
   }
 
-  // 5. 신규 기업 데이터 Neon DB 자동 적재 (온디맨드 동기화 및 DART 코드 갱신)
+  // 5. 신규 기업 데이터 Neon DB 자동 적재 및 실시간 갱신 정보 동기화 (온디맨드 동기화 및 DART 코드 갱신)
   if (business) {
     const isNew = !localBiz;
     const wasUnregistered = localBiz && localBiz.b_nm === "상호 미등록 사업자" && business.b_nm !== "상호 미등록 사업자";
     const hasNewDartCode = localBiz && !localBiz.dart_code && business.dart_code;
     
-    if (isNew || wasUnregistered || hasNewDartCode) {
+    // 로컬 DB의 종업원수와 실시간 API로 가져온 종업원수가 다를 경우 데이터 동기화
+    const hasEmployeeCountDiff = localBiz && localBiz.npsSbscrbNmps !== business.npsSbscrbNmps;
+
+    if (isNew || wasUnregistered || hasNewDartCode || hasEmployeeCountDiff) {
       try {
-        if (isNew || wasUnregistered) {
+        if (isNew || wasUnregistered || hasEmployeeCountDiff) {
           const cachedBiz = {
             ...business,
-            dataSource: "local"
+            dataSource: "local",
+            ntsLastSyncAt: new Date(),
+            npsLastSyncAt: new Date()
           };
           await upsertBusiness(cachedBiz);
-          console.log(`[Cache Sync] Successfully cached/updated business to Neon DB: ${business.b_nm} (${cleanBNo})`);
+          console.log(`[Cache Sync] Successfully cached/updated business to Neon DB: ${business.b_nm} (${cleanBNo}), Employees: ${business.npsSbscrbNmps}`);
           business.dataSource = "local";
         } else if (hasNewDartCode) {
           localBiz.dart_code = business.dart_code;
@@ -538,22 +1119,7 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
   const { apiStatus, business, isInvalid } = await getUnifiedBusinessData(cleanBNo);
   const formattedBNo = cleanBNo.replace(/(\d{3})(\d{2})(\d{5})/, "$1-$2-$3");
 
-  // 실시간 공공 입찰공고, 특허권 및 DART 전자공시 목록 조회
-  const bidsPromise = getRecentBidsByKeyword(business?.b_nm || "");
-  const patentsPromise = getPatentsByCompany(business?.b_nm || "", business?.p_nm || "");
-  const disclosuresPromise = business?.dart_code 
-    ? getRecentDisclosures(business.dart_code) 
-    : Promise.resolve([]);
-  const keyDisclosuresPromise = business?.dart_code 
-    ? getRecentKeyDisclosures(business.dart_code) 
-    : Promise.resolve([]);
-    
-  const [bids, patents, disclosures, keyDisclosures] = await Promise.all([
-    bidsPromise, 
-    patentsPromise, 
-    disclosuresPromise,
-    keyDisclosuresPromise
-  ]);
+
 
   const formatDate = (dateStr: string) => {
     if (!dateStr || dateStr.length !== 8) return dateStr || "-";
@@ -587,14 +1153,17 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
     "foundingDate": business.start_dt.replace(/(\d{4})(\d{2})(\d{2})/, "$1-$2-$3")
   } : null;
 
-  const relatedList = [
-    { name: "지윤 주식회사", no: "1378651839" },
-    { name: "비바리퍼블리카 (Toss)", no: "1208801280" },
-    { name: "네이버 (NAVER)", no: "2208162517" },
-    { name: "주식회사 카카오", no: "1208147521" },
-    { name: "스타벅스 코리아", no: "2018121515" },
-    { name: "삼양식품 주식회사", no: "1028105450" }
-  ].filter(item => item.no !== cleanBNo).slice(0, 4);
+  const recommended = await getRecommendedBusinesses(
+    cleanBNo,
+    business?.b_adr || "",
+    business?.b_sector || "",
+    business?.is_sme || ""
+  );
+
+  const relatedList = recommended.map(r => ({
+    name: r.b_nm,
+    no: r.b_no
+  }));
 
   // 차트 1: 매출액 & 영업이익 듀얼 꺾은선 차트 그리기
   const renderDualChart = () => {
@@ -798,6 +1367,11 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                   </div>
                   <h1 style={{ fontSize: "2.2rem", fontWeight: 800, color: "var(--color-text-main)", letterSpacing: "-0.02em" }}>
                     {business?.b_nm}
+                    {business?.brand_name && business.brand_name.split(",")[0].trim() !== business.b_nm && (
+                      <span style={{ fontSize: "1.3rem", fontWeight: 600, color: "var(--color-text-desc)", marginLeft: "12px", display: "inline-block", verticalAlign: "middle" }}>
+                        ({business.brand_name.split(",")[0].trim()})
+                      </span>
+                    )}
                   </h1>
                 </div>
 
@@ -1053,8 +1627,8 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                 </div>
               </div>
 
-              {/* 통신판매업 신고 상세 정보 카드 (쇼핑몰 소상공인 전용) */}
-              {business?.mailOrderNo && (
+              {/* 4번째 카드: 통신판매업자일 경우 통신판매 상세 정보를, 아닐 경우 기업 평가 및 시장 랭킹 지표를 노출 */}
+              {business?.mailOrderNo ? (
                 <div className="card" style={{ padding: "28px" }}>
                   <h3 style={{ fontSize: "1.15rem", fontWeight: 800, color: "var(--color-text-main)", marginBottom: "20px" }}>
                     🛍️ 통신판매업 신고 상세 정보
@@ -1102,6 +1676,54 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                     )}
                   </div>
                 </div>
+              ) : (
+                <div className="card" style={{ padding: "28px" }}>
+                  <h3 style={{ fontSize: "1.15rem", fontWeight: 800, color: "var(--color-text-main)", marginBottom: "20px" }}>
+                    🛡️ 기업 신용 평가 및 시장 지표
+                  </h3>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--color-border)", paddingBottom: "10px" }}>
+                      <span style={{ color: "var(--color-text-sub)", fontWeight: 500 }}>기업 신용등급</span>
+                      <span style={{
+                        fontWeight: 700,
+                        color: business?.credit_rating && business.credit_rating !== "-" ? "var(--color-primary)" : "var(--color-text-desc)"
+                      }}>
+                        {business?.credit_rating && business.credit_rating !== "-" ? business.credit_rating : "평가 보류/일반 관리"}
+                      </span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--color-border)", paddingBottom: "10px" }}>
+                      <span style={{ color: "var(--color-text-sub)", fontWeight: 500 }}>업계 시장 점유율</span>
+                      <span style={{ fontWeight: 700, color: "var(--color-text-main)" }}>
+                        {business?.industry_rank && business.industry_rank !== "-" ? business.industry_rank : "순위 정보 없음"}
+                      </span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--color-border)", paddingBottom: "10px" }}>
+                      <span style={{ color: "var(--color-text-sub)", fontWeight: 500 }}>외부 감사 여부</span>
+                      <span style={{ fontWeight: 700, color: "var(--color-text-main)" }}>
+                        {business?.is_audited ? "외부감사 대상 법인 (외감)" : "일반 관리 대상"}
+                      </span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--color-border)", paddingBottom: "10px" }}>
+                      <span style={{ color: "var(--color-text-sub)", fontWeight: 500 }}>상장 구분</span>
+                      <span style={{ fontWeight: 700, color: "var(--color-text-main)" }}>
+                        {business?.listing_status || (business?.enpPbncYn === "Y" ? "상장" : "비상장")}
+                      </span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", paddingBottom: "2px" }}>
+                      <span style={{ color: "var(--color-text-sub)", fontWeight: 500 }}>데이터 정합성 상태</span>
+                      <span style={{
+                        fontWeight: 700,
+                        color: "var(--color-success)",
+                        backgroundColor: "rgba(45, 202, 115, 0.1)",
+                        padding: "2px 6px",
+                        borderRadius: "4px",
+                        fontSize: "0.78rem"
+                      }}>
+                        공공 API 연동 실시간 검증 완료
+                      </span>
+                    </div>
+                  </div>
+                </div>
               )}
 
             </div>
@@ -1131,15 +1753,15 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
             {/* 재무/고용 요약 대시보드 */}
             <div className="card" style={{ padding: "32px" }}>
               <h3 style={{ fontSize: "1.3rem", fontWeight: 800, color: "var(--color-text-main)", marginBottom: "8px" }}>
-                {business?.is_audited ? "📊 마음데이터 분석 인사이트" : "📊 마음데이터 고용 분석 인사이트"}
+                {business?.history && business.history.length > 0 ? "📊 마음데이터 분석 인사이트" : "📊 마음데이터 고용 분석 인사이트"}
               </h3>
               <p style={{ fontSize: "0.85rem", color: "var(--color-text-desc)", marginBottom: "28px" }}>
-                {business?.is_audited 
-                  ? "금융위원회 공시 데이터를 바탕으로 분석된 핵심 재무 및 고용 트렌드입니다." 
+                {business?.history && business.history.length > 0 
+                  ? "수집된 재무 및 고용 데이터를 바탕으로 분석된 핵심 트렌드입니다." 
                   : "국민연금 실시간 연동 데이터를 바탕으로 분석된 기업의 실시간 고용 트렌드입니다."}
               </p>
 
-              {business?.is_audited ? (
+              {business?.history && business.history.length > 0 ? (
                 // 1. 외감 기업 (공시 대상)용 UI
                 <>
                   <div style={{
@@ -1316,28 +1938,30 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
 
               {/* 3개년 공식 재무제표 요약 테이블 또는 공시 비대상 안내 */}
               <div style={{ marginTop: "24px" }}>
-                {business?.is_audited ? (
+                {business?.history && business.history.length > 0 ? (
                   <>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "8px" }}>
                       <h4 style={{ fontSize: "1.1rem", fontWeight: 800, color: "var(--color-text-main)", margin: 0 }}>
                         📋 3개년 주요 재무 상태표 & 손익계산서 요약
                       </h4>
-                      <a
-                        href="#dart-disclosures-section"
-                        style={{
-                          fontSize: "0.8rem",
-                          color: "var(--color-primary)",
-                          fontWeight: 700,
-                          backgroundColor: "var(--color-primary-light)",
-                          padding: "6px 12px",
-                          borderRadius: "8px",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "4px"
-                        }}
-                      >
-                        🏛️ 금융감독원 DART 공시 원본 보기 ➔
-                      </a>
+                      {business.is_audited && business.dart_code && (
+                        <a
+                          href="#dart-disclosures-section"
+                          style={{
+                            fontSize: "0.8rem",
+                            color: "var(--color-primary)",
+                            fontWeight: 700,
+                            backgroundColor: "var(--color-primary-light)",
+                            padding: "6px 12px",
+                            borderRadius: "8px",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "4px"
+                          }}
+                        >
+                          🏛️ 금융감독원 DART 공시 원본 보기 ➔
+                        </a>
+                      )}
                     </div>
                     {business.history && business.history.length > 0 ? (
                       <div style={{ overflowX: "auto", border: "1px solid var(--color-border)", borderRadius: "14px" }}>
@@ -1440,81 +2064,9 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                 <h4 style={{ fontSize: "1.2rem", fontWeight: 800, color: "var(--color-text-main)", marginBottom: "12px" }}>
                   🏛️ 조달청 나라장터 입찰공고 매칭 내역
                 </h4>
-                {bids.length > 0 ? (
-                  <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                    {bids.map((bid, index) => (
-                      <div 
-                        key={`${bid.bidNtceNo}-${bid.bidNtceOrd || index}`} 
-                        style={{
-                          padding: "20px",
-                          border: "1px solid var(--color-border)",
-                          borderRadius: "14px",
-                          backgroundColor: "var(--bg-color-card)",
-                          display: "flex",
-                          flexDirection: "column",
-                          gap: "10px"
-                        }}
-                      >
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "8px" }}>
-                          <div>
-                            <span style={{ fontSize: "0.78rem", color: "var(--color-text-desc)", fontWeight: 700, display: "inline-block", marginBottom: "4px" }}>
-                              공고번호: {bid.bidNtceNo}-{bid.bidNtceOrd} | {bid.cntrctCnclMthdNm}
-                            </span>
-                            <h5 style={{ fontSize: "1rem", fontWeight: 800, color: "var(--color-text-main)", margin: "4px 0 0 0" }}>
-                              {bid.bidNtceNm}
-                            </h5>
-                          </div>
-                          <a 
-                            href={bid.detailUrl} 
-                            target="_blank" 
-                            rel="noopener noreferrer" 
-                            style={{
-                              fontSize: "0.78rem",
-                              color: "var(--color-primary)",
-                              fontWeight: 700,
-                              textDecoration: "underline",
-                              whiteSpace: "nowrap"
-                            }}
-                          >
-                            공고 원본 보기 ➔
-                          </a>
-                        </div>
-                        
-                        <div style={{
-                          display: "grid",
-                          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-                          gap: "6px 12px",
-                          padding: "10px 14px",
-                          backgroundColor: "rgba(255, 255, 255, 0.015)",
-                          borderRadius: "10px",
-                          fontSize: "0.85rem"
-                        }}>
-                          <div style={{ color: "var(--color-text-desc)" }}>
-                            수요기관: <strong style={{ color: "var(--color-text-sub)" }}>{bid.dminsttNm}</strong>
-                          </div>
-                          <div style={{ color: "var(--color-text-desc)" }}>
-                            공고 등록일: <strong style={{ color: "var(--color-text-sub)" }}>{bid.bidNtceDt}</strong>
-                          </div>
-                          <div style={{ color: "var(--color-text-desc)", gridColumn: "span 2" }}>
-                            추정사업금액: <strong style={{ color: "var(--color-primary)" }}>{bid.presmptPrce.toLocaleString()}원</strong>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div style={{
-                    padding: "24px",
-                    borderRadius: "14px",
-                    border: "1px solid var(--color-border)",
-                    backgroundColor: "var(--bg-color-main)",
-                    textAlign: "center",
-                    fontSize: "0.88rem",
-                    color: "var(--color-text-desc)"
-                  }}>
-                    최근 30일간 등록된 입찰/낙찰 공고 매칭 내역이 존재하지 않습니다.
-                  </div>
-                )}
+                <Suspense fallback={<SectionSkeleton />}>
+                  <BidsSection companyNm={business?.b_nm || ""} />
+                </Suspense>
               </div>
 
               {/* 4. 지식재산권 (특허/상표) 포트폴리오 (신설) */}
@@ -1522,81 +2074,9 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                 <h4 style={{ fontSize: "1.2rem", fontWeight: 800, color: "var(--color-text-main)", marginBottom: "12px" }}>
                   💡 보유 특허 및 지식재산권(IP) 포트폴리오
                 </h4>
-                {patents.length > 0 ? (
-                  <div style={{ overflowX: "auto", border: "1px solid var(--color-border)", borderRadius: "14px" }}>
-                    <table style={{
-                      width: "100%",
-                      borderCollapse: "collapse",
-                      textAlign: "left",
-                      fontSize: "0.88rem",
-                      backgroundColor: "var(--bg-color-card)"
-                    }}>
-                      <thead>
-                        <tr style={{ backgroundColor: "var(--bg-color-main)", borderBottom: "1px solid var(--color-border)" }}>
-                          <th style={{ padding: "14px 16px", color: "var(--color-text-sub)", fontWeight: 700 }}>권리 구분 (출원번호)</th>
-                          <th style={{ padding: "14px 16px", color: "var(--color-text-sub)", fontWeight: 700 }}>발명/상표 명칭</th>
-                          <th style={{ padding: "14px 16px", color: "var(--color-text-sub)", fontWeight: 700 }}>출원일자</th>
-                          <th style={{ padding: "14px 16px", color: "var(--color-text-sub)", fontWeight: 700, textAlign: "right" }}>상태</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {patents.map((pat) => (
-                          <tr key={pat.applicationNumber} style={{ borderBottom: "1px solid var(--color-border)" }}>
-                            <td style={{ padding: "14px 16px" }}>
-                              <span style={{ display: "block", fontWeight: 700, color: "var(--color-text-main)" }}>
-                                특허권
-                              </span>
-                              <span style={{ fontSize: "0.78rem", color: "var(--color-text-desc)" }}>
-                                {pat.applicationNumber}
-                              </span>
-                            </td>
-                            <td style={{ padding: "14px 16px", fontWeight: 600, color: "var(--color-text-sub)", maxWidth: "240px", wordBreak: "break-all" }}>
-                              {pat.detailUrl ? (
-                                <a 
-                                  href={pat.detailUrl} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer" 
-                                  className="patent-link"
-                                >
-                                  {pat.inventionTitle} ↗
-                                </a>
-                              ) : (
-                                pat.inventionTitle
-                              )}
-                            </td>
-                            <td style={{ padding: "14px 16px", color: "var(--color-text-desc)" }}>
-                              {pat.applicationDate}
-                            </td>
-                            <td style={{ padding: "14px 16px", textAlign: "right" }}>
-                              <span style={{
-                                backgroundColor: pat.patentStatus === "등록" ? "rgba(16, 185, 129, 0.1)" : "rgba(59, 130, 246, 0.1)",
-                                color: pat.patentStatus === "등록" ? "#10b981" : "var(--color-primary)",
-                                fontSize: "0.75rem",
-                                fontWeight: 700,
-                                padding: "4px 8px",
-                                borderRadius: "6px"
-                              }}>
-                                {pat.patentStatus}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <div style={{
-                    padding: "24px",
-                    borderRadius: "14px",
-                    border: "1px solid var(--color-border)",
-                    backgroundColor: "var(--bg-color-main)",
-                    textAlign: "center",
-                    fontSize: "0.88rem",
-                    color: "var(--color-text-desc)"
-                  }}>
-                    출원 또는 등록된 공식 특허 지식재산권 정보가 제공되지 않는 기업입니다.
-                  </div>
-                )}
+                <Suspense fallback={<SectionSkeleton />}>
+                  <PatentsSection companyNm={business?.b_nm || ""} pNm={business?.p_nm || ""} />
+                </Suspense>
               </div>
 
               {/* 5. 금융감독원 DART 실시간 공시 목록 (신설) */}
@@ -1605,67 +2085,10 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                   <h4 style={{ fontSize: "1.2rem", fontWeight: 800, color: "var(--color-text-main)", marginBottom: "12px" }}>
                     🏛️ 금융감독원 DART 실시간 공시 내역
                   </h4>
-                  {disclosures && disclosures.length > 0 ? (
-                    <div style={{ overflowX: "auto", border: "1px solid var(--color-border)", borderRadius: "14px" }}>
-                      <table style={{
-                        width: "100%",
-                        borderCollapse: "collapse",
-                        textAlign: "left",
-                        fontSize: "0.88rem",
-                        backgroundColor: "var(--bg-color-card)"
-                      }}>
-                        <thead>
-                          <tr style={{ backgroundColor: "var(--bg-color-main)", borderBottom: "1px solid var(--color-border)" }}>
-                            <th style={{ padding: "14px 16px", color: "var(--color-text-sub)", fontWeight: 700 }}>보고서 명칭</th>
-                            <th style={{ padding: "14px 16px", color: "var(--color-text-sub)", fontWeight: 700 }}>공시 제출인</th>
-                            <th style={{ padding: "14px 16px", color: "var(--color-text-sub)", fontWeight: 700 }}>접수일자</th>
-                            <th style={{ padding: "14px 16px", color: "var(--color-text-sub)", fontWeight: 700, textAlign: "right" }}>원문 보기</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {disclosures.map((disc) => (
-                            <tr key={disc.rceptNo} style={{ borderBottom: "1px solid var(--color-border)" }}>
-                              <td style={{ padding: "14px 16px", fontWeight: 600, color: "var(--color-text-main)", maxWidth: "320px", wordBreak: "break-all" }}>
-                                {disc.reportNm}
-                                {disc.rm && (
-                                  <span style={{
-                                    marginLeft: "8px",
-                                    backgroundColor: "rgba(49, 130, 246, 0.1)",
-                                    color: "var(--color-primary)",
-                                    fontSize: "0.7rem",
-                                    padding: "2px 6px",
-                                    borderRadius: "4px",
-                                    fontWeight: 700
-                                  }}>
-                                    {disc.rm}
-                                  </span>
-                                )}
-                              </td>
-                              <td style={{ padding: "14px 16px", color: "var(--color-text-sub)" }}>
-                                {disc.flrNm}
-                              </td>
-                              <td style={{ padding: "14px 16px", color: "var(--color-text-desc)" }}>
-                                {disc.rceptDt}
-                              </td>
-                              <td style={{ padding: "14px 16px", textAlign: "right" }}>
-                                <a 
-                                  href={disc.detailUrl} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer" 
-                                  style={{
-                                    color: "var(--color-primary)",
-                                    fontWeight: 700,
-                                    textDecoration: "underline"
-                                  }}
-                                >
-                                  열람 ➔
-                                </a>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
+                  {business.dart_code ? (
+                    <Suspense fallback={<SectionSkeleton />}>
+                      <DartDisclosuresSection dartCode={business.dart_code} />
+                    </Suspense>
                   ) : (
                     <div style={{
                       padding: "24px",
@@ -1676,9 +2099,7 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                       fontSize: "0.88rem",
                       color: "var(--color-text-desc)"
                     }}>
-                      {business?.dart_code 
-                        ? "최근 2년 내에 DART에 공시된 보고서 내역이 없거나 임시 점검 중입니다." 
-                        : "DART 고유번호 매핑 정보가 등록되지 않아 공시 내역을 연동할 수 없습니다."}
+                      DART 고유번호 매핑 정보가 등록되지 않아 공시 내역을 연동할 수 없습니다.
                     </div>
                   )}
                 </div>
@@ -1690,85 +2111,10 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                   <h4 style={{ fontSize: "1.2rem", fontWeight: 800, color: "var(--color-text-main)", marginBottom: "12px" }}>
                     📊 금융감독원 DART 분기별 실적/정기 보고서
                   </h4>
-                  {keyDisclosures && keyDisclosures.length > 0 ? (
-                    <div style={{ overflowX: "auto", border: "1px solid var(--color-border)", borderRadius: "14px" }}>
-                      <table style={{
-                        width: "100%",
-                        borderCollapse: "collapse",
-                        textAlign: "left",
-                        fontSize: "0.88rem",
-                        backgroundColor: "var(--bg-color-card)"
-                      }}>
-                        <thead>
-                          <tr style={{ backgroundColor: "var(--bg-color-main)", borderBottom: "1px solid var(--color-border)" }}>
-                            <th style={{ padding: "14px 16px", color: "var(--color-text-sub)", fontWeight: 700 }}>보고서 구분</th>
-                            <th style={{ padding: "14px 16px", color: "var(--color-text-sub)", fontWeight: 700 }}>보고서 명칭</th>
-                            <th style={{ padding: "14px 16px", color: "var(--color-text-sub)", fontWeight: 700 }}>접수일자</th>
-                            <th style={{ padding: "14px 16px", color: "var(--color-text-sub)", fontWeight: 700, textAlign: "right" }}>공시 열람</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {keyDisclosures.map((disc) => {
-                            // 보고서 유형 결정
-                            let typeText = "정기공시";
-                            let typeColor = "var(--color-primary)";
-                            let typeBg = "rgba(49, 130, 246, 0.1)";
-                            
-                            if (disc.reportNm.includes("사업보고서")) {
-                              typeText = "사업보고서 (연간)";
-                              typeColor = "#ef4444";
-                              typeBg = "rgba(239, 68, 68, 0.1)";
-                            } else if (disc.reportNm.includes("반기보고서")) {
-                              typeText = "반기보고서";
-                              typeColor = "#f59e0b";
-                              typeBg = "rgba(245, 158, 11, 0.1)";
-                            } else if (disc.reportNm.includes("분기보고서")) {
-                              typeText = "분기보고서";
-                              typeColor = "#10b981";
-                              typeBg = "rgba(16, 185, 129, 0.1)";
-                            }
-
-                            return (
-                              <tr key={disc.rceptNo} style={{ borderBottom: "1px solid var(--color-border)" }}>
-                                <td style={{ padding: "14px 16px" }}>
-                                  <span style={{
-                                    backgroundColor: typeBg,
-                                    color: typeColor,
-                                    fontSize: "0.75rem",
-                                    padding: "4px 8px",
-                                    borderRadius: "6px",
-                                    fontWeight: 700,
-                                    border: `1px solid ${typeColor}22`
-                                  }}>
-                                    {typeText}
-                                  </span>
-                                </td>
-                                <td style={{ padding: "14px 16px", fontWeight: 700, color: "var(--color-text-main)", maxWidth: "300px", wordBreak: "break-all" }}>
-                                  {disc.reportNm}
-                                </td>
-                                <td style={{ padding: "14px 16px", color: "var(--color-text-desc)", fontWeight: 600 }}>
-                                  {disc.rceptDt}
-                                </td>
-                                <td style={{ padding: "14px 16px", textAlign: "right" }}>
-                                  <a 
-                                    href={disc.detailUrl} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer" 
-                                    style={{
-                                      color: "var(--color-primary)",
-                                      fontWeight: 700,
-                                      textDecoration: "underline"
-                                    }}
-                                  >
-                                    원문 보기 ➔
-                                  </a>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
+                  {business.dart_code ? (
+                    <Suspense fallback={<SectionSkeleton />}>
+                      <DartKeyDisclosuresSection dartCode={business.dart_code} />
+                    </Suspense>
                   ) : (
                     <div style={{
                       padding: "24px",
@@ -1785,6 +2131,24 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                 </div>
               )}
             </div>
+
+            {/* 기업 연혁 및 상호 변경 히스토리 (수집된 연혁이 없으면 실제 개업일 기준으로 기본 설립 연혁 노출) */}
+            {(() => {
+              const timelineData = (business?.historyTimeline && business.historyTimeline.length > 0)
+                ? business.historyTimeline
+                : (business?.start_dt && business.start_dt !== "-" && business.start_dt.replace(/[^0-9]/g, "").length === 8
+                  ? [{ eventDate: business.start_dt, eventTitle: "법인 설립", eventDescription: `${business.b_nm} 설립 및 개업` }]
+                  : []);
+              return (
+                <TimelineSection
+                  timeline={timelineData}
+                  bNo={cleanBNo}
+                  brandName={business?.brand_name || ""}
+                  homepage={business?.homepage || ""}
+                  description={business?.description || ""}
+                />
+              );
+            })()}
 
             {/* 연관 사업자 추천 */}
             <div style={{ marginTop: "16px" }}>

@@ -36,6 +36,14 @@ export async function getBusinessByBNo(bNo: string) {
 
   const business = bizResult.rows[0];
   
+  // 조회수 및 실시간 로그 증가 (비동기 수행하여 응답 속도 영향 방지)
+  Promise.all([
+    query("UPDATE businesses SET view_count = view_count + 1 WHERE b_no = $1", [clean]),
+    query("INSERT INTO business_view_logs (b_no) VALUES ($1)", [clean])
+  ]).catch(err => {
+    console.error("Failed to record view metrics:", err);
+  });
+  
   // 1:N 연도별 이력 조회
   const histResult = await query(
     `SELECT year, revenue, operating_income as "operatingIncome", net_income as "netIncome", 
@@ -44,6 +52,15 @@ export async function getBusinessByBNo(bNo: string) {
      FROM business_history 
      WHERE b_no = $1 
      ORDER BY year ASC`,
+    [clean]
+  );
+
+  // 1:N 타임라인 연혁 조회
+  const timelineResult = await query(
+    `SELECT event_date as "eventDate", event_title as "eventTitle", event_description as "eventDescription"
+     FROM business_timeline
+     WHERE b_no = $1
+     ORDER BY event_date DESC`,
     [clean]
   );
 
@@ -85,6 +102,14 @@ export async function getBusinessByBNo(bNo: string) {
     newAcqsNmps: business.new_acqs_nmps || 0,
     lossSbscrbNmps: business.loss_sbscrb_nmps || 0,
     telNo: business.tel_no || "",
+    brand_name: business.brand_name || "",
+    ntsLastSyncAt: business.nts_last_sync_at,
+    npsLastSyncAt: business.nps_last_sync_at,
+    historyTimeline: timelineResult.rows.map((r: any) => ({
+      eventDate: r.eventDate,
+      eventTitle: r.eventTitle,
+      eventDescription: r.eventDescription
+    })),
     history: histResult.rows.map((r: any) => ({
       year: r.year,
       revenue: parseInt(r.revenue || "0", 10),
@@ -118,9 +143,9 @@ export async function searchBusinesses(q: string) {
   const searchWord = `%${q}%`;
   const cleanQ = q.replace(/[^0-9]/g, "");
   const result = await query(
-    `SELECT b_no, b_nm, p_nm, b_adr, b_sector, is_sme, listing_status, data_source 
+    `SELECT b_no, b_nm, p_nm, b_adr, b_sector, is_sme, listing_status, data_source, brand_name 
      FROM businesses 
-     WHERE b_nm LIKE $1 OR p_nm LIKE $1 OR b_adr LIKE $1 OR b_no = $2`,
+     WHERE b_nm LIKE $1 OR p_nm LIKE $1 OR b_adr LIKE $1 OR brand_name LIKE $1 OR b_no = $2`,
     [searchWord, cleanQ || "NOT_A_NUMBER"]
   );
   return result.rows.map((row) => ({
@@ -132,13 +157,32 @@ export async function searchBusinesses(q: string) {
     is_sme: row.is_sme,
     listing_status: row.listing_status,
     dataSource: row.data_source || "local",
+    brand_name: row.brand_name || "",
   }));
+}
+
+// 상호명 정규화 필터 (법인 수식어 제거)
+function extractCoreBrand(name: string): string {
+  if (!name) return "";
+  return name
+    .replace(/\(.*?\)/g, "")
+    .replace(/주식회사/g, "")
+    .replace(/\(주\)/g, "")
+    .replace(/（주）/g, "")
+    .replace(/\(유\)/g, "")
+    .replace(/유한회사/g, "")
+    .replace(/\(사\)/g, "")
+    .replace(/사단법인/g, "")
+    .trim();
 }
 
 // 4. 기업 정보 등록/수정 (DART 및 API 크롤링 캐시용)
 export async function upsertBusiness(biz: any) {
   const clean = biz.b_no.replace(/[^0-9]/g, "");
   
+  const core = extractCoreBrand(biz.b_nm);
+  const brandVal = biz.brandName || biz.brand_name || (core ? `${core}, ${biz.b_nm}` : biz.b_nm);
+
   // 1. Main Business upsert
   await query(`
     INSERT INTO businesses (
@@ -147,10 +191,11 @@ export async function upsertBusiness(biz: any) {
       is_audited, nps_sbscrb_nmps, nps_linked, corp_enm, crno, enp_tlno, enp_fxno, enp_pncd,
       enp_stac_nm, enp_main_biz_nm, data_source,
       mail_order_no, declare_org, goods_type, sell_type, close_date, rep_email, zip_cd,
-      new_acqs_nmps, loss_sbscrb_nmps, tel_no
+      new_acqs_nmps, loss_sbscrb_nmps, tel_no, brand_name,
+      nts_last_sync_at, nps_last_sync_at
     ) VALUES (
       $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27,
-      $28, $29, $30, $31, $32, $33, $34, $35, $36, $37
+      $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, $40
     ) ON CONFLICT (b_no) DO UPDATE SET
       b_nm = EXCLUDED.b_nm,
       p_nm = EXCLUDED.p_nm,
@@ -187,7 +232,10 @@ export async function upsertBusiness(biz: any) {
       zip_cd = EXCLUDED.zip_cd,
       new_acqs_nmps = EXCLUDED.new_acqs_nmps,
       loss_sbscrb_nmps = EXCLUDED.loss_sbscrb_nmps,
-      tel_no = EXCLUDED.tel_no
+      tel_no = EXCLUDED.tel_no,
+      brand_name = EXCLUDED.brand_name,
+      nts_last_sync_at = COALESCE(EXCLUDED.nts_last_sync_at, businesses.nts_last_sync_at),
+      nps_last_sync_at = COALESCE(EXCLUDED.nps_last_sync_at, businesses.nps_last_sync_at)
   `, [
     clean, biz.b_nm, biz.p_nm, biz.start_dt, biz.b_adr, biz.b_sector, biz.b_type, biz.corp_no || "", biz.dart_code || "",
     biz.description || "", biz.credit_rating || "", biz.industry_rank || "", biz.is_sme || "", biz.listing_status || "",
@@ -195,8 +243,18 @@ export async function upsertBusiness(biz: any) {
     biz.corpEnm || "", biz.crno || "", biz.enpTlno || "", biz.enpFxno || "", biz.enpPncd || "", biz.enpStacNm || "",
     biz.enpMainBizNm || "", biz.dataSource || "local",
     biz.mailOrderNo || "", biz.declareOrg || "", biz.goodsType || "", biz.sellType || "", biz.closeDate || "", biz.repEmail || "", biz.zipCd || "",
-    biz.newAcqsNmps || 0, biz.lossSbscrbNmps || 0, biz.telNo || ""
+    biz.newAcqsNmps || 0, biz.lossSbscrbNmps || 0, biz.telNo || "", brandVal,
+    biz.ntsLastSyncAt || null, biz.npsLastSyncAt || null
   ]);
+
+  // 1.1. 신규 설립일 타임라인 자동 갱신
+  if (biz.start_dt) {
+    await query(`
+      INSERT INTO business_timeline (b_no, event_date, event_title, event_description)
+      VALUES ($1, $2, $3, $4)
+      ON CONFLICT (b_no, event_date, event_title) DO NOTHING
+    `, [clean, biz.start_dt, "법인 설립", `${biz.b_nm} 설립 및 개업`]);
+  }
 
   // 2. 재무이력 갱신 (전체 삭제 후 다시 등록)
   if (biz.history && Array.isArray(biz.history)) {
@@ -249,3 +307,148 @@ export async function upsertStatsHistory(stat: any) {
       stats_data = EXCLUDED.stats_data
   `, [date, JSON.stringify(statsData)]);
 }
+
+// 9. 주변 기업 및 유사 사업자 하이브리드 스코어링 추천 조회
+export async function getRecommendedBusinesses(
+  bNo: string,
+  bAdr: string,
+  bSector: string,
+  isSme: string
+) {
+  const cleanBNo = bNo.replace(/[^0-9]/g, "");
+  
+  // 시/군/구 추출 (예: "마포구", "강남구", "안양시" 등)
+  let sigungu = "";
+  const adrMatch = bAdr.match(/\s([^\s]+(?:구|군|시))\s/);
+  if (adrMatch) {
+    sigungu = `%${adrMatch[1]}%`;
+  } else {
+    const tokens = bAdr.split(" ");
+    sigungu = tokens.length > 1 ? `%${tokens[1]}%` : "%서울%";
+  }
+
+  // 업종 핵심 키워드 추출 (예: "음식점", "제조업", "소프트웨어")
+  let sectorKeyword = "%";
+  if (bSector) {
+    const cleanSector = bSector.split(",")[0].split(" 및 ")[0].trim();
+    sectorKeyword = `%${cleanSector}%`;
+  }
+
+  const queryText = `
+    SELECT b_no, b_nm, b_adr, b_sector, is_sme, listing_status, data_source
+    FROM businesses
+    WHERE b_no != $1 AND b_nm != '상호 미등록 사업자'
+    ORDER BY 
+      (CASE WHEN b_adr LIKE $2 THEN 50 ELSE 0 END) +
+      (CASE WHEN b_sector LIKE $3 THEN 40 ELSE 0 END) +
+      (CASE WHEN is_sme = $4 THEN 10 ELSE 0 END) DESC,
+      start_dt DESC
+    LIMIT 4
+  `;
+
+  const result = await query(queryText, [cleanBNo, sigungu, sectorKeyword, isSme || ""]);
+  return result.rows.map((row) => ({
+    b_no: row.b_no,
+    b_nm: row.b_nm,
+    b_adr: row.b_adr,
+    b_sector: row.b_sector,
+    is_sme: row.is_sme,
+    listing_status: row.listing_status,
+    dataSource: row.data_source || "local"
+  }));
+}
+
+// 10. 수정 요청 등록 (business_edit_requests)
+export async function addEditRequest(req: {
+  b_no: string;
+  requester_type: string;
+  requester_email: string;
+  proposed_brand_name?: string;
+  proposed_homepage?: string;
+  proposed_description?: string;
+  proposed_timeline?: any;
+}) {
+  const cleanBNo = req.b_no.replace(/[^0-9]/g, "");
+  const result = await query(`
+    INSERT INTO business_edit_requests (
+      b_no, requester_type, requester_email, proposed_brand_name, proposed_homepage, proposed_description, proposed_timeline
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+    RETURNING id
+  `, [
+    cleanBNo,
+    req.requester_type,
+    req.requester_email,
+    req.proposed_brand_name || null,
+    req.proposed_homepage || null,
+    req.proposed_description || null,
+    req.proposed_timeline ? JSON.stringify(req.proposed_timeline) : null
+  ]);
+  return result.rows[0]?.id;
+}
+
+// 11. 대기중인 수정 요청 목록 조회 (businesses 상호명 조인)
+export async function getPendingEditRequests() {
+  const result = await query(`
+    SELECT r.id, r.b_no, b.b_nm, b.brand_name as "currentBrandName", b.homepage as "currentHomepage",
+           b.description as "currentDescription", r.requester_type as "requesterType", r.requester_email as "requesterEmail",
+           r.proposed_brand_name as "proposedBrandName", r.proposed_homepage as "proposedHomepage",
+           r.proposed_description as "proposedDescription", r.proposed_timeline as "proposedTimeline",
+           r.status, r.created_at as "createdAt"
+    FROM business_edit_requests r
+    JOIN businesses b ON r.b_no = b.b_no
+    WHERE r.status = 'pending'
+    ORDER BY r.created_at DESC
+  `);
+  return result.rows.map(row => ({
+    id: row.id,
+    b_no: row.b_no,
+    b_nm: row.b_nm,
+    currentBrandName: row.currentBrandName || "",
+    currentHomepage: row.currentHomepage || "",
+    currentDescription: row.currentDescription || "",
+    requesterType: row.requesterType,
+    requesterEmail: row.requesterEmail,
+    proposedBrandName: row.proposedBrandName || "",
+    proposedHomepage: row.proposedHomepage || "",
+    proposedDescription: row.proposedDescription || "",
+    proposedTimeline: typeof row.proposedTimeline === 'string' 
+      ? JSON.parse(row.proposedTimeline) 
+      : (row.proposedTimeline || []),
+    status: row.status,
+    createdAt: row.createdAt
+  }));
+}
+
+// 12. 특정 ID의 수정 요청 상세 조회
+export async function getEditRequestById(id: number) {
+  const result = await query(
+    "SELECT * FROM business_edit_requests WHERE id = $1 LIMIT 1",
+    [id]
+  );
+  if (result.rows.length === 0) return null;
+  const row = result.rows[0];
+  return {
+    id: row.id,
+    b_no: row.b_no,
+    requesterType: row.requester_type,
+    requesterEmail: row.requester_email,
+    proposedBrandName: row.proposed_brand_name || "",
+    proposedHomepage: row.proposed_homepage || "",
+    proposedDescription: row.proposed_description || "",
+    proposedTimeline: typeof row.proposed_timeline === 'string'
+      ? JSON.parse(row.proposed_timeline)
+      : (row.proposed_timeline || []),
+    status: row.status,
+    createdAt: row.created_at
+  };
+}
+
+// 13. 수정 요청 상태 변경
+export async function updateEditRequestStatus(id: number, status: string) {
+  await query(
+    "UPDATE business_edit_requests SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2",
+    [status, id]
+  );
+}
+
+
