@@ -3,6 +3,7 @@ import { Inter, Noto_Sans_KR } from "next/font/google";
 import "./globals.css";
 import ThemeRegistry from "@/components/ThemeRegistry";
 import Link from "next/link";
+import Script from "next/script";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -48,6 +49,12 @@ export default function RootLayout({
   return (
     <html lang="ko" className={`${inter.variable} ${notoSansKR.variable}`}>
       <body>
+        <Script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3713361723411048"
+          crossOrigin="anonymous"
+          strategy="afterInteractive"
+        />
         <ThemeRegistry>
           <header className="header">
             <div className="container header-inner">

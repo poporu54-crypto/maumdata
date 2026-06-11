@@ -403,74 +403,77 @@ function TimelineSection({
   };
 
   return (
-    <div className="card" style={{ padding: "32px", display: "flex", flexDirection: "column", gap: "20px" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
-        <span style={{ fontSize: "1.3rem" }}>📅</span>
-        <h3 style={{ fontSize: "1.25rem", fontWeight: 800, color: "var(--color-text-main)", margin: 0 }}>
-          주요 연혁 및 기업 히스토리
-        </h3>
-      </div>
-      
-      <div style={{
-        position: "relative",
-        paddingLeft: "24px",
-        borderLeft: "2px solid var(--color-border)",
-        display: "flex",
-        flexDirection: "column",
-        gap: "28px",
-        marginLeft: "10px"
-      }}>
-        {timeline.map((event, idx) => (
-          <div key={idx} style={{ position: "relative" }}>
-            <span style={{
-              position: "absolute",
-              left: "-31px",
-              top: "4px",
-              width: "12px",
-              height: "12px",
-              borderRadius: "50%",
-              backgroundColor: "var(--color-primary)",
-              border: "3px solid var(--bg-color-card)"
-            }} />
-            
-            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+    <>
+      <AdBanner />
+      <div className="card" style={{ padding: "32px", display: "flex", flexDirection: "column", gap: "20px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
+          <span style={{ fontSize: "1.3rem" }}>📅</span>
+          <h3 style={{ fontSize: "1.25rem", fontWeight: 800, color: "var(--color-text-main)", margin: 0 }}>
+            주요 연혁 및 기업 히스토리
+          </h3>
+        </div>
+        
+        <div style={{
+          position: "relative",
+          paddingLeft: "24px",
+          borderLeft: "2px solid var(--color-border)",
+          display: "flex",
+          flexDirection: "column",
+          gap: "28px",
+          marginLeft: "10px"
+        }}>
+          {timeline.map((event, idx) => (
+            <div key={idx} style={{ position: "relative" }}>
               <span style={{
-                fontSize: "0.85rem",
-                fontWeight: 700,
-                color: "var(--color-primary)"
-              }}>
-                {formatEventDate(event.eventDate)}
-              </span>
-              <strong style={{
-                fontSize: "1.05rem",
-                fontWeight: 800,
-                color: "var(--color-text-main)"
-              }}>
-                {event.eventTitle}
-              </strong>
-              <p style={{
-                fontSize: "0.92rem",
-                color: "var(--color-text-sub)",
-                lineHeight: 1.5,
-                margin: "4px 0 0 0"
-              }}>
-                {event.eventDescription}
-              </p>
+                position: "absolute",
+                left: "-31px",
+                top: "4px",
+                width: "12px",
+                height: "12px",
+                borderRadius: "50%",
+                backgroundColor: "var(--color-primary)",
+                border: "3px solid var(--bg-color-card)"
+              }} />
+              
+              <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                <span style={{
+                  fontSize: "0.85rem",
+                  fontWeight: 700,
+                  color: "var(--color-primary)"
+                }}>
+                  {formatEventDate(event.eventDate)}
+                </span>
+                <strong style={{
+                  fontSize: "1.05rem",
+                  fontWeight: 800,
+                  color: "var(--color-text-main)"
+                }}>
+                  {event.eventTitle}
+                </strong>
+                <p style={{
+                  fontSize: "0.92rem",
+                  color: "var(--color-text-sub)",
+                  lineHeight: 1.5,
+                  margin: "4px 0 0 0"
+                }}>
+                  {event.eventDescription}
+                </p>
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
 
-      {/* 연혁 수정 제안 버튼 추가 */}
-      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "12px", borderTop: "1px solid var(--color-border)", paddingTop: "20px" }}>
-        <EditRequestTrigger
-          bNo={bNo}
-          currentBrandName={brandName}
-          currentHomepage={homepage}
-          currentDescription={description}
-        />
+        {/* 연혁 수정 제안 버튼 추가 */}
+        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "12px", borderTop: "1px solid var(--color-border)", paddingTop: "20px" }}>
+          <EditRequestTrigger
+            bNo={bNo}
+            currentBrandName={brandName}
+            currentHomepage={homepage}
+            currentDescription={description}
+          />
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -478,6 +481,7 @@ import Link from "next/link";
 import { getNtsCompanyStatus, NtsCompanyStatus } from "@/lib/ntsApi";
 import { getCorpBasicOutline, getCorpFinanceInfo, CorpBasicOutline, CorpFinanceDetail } from "@/lib/corpApi";
 import { getNpsBplcInfo } from "@/lib/npsApi";
+import AdBanner from "@/components/AdBanner";
 import { getRecentBidsByKeyword } from "@/lib/procurementApi";
 import { getPatentsByCompany } from "@/lib/patentApi";
 import { getRecentDisclosures, getRecentKeyDisclosures } from "@/lib/dartApi";
@@ -1573,6 +1577,7 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
               </div>
 
               {/* 방대한 추가 상세 정보 카드 (신설) */}
+              <AdBanner />
               <div className="card" style={{ padding: "28px" }}>
                 <h3 style={{ fontSize: "1.15rem", fontWeight: 800, color: "var(--color-text-main)", marginBottom: "20px" }}>
                   연계 기관 상세 정보 및 실시간 연동 지표

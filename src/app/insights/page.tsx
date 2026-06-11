@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import AdBanner from "@/components/AdBanner";
 
 export default function InsightsPage() {
   const [activeTab, setActiveTab] = useState<"industry" | "region" | "trend">("industry");
@@ -173,6 +174,8 @@ export default function InsightsPage() {
             성장 추이
           </button>
         </div>
+
+        <AdBanner />
 
         {/* 컨텐츠 영역 */}
         {activeTab === "industry" && (

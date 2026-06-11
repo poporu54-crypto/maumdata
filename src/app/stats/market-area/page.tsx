@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
+import AdBanner from "@/components/AdBanner";
 
 // Leaflet 지도는 클라이언트 사이드에서만 안전하게 렌더링되도록 dynamic import(ssr: false) 처리합니다.
 const InteractiveMap = dynamic(() => import("@/components/InteractiveMap"), {
@@ -336,6 +337,8 @@ export default function MarketAreaHub() {
             })}
           </div>
         </div>
+
+        <AdBanner />
 
         {/* 지도 및 정보 그리드 레이아웃 */}
         <div style={{

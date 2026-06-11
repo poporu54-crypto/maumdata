@@ -6,6 +6,7 @@ import StatsDashboard from "@/components/StatsDashboard";
 import { recordSnapshotIfMissing, startSnapshotScheduler } from "@/lib/statScheduler";
 import { query } from "@/lib/db";
 import DragScrollContainer from "@/components/DragScrollContainer";
+import AdBanner from "@/components/AdBanner";
 
 export const dynamic = "force-dynamic";
 
@@ -123,6 +124,7 @@ export default async function MainPage() {
               </Link>
             ))}
           </DragScrollContainer>
+          <AdBanner />
         </div>
 
         {/* 포털 요약 지표 카드 & 실시간 상세 대시보드 */}
