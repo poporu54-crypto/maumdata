@@ -51,6 +51,16 @@ interface BusinessData {
   enpKoseYn?: string;
   enpKonexYn?: string;
   
+  // 통신판매 V2 상세 정보
+  mailOrderNo?: string;
+  declareOrg?: string;
+  goodsType?: string;
+  sellType?: string;
+  closeDate?: string;
+  repEmail?: string;
+  telNo?: string;
+  zipCd?: string;
+  
   // 국민연금 V2 상세 지표
   newAcqsNmps?: number;
   lossSbscrbNmps?: number;
@@ -399,6 +409,14 @@ async function getUnifiedBusinessData(bNo: string): Promise<{
         
         enpTlno: ftcInfo.telNo,
         enpPncd: ftcInfo.zipCd,
+        mailOrderNo: ftcInfo.mailOrderNo,
+        declareOrg: ftcInfo.declareOrg,
+        goodsType: ftcInfo.goodsType,
+        sellType: ftcInfo.sellType,
+        closeDate: ftcInfo.closeDate,
+        repEmail: ftcInfo.repEmail,
+        telNo: ftcInfo.telNo,
+        zipCd: ftcInfo.zipCd,
         
         history: []
       };
@@ -919,7 +937,7 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                   <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--color-border)", paddingBottom: "10px" }}>
                     <span style={{ color: "var(--color-text-sub)", fontWeight: 500 }}>주업종</span>
                     <span style={{ fontWeight: 700, color: "var(--color-text-main)", textAlign: "right" }}>
-                      {business?.main_biz || business?.b_sector || "-"}
+                      {business?.main_biz || (business?.goodsType ? `전자상거래 (${business.goodsType})` : business?.b_sector) || "-"}
                     </span>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", paddingBottom: "2px" }}>
@@ -955,7 +973,7 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                   <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--color-border)", paddingBottom: "10px" }}>
                     <span style={{ color: "var(--color-text-sub)", fontWeight: 500 }}>대표 전화번호</span>
                     <span style={{ fontWeight: 700, color: "var(--color-text-main)" }}>
-                      {business?.enpTlno || "-"}
+                      {business?.enpTlno || business?.telNo || "-"}
                     </span>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--color-border)", paddingBottom: "10px" }}>
@@ -967,7 +985,7 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                   <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--color-border)", paddingBottom: "10px" }}>
                     <span style={{ color: "var(--color-text-sub)", fontWeight: 500 }}>우편번호</span>
                     <span style={{ fontWeight: 700, color: "var(--color-text-main)" }}>
-                      {business?.enpPncd || "-"}
+                      {business?.enpPncd || business?.zipCd || "-"}
                     </span>
                   </div>
                   {business?.enpMainBizNm && (
@@ -1025,6 +1043,57 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                   )}
                 </div>
               </div>
+
+              {/* 통신판매업 신고 상세 정보 카드 (쇼핑몰 소상공인 전용) */}
+              {business?.mailOrderNo && (
+                <div className="card" style={{ padding: "28px" }}>
+                  <h3 style={{ fontSize: "1.15rem", fontWeight: 800, color: "var(--color-text-main)", marginBottom: "20px" }}>
+                    🛍️ 통신판매업 신고 상세 정보
+                  </h3>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--color-border)", paddingBottom: "10px" }}>
+                      <span style={{ color: "var(--color-text-sub)", fontWeight: 500 }}>통신판매번호</span>
+                      <span style={{ fontWeight: 700, color: "var(--color-text-main)" }}>
+                        {business.mailOrderNo}
+                      </span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--color-border)", paddingBottom: "10px" }}>
+                      <span style={{ color: "var(--color-text-sub)", fontWeight: 500 }}>신고 기관</span>
+                      <span style={{ fontWeight: 700, color: "var(--color-text-main)" }}>
+                        {business.declareOrg || "-"}
+                      </span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--color-border)", paddingBottom: "10px" }}>
+                      <span style={{ color: "var(--color-text-sub)", fontWeight: 500 }}>취급 품목</span>
+                      <span style={{ fontWeight: 700, color: "var(--color-text-main)", textAlign: "right" }}>
+                        {business.goodsType || "-"}
+                      </span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--color-border)", paddingBottom: "10px" }}>
+                      <span style={{ color: "var(--color-text-sub)", fontWeight: 500 }}>판매 방식</span>
+                      <span style={{ fontWeight: 700, color: "var(--color-text-main)" }}>
+                        {business.sellType || "-"}
+                      </span>
+                    </div>
+                    {business.repEmail && (
+                      <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--color-border)", paddingBottom: "10px" }}>
+                        <span style={{ color: "var(--color-text-sub)", fontWeight: 500 }}>대표 이메일</span>
+                        <span style={{ fontWeight: 700, color: "var(--color-text-main)", wordBreak: "break-all" }}>
+                          {business.repEmail}
+                        </span>
+                      </div>
+                    )}
+                    {business.closeDate && business.closeDate !== "-" && (
+                      <div style={{ display: "flex", justifyContent: "space-between", paddingBottom: "2px" }}>
+                        <span style={{ color: "var(--color-text-sub)", fontWeight: 500 }}>통신판매 폐업일</span>
+                        <span style={{ fontWeight: 700, color: "var(--color-danger)" }}>
+                          {formatDate(business.closeDate)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
             </div>
 

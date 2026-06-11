@@ -8,6 +8,14 @@ export interface FtcMailOrderBusiness {
   telNo?: string;        // 전화번호
   zipCd?: string;        // 우편번호
   wbsitAddr?: string;    // 홈페이지주소
+  
+  // 상세 정보 강화용 추가 필드
+  mailOrderNo?: string;  // 통신판매신고번호
+  declareOrg?: string;   // 신고기관
+  goodsType?: string;    // 취급품목
+  sellType?: string;     // 판매방식
+  closeDate?: string;    // 폐업일자
+  repEmail?: string;     // 대표 이메일
 }
 
 // 사용자가 공공데이터포털에서 발급받은 공정위 API 전용 키 또는 기본 공통 키 활용
@@ -66,6 +74,14 @@ export async function getFtcMailOrderInfo(bNo: string): Promise<FtcMailOrderBusi
         telNo: item.telno && item.telno !== "N/A" ? item.telno : "",
         zipCd: item.lctnRnOzip && item.lctnRnOzip !== "N/A" ? item.lctnRnOzip : "",
         wbsitAddr: item.domnCn && item.domnCn !== "N/A" ? item.domnCn : "",
+        
+        // 새롭게 발굴한 상세 지표들 추가 매핑
+        mailOrderNo: item.prmmiMnno && item.prmmiMnno !== "N/A" ? item.prmmiMnno : "",
+        declareOrg: item.dclrInstNm && item.dclrInstNm !== "N/A" ? item.dclrInstNm : "",
+        goodsType: item.trtmntPrdlstNm && item.trtmntPrdlstNm !== "N/A" ? item.trtmntPrdlstNm : "",
+        sellType: item.ntslMthdNm && item.ntslMthdNm !== "N/A" ? item.ntslMthdNm : "",
+        closeDate: item.clsbizDate && item.clsbizDate !== "N/A" ? item.clsbizDate : "",
+        repEmail: item.rprsvEmladr && item.rprsvEmladr !== "N/A" ? item.rprsvEmladr : "",
       };
     }
 
