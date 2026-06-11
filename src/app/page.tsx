@@ -70,26 +70,12 @@ export default async function MainPage() {
           }}>
             <span>✨ 마음데이터 독자적인 기업 분석 엔진</span>
           </div>
-          <h1 style={{
-            fontSize: "3.2rem",
-            fontWeight: 800,
-            letterSpacing: "-0.03em",
-            lineHeight: 1.2,
-            marginBottom: "16px",
-            background: "linear-gradient(135deg, var(--color-primary) 0%, #a855f7 100%)",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent"
-          }}>
-            모든 기업 정보를 <br />
+          <h1 className="hero-title">
+            모든 기업 정보를 <br className="br-pc" />
             한 번에, 정확하게
           </h1>
-          <p style={{
-            color: "var(--color-text-sub)",
-            fontSize: "1.2rem",
-            fontWeight: 500,
-            lineHeight: 1.6
-          }}>
-            정교한 AI 기업 분석 지표와 실시간 상태 검증이 <br />
+          <p className="hero-subtitle">
+            정교한 AI 기업 분석 지표와 실시간 상태 검증이 <br className="br-pc" />
             하나로 융합된 대한민국 대표 민간 기업 데이터 포털
           </p>
         </div>
