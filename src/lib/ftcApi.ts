@@ -11,7 +11,7 @@ export interface FtcMailOrderBusiness {
 }
 
 // 사용자가 공공데이터포털에서 발급받은 공정위 API 전용 키 또는 기본 공통 키 활용
-const SERVICE_KEY = process.env.FTC_SERVICE_KEY || process.env.DATA_PORTAL_SERVICE_KEY || "f36b1b2ca7c1dc5648a1b0d8eb1fff41a6b22f58a653cd7f8895c33cb72c931b";
+const SERVICE_KEY = process.env.FTC_SERVICE_KEY || process.env.DATA_PORTAL_SERVICE_KEY || "";
 
 /**
  * 공정거래위원회 통신판매사업자 등록상세 API를 조회하여 상세 정보를 반환합니다.

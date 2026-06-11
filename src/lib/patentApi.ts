@@ -9,7 +9,7 @@ export interface PatentInfo {
   detailUrl?: string;        // 상세정보 URL
 }
 
-const ACCESS_KEY = "EyFMzVLEy1Ec8PzYgRZyzuthhGSFeImiNYG5DvVahKo=";
+const ACCESS_KEY = process.env.KIPRIS_ACCESS_KEY || "";
 const API_URL = "http://plus.kipris.or.kr/kipo-api/kipi/patUtiModInfoSearchSevice/getWordSearch"; // KIPRIS Plus getWordSearch API
 
 /**

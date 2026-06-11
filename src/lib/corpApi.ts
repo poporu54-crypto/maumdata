@@ -34,7 +34,7 @@ export interface CorpFinanceDetail {
   totalEquity: number;     // 자본총계 (억 원)
 }
 
-const SERVICE_KEY = "f36b1b2ca7c1dc5648a1b0d8eb1fff41a6b22f58a653cd7f8895c33cb72c931b";
+const SERVICE_KEY = process.env.DATA_PORTAL_SERVICE_KEY || "";
 
 /**
  * 1. 금융위원회 기업기본정보 API를 조회하여 법인 기본 개요를 반환합니다.

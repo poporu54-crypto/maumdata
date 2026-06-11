@@ -19,7 +19,7 @@ interface NtsApiResponse {
   data?: NtsCompanyStatus[];
 }
 
-const SERVICE_KEY = "f36b1b2ca7c1dc5648a1b0d8eb1fff41a6b22f58a653cd7f8895c33cb72c931b";
+const SERVICE_KEY = process.env.DATA_PORTAL_SERVICE_KEY || "";
 const API_URL = `https://api.odcloud.kr/api/nts-businessman/v1/status?serviceKey=${SERVICE_KEY}`;
 
 /**

@@ -10,7 +10,7 @@ export interface PortalStats {
   };
 }
 
-const SERVICE_KEY = "f36b1b2ca7c1dc5648a1b0d8eb1fff41a6b22f58a653cd7f8895c33cb72c931b";
+const SERVICE_KEY = process.env.DATA_PORTAL_SERVICE_KEY || "";
 
 // 1. 통계청 전국사업체조사 최신 Endpoint (20231231 기준)
 const SURVEY_API_URL = "https://api.odcloud.kr/api/15087673/v1/uddi:32e6d6f0-6d01-4f62-b76e-b0ae5b840573";
