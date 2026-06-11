@@ -5,6 +5,7 @@ import SearchForm from "@/components/SearchForm";
 import StatsDashboard from "@/components/StatsDashboard";
 import { recordSnapshotIfMissing, startSnapshotScheduler } from "@/lib/statScheduler";
 import { query } from "@/lib/db";
+import DragScrollContainer from "@/components/DragScrollContainer";
 
 export const dynamic = "force-dynamic";
 
@@ -96,7 +97,7 @@ export default async function MainPage() {
           }}>
             실시간 많이 찾는 기업
           </h3>
-          <div className="quick-links-scroll">
+          <DragScrollContainer className="quick-links-scroll">
             {quickLinks.map((link) => (
               <Link
                 key={link.no}
@@ -121,7 +122,7 @@ export default async function MainPage() {
                 <span>{link.name}</span>
               </Link>
             ))}
-          </div>
+          </DragScrollContainer>
         </div>
 
         {/* 포털 요약 지표 카드 & 실시간 상세 대시보드 */}
