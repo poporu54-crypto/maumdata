@@ -27,7 +27,7 @@ export default async function MainPage() {
   ];
 
   return (
-    <div className="animate-fade-in" style={{ padding: "64px 0 80px 0" }}>
+    <div className="animate-fade-in" style={{ padding: "24px 0 80px 0" }}>
       <div className="container" style={{ maxWidth: "720px" }}>
         
         {/* 히어로 타이틀 */}
