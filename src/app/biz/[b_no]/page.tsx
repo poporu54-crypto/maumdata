@@ -826,7 +826,14 @@ async function getUnifiedBusinessData(bNo: string): Promise<{
   const isCacheIncomplete = localBiz && (
     !localBiz.crno || 
     localBiz.crno === "-" ||
-    (isListedOrAudited && (!localBiz.history || localBiz.history.length === 0))
+    (isListedOrAudited && (
+      !localBiz.history || 
+      localBiz.history.length === 0 ||
+      !localBiz.credit_rating ||
+      localBiz.credit_rating === "-" ||
+      !localBiz.industry_rank ||
+      localBiz.industry_rank === "-"
+    ))
   );
 
   if (localBiz && localBiz.b_nm !== "상호 미등록 사업자" && !isCacheIncomplete) {
