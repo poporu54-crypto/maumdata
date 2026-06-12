@@ -41,7 +41,7 @@ export default function AdBanner() {
         style={{ display: "block", width: "100%", minHeight: "90px" }}
         data-ad-client="ca-pub-3713361723411048"
         data-ad-slot="2095684443"
-        data-ad-format="auto"
+        data-ad-format="horizontal"
         data-full-width-responsive="true"
       />
     </div>

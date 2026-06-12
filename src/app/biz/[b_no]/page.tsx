@@ -1315,7 +1315,7 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
       const hours = String(d.getHours()).padStart(2, "0");
       const minutes = String(d.getMinutes()).padStart(2, "0");
       
-      return `${year}년 ${month}월 ${date}일 ${hours}:${minutes}`;
+      return `${year}.${month}.${date} ${hours}:${minutes}`;
     } catch (e) {
       return "방금 전 (실시간)";
     }
@@ -1628,7 +1628,7 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                     </div>
                   )}
                   <div style={{ display: "flex", justifyContent: "space-between", paddingBottom: "2px" }}>
-                    <span style={{ color: "var(--color-text-sub)", fontWeight: 500 }}>마음데이터 검증 시각</span>
+                    <span style={{ color: "var(--color-text-sub)", fontWeight: 500 }}>검증 시각</span>
                     <span style={{ fontWeight: 600, color: "var(--color-text-desc)" }}>
                       {business ? formatSyncTime(business.ntsLastSyncAt) : "방금 전 (실시간)"}
                     </span>
@@ -1722,7 +1722,6 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
               </div>
 
               {/* 방대한 추가 상세 정보 카드 (신설) */}
-              <AdBanner />
               <div className="card" style={{ padding: "28px" }}>
                 <h3 style={{ fontSize: "1.15rem", fontWeight: 800, color: "var(--color-text-main)", marginBottom: "20px" }}>
                   연계 기관 상세 정보 및 실시간 연동 지표
@@ -1891,7 +1890,7 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                       </span>
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between", paddingBottom: "2px" }}>
-                      <span style={{ color: "var(--color-text-sub)", fontWeight: 500 }}>데이터 정합성 상태</span>
+                      <span style={{ color: "var(--color-text-sub)", fontWeight: 500 }}>정합성 상태</span>
                       <span style={{
                         fontWeight: 700,
                         color: "var(--color-success)",
@@ -1900,7 +1899,7 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                         borderRadius: "4px",
                         fontSize: "0.78rem"
                       }}>
-                        공공 API 연동 실시간 검증 완료
+                        실시간 검증 완료
                       </span>
                     </div>
                   </div>
@@ -1908,6 +1907,8 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
               )}
 
             </div>
+
+            <AdBanner />
 
             {/* 소재지 주소 */}
             <div className="card" style={{ padding: "28px" }}>
