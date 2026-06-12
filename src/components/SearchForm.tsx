@@ -120,7 +120,7 @@ export default function SearchForm() {
         <div style={{ fontSize: "1.5rem", marginRight: "16px" }}>🔍</div>
         <input
           type="text"
-          placeholder="사업자번호, 상호명, 대표자명 또는 지역명(예: 역삼동) 입력"
+          placeholder="사업자번호, 상호, 대표자, 지역명 입력"
           value={query}
           onChange={handleInputChange}
           style={{
@@ -130,7 +130,7 @@ export default function SearchForm() {
             fontSize: "1.15rem",
             fontWeight: 600,
             color: "var(--color-text-main)",
-            padding: "12px 0"
+            padding: "12px 16px 12px 0"
           }}
         />
         <button type="submit" className="btn-primary" style={{

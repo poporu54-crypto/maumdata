@@ -407,3 +407,15 @@ input, button, select {
     line-height: 1.5;
   }
 }
+
+/* Placeholder Responsive Adjustments */
+input::placeholder {
+  font-size: 0.95rem;
+  opacity: 0.7;
+}
+
+@media (max-width: 640px) {
+  input::placeholder {
+    font-size: 0.82rem;
+  }
+}

@@ -257,7 +257,7 @@ export default function MarketAreaHub() {
               <div style={{ fontSize: "1.5rem", marginRight: "16px" }}>📍</div>
               <input
                 type="text"
-                placeholder="검색할 동 이름을 입력해 주세요 (예: 역삼동, 삼평동, 우제1동)"
+                placeholder="동 이름 입력 (예: 역삼동, 삼평동)"
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
@@ -270,7 +270,7 @@ export default function MarketAreaHub() {
                   fontSize: "1.15rem",
                   fontWeight: 600,
                   color: "var(--color-text-main)",
-                  padding: "12px 0"
+                  padding: "12px 16px 12px 0"
                 }}
               />
               <button type="submit" className="btn-primary" style={{
