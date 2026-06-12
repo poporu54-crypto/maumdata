@@ -916,6 +916,7 @@ async function getUnifiedBusinessData(bNo: string): Promise<{
 
   // 1. [최적화] 로컬 DB 선조회 (NTS API 대기 전 캐시 히트 검사)
   const localBiz = await getLocalBusiness(cleanBNo);
+  const localBizVal = localBiz;
   
   const isListedOrAudited = 
     localBiz?.listing_status?.includes("상장") || 
@@ -939,15 +940,15 @@ async function getUnifiedBusinessData(bNo: string): Promise<{
   );
 
   // 로컬 DB 캐시 히트 조건 만족 시, 국세청 API 호출 없이 즉시 캐시 데이터 반환
-  // ("상호 미등록 사업자" 임시 캐시를 포함해 한 번 적재된 데이터라면 렌더 블로킹 조회를 건너뜁니다)
-  if (localBiz && !isCacheIncomplete) {
+  // DB에 데이터가 존재하기만 하면 (정보가 일부 누락되었더라도) 렌더 블로킹 조회를 무조건 건너뜁니다!
+  if (localBiz) {
     console.log(`[Cache Hit] Business data loaded directly from Neon DB (Skipped NTS API): ${localBiz.b_nm} (${cleanBNo})`);
     
     // UI 렌더링에 지장이 없도록 가상의 mock apiStatus 설정 (대기 시간 0ms)
     const mockApiStatus: NtsCompanyStatus = {
       b_no: cleanBNo,
-      b_stt: "계속사업자",
-      b_stt_cd: "01",
+      b_stt: localBiz.b_nm === "상호 미등록 사업자" ? "계속사업자" : (localBiz.b_type?.includes("폐업") ? "폐업자" : "계속사업자"),
+      b_stt_cd: localBiz.b_type?.includes("폐업") ? "02" : "01",
       tax_type: "부가가치세 일반과세자",
       tax_type_cd: "01",
       end_dt: "",
@@ -965,7 +966,8 @@ async function getUnifiedBusinessData(bNo: string): Promise<{
     const npsLastSync = localBiz.npsLastSyncAt ? new Date(localBiz.npsLastSyncAt) : new Date(0);
     const npsDiffDays = Math.floor((now.getTime() - npsLastSync.getTime()) / (1000 * 60 * 60 * 24));
     
-    const ntsUpdateNeeded = ntsDiffDays >= 10;
+    // NTS는 10일 만료, NPS는 30일 만료, 혹은 캐시가 불완전한 상태(isCacheIncomplete)일 때도 백그라운드에서 비동기로 수집하도록 설정합니다.
+    const ntsUpdateNeeded = ntsDiffDays >= 10 || !!isCacheIncomplete;
     const npsUpdateNeeded = localBiz.npsLinked ? (npsDiffDays >= 30) : (npsDiffDays >= 1);
     
     if (ntsUpdateNeeded || npsUpdateNeeded) {
@@ -993,7 +995,7 @@ async function getUnifiedBusinessData(bNo: string): Promise<{
   }
 
   // 3. 공공 API 동시(병렬) 호출로 로딩 속도 극대화
-  const basicInfoPromise = getCorpBasicOutline(cleanBNo, localBiz?.corp_no);
+  const basicInfoPromise = getCorpBasicOutline(cleanBNo, undefined);
   const ftcInfoPromise = getFtcMailOrderInfo(cleanBNo);
   
   const [basicInfo, ftcInfo] = await Promise.all([basicInfoPromise, ftcInfoPromise]);
@@ -1008,10 +1010,10 @@ async function getUnifiedBusinessData(bNo: string): Promise<{
     const [financeDetail, npsInfo] = await Promise.all([financeDetailPromise, npsInfoPromise]);
     
     // DART 고유번호 동적 매핑 조회
-    let dartCode = localBiz?.dart_code || "";
+    let dartCode = localBizVal?.dart_code || "";
     if (!dartCode) {
       let stockCode = "";
-      const listingStatus = localBiz?.listing_status || "";
+      const listingStatus = localBizVal?.listing_status || "";
       const stockMatch = listingStatus.match(/\((\d{6})\)/);
       if (stockMatch) {
         stockCode = stockMatch[1];
@@ -1068,13 +1070,13 @@ async function getUnifiedBusinessData(bNo: string): Promise<{
       b_type: scale,
       corp_no: basicInfo.crno,
       dart_code: dartCode,
-      description: localBiz?.description || `${basicInfo.corpNm}은(는) 금융위원회 공시 정보가 등록된 대한민국 공식 ${scale}입니다.`,
-      credit_rating: localBiz?.credit_rating || credit_rating,
-      industry_rank: localBiz?.industry_rank || industry_rank,
+      description: localBizVal?.description || `${basicInfo.corpNm}은(는) 금융위원회 공시 정보가 등록된 대한민국 공식 ${scale}입니다.`,
+      credit_rating: localBizVal?.credit_rating || credit_rating,
+      industry_rank: localBizVal?.industry_rank || industry_rank,
       dataSource: "public",
       is_sme: scale,
-      listing_status: localBiz?.listing_status || (scale.includes("대기업") ? "코스피 상장" : "비상장"),
-      homepage: localBiz?.homepage && localBiz.homepage !== "-" ? localBiz.homepage : (basicInfo.enpHpaddr || "-"),
+      listing_status: localBizVal?.listing_status || (scale.includes("대기업") ? "코스피 상장" : "비상장"),
+      homepage: localBizVal?.homepage && localBizVal.homepage !== "-" ? localBizVal.homepage : (basicInfo.enpHpaddr || "-"),
       main_biz: basicInfo.enpMainBizNm || basicInfo.enpIndyNm || "기타 서비스업",
       is_audited: !!dartCode,
       
@@ -1144,18 +1146,18 @@ async function getUnifiedBusinessData(bNo: string): Promise<{
       business.newAcqsNmps = npsInfo.newAcqsNmps;
       business.lossSbscrbNmps = npsInfo.lossSbscrbNmps;
     }
-  } else if (localBiz) {
+  } else if (localBizVal) {
     // 3.3. 공용 API도 다 실패했는데 기존 로컬 DB 캐시 데이터가 있는 경우
-    const npsInfo = await getNpsBplcInfo(cleanBNo, localBiz.b_nm);
+    const npsInfo = await getNpsBplcInfo(cleanBNo, localBizVal.b_nm);
     if (npsInfo && npsInfo.npsSbscrbNmps > 0) {
-      localBiz.npsLinked = true;
-      localBiz.npsSbscrbNmps = npsInfo.npsSbscrbNmps;
-      localBiz.newAcqsNmps = npsInfo.newAcqsNmps;
-      localBiz.lossSbscrbNmps = npsInfo.lossSbscrbNmps;
-      const latestHist = localBiz.history[localBiz.history.length - 1];
+      localBizVal.npsLinked = true;
+      localBizVal.npsSbscrbNmps = npsInfo.npsSbscrbNmps;
+      localBizVal.newAcqsNmps = npsInfo.newAcqsNmps;
+      localBizVal.lossSbscrbNmps = npsInfo.lossSbscrbNmps;
+      const latestHist = localBizVal.history[localBizVal.history.length - 1];
       if (latestHist) latestHist.employees = npsInfo.npsSbscrbNmps;
     }
-    business = localBiz;
+    business = localBizVal;
   } else {
     // 3.4. 모든 공시 정보가 없어 최후 수단으로 미등록 사업자 Fallback
     const realBiz: BusinessData = {
@@ -1190,12 +1192,12 @@ async function getUnifiedBusinessData(bNo: string): Promise<{
 
   // 5. 신규 기업 데이터 Neon DB 자동 적재 및 실시간 갱신 정보 동기화 (온디맨드 동기화 및 DART 코드 갱신)
   if (business) {
-    const isNew = !localBiz;
-    const wasUnregistered = localBiz && localBiz.b_nm === "상호 미등록 사업자" && business.b_nm !== "상호 미등록 사업자";
-    const hasNewDartCode = localBiz && !localBiz.dart_code && business.dart_code;
+    const isNew = !localBizVal;
+    const wasUnregistered = localBizVal && localBizVal.b_nm === "상호 미등록 사업자" && business.b_nm !== "상호 미등록 사업자";
+    const hasNewDartCode = localBizVal && !localBizVal.dart_code && business.dart_code;
     
     // 로컬 DB의 종업원수와 실시간 API로 가져온 종업원수가 다를 경우 데이터 동기화
-    const hasEmployeeCountDiff = localBiz && localBiz.npsSbscrbNmps !== business.npsSbscrbNmps;
+    const hasEmployeeCountDiff = localBizVal && localBizVal.npsSbscrbNmps !== business.npsSbscrbNmps;
 
     if (isNew || wasUnregistered || hasNewDartCode || hasEmployeeCountDiff) {
       try {
@@ -1210,8 +1212,8 @@ async function getUnifiedBusinessData(bNo: string): Promise<{
           console.log(`[Cache Sync] Successfully cached/updated business to Neon DB: ${business.b_nm} (${cleanBNo}), Employees: ${business.npsSbscrbNmps}`);
           business.dataSource = "local";
         } else if (hasNewDartCode) {
-          localBiz.dart_code = business.dart_code;
-          await upsertBusiness(localBiz);
+          localBizVal.dart_code = business.dart_code;
+          await upsertBusiness(localBizVal);
           console.log(`[Cache Sync] Successfully updated DART code for existing business in Neon DB: ${business.b_nm} (${business.dart_code})`);
         }
       } catch (e) {
