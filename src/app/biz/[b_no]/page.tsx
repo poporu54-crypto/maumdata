@@ -826,6 +826,7 @@ async function triggerBackgroundSync(
            SET nps_sbscrb_nmps = $1, 
                new_acqs_nmps = $2, 
                loss_sbscrb_nmps = $3, 
+               nps_linked = true, 
                nps_last_sync_at = CURRENT_TIMESTAMP 
            WHERE b_no = $4`,
           [npsInfo.npsSbscrbNmps, npsInfo.newAcqsNmps || 0, npsInfo.lossSbscrbNmps || 0, bNo]
@@ -971,8 +972,11 @@ async function getUnifiedBusinessData(bNo: string): Promise<{
     const npsUpdateNeeded = localBiz.npsLinked ? (npsDiffDays >= 30) : (npsDiffDays >= 1);
     
     if (ntsUpdateNeeded || npsUpdateNeeded) {
-      // 정보 갱신 만료 시 백그라운드로 비동기 업데이트 실행 (메인 쓰레드 대기 없음)
-      triggerBackgroundSync(cleanBNo, localBiz, ntsUpdateNeeded, npsUpdateNeeded);
+      // 정보 갱신 만료 시 백그라운드로 비동기 업데이트 실행 (완전한 비동기 예약을 위해 setTimeout으로 감싸서 렌더링 스레드 차단 원천 해결)
+      setTimeout(() => {
+        triggerBackgroundSync(cleanBNo, localBizVal, ntsUpdateNeeded, npsUpdateNeeded)
+          .catch(err => console.error("Background sync error:", err));
+      }, 0);
     }
     
     return { apiStatus: mockApiStatus, business: localBiz, isInvalid: false };
