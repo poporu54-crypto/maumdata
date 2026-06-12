@@ -1,6 +1,5 @@
 import React from "react";
 import { Metadata } from "next";
-import Link from "next/link";
 import DateSelector from "@/components/DateSelector";
 import { HistoryEntry } from "@/lib/statScheduler";
 import { getStatsHistory } from "@/lib/db";
@@ -98,7 +97,6 @@ export default async function NewBizStatsPage({ searchParams }: PageProps) {
 
         {/* 타이틀 헤더 */}
         <div style={{ marginBottom: "32px" }}>
-          <Link href="/" className="back-link">➔ 메인 화면으로 돌아가기</Link>
           <h1 style={{
             fontSize: "1.8rem",
             fontWeight: 800,

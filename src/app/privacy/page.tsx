@@ -1,6 +1,5 @@
 import React from "react";
 import { Metadata } from "next";
-import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "개인정보처리방침 | 마음데이터",
@@ -12,12 +11,6 @@ export default function PrivacyPage() {
     <div className="animate-fade-in" style={{ padding: "40px 0 80px 0" }}>
       <div className="container" style={{ maxWidth: "800px" }}>
         
-        {/* 뒤로가기 링크 */}
-        <div style={{ marginBottom: "24px" }}>
-          <Link href="/" className="back-link" style={{ fontSize: "0.9rem", fontWeight: 600 }}>
-            ➔ 메인 화면으로 돌아가기
-          </Link>
-        </div>
 
         {/* 메인 카드 */}
         <div className="card" style={{ padding: "40px", display: "flex", flexDirection: "column", gap: "28px" }}>

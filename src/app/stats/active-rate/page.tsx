@@ -74,7 +74,6 @@ export default async function ActiveRateStatsPage({ searchParams }: PageProps) {
         
         {/* 헤더 */}
         <div style={{ marginBottom: "32px" }}>
-          <Link href="/" className="back-link">➔ 메인 화면으로 돌아가기</Link>
           <h1 style={{ fontSize: "1.85rem", fontWeight: 800, color: "var(--color-text-main)", marginBottom: "8px" }}>
             📈 계속사업자 비율 통계 분석
           </h1>
