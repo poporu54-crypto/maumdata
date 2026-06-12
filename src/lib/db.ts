@@ -86,6 +86,7 @@ export async function getBusinessByBNo(bNo: string) {
     bSttCd: business.b_stt_cd || "01",
     npsSbscrbNmps: business.nps_sbscrb_nmps || 0,
     npsLinked: business.nps_linked || false,
+    npsChrgAmt: business.nps_chrg_amt ? parseInt(business.nps_chrg_amt, 10) : 0,
     corpEnm: business.corp_enm || "",
     crno: business.crno || "",
     enpTlno: business.enp_tlno || "",
@@ -201,11 +202,11 @@ export async function upsertBusiness(biz: any) {
       new_acqs_nmps, loss_sbscrb_nmps, tel_no, brand_name,
       nts_last_sync_at, nps_last_sync_at,
       tax_type, tax_type_cd,
-      b_stt, b_stt_cd
+      b_stt, b_stt_cd, nps_chrg_amt
     ) VALUES (
       $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27,
       $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, $40,
-      $41, $42, $43, $44
+      $41, $42, $43, $44, $45
     ) ON CONFLICT (b_no) DO UPDATE SET
       b_nm = EXCLUDED.b_nm,
       p_nm = EXCLUDED.p_nm,
@@ -249,7 +250,8 @@ export async function upsertBusiness(biz: any) {
       tax_type = EXCLUDED.tax_type,
       tax_type_cd = EXCLUDED.tax_type_cd,
       b_stt = EXCLUDED.b_stt,
-      b_stt_cd = EXCLUDED.b_stt_cd
+      b_stt_cd = EXCLUDED.b_stt_cd,
+      nps_chrg_amt = EXCLUDED.nps_chrg_amt
   `, [
     clean, biz.b_nm, biz.p_nm, biz.start_dt, biz.b_adr, biz.b_sector, biz.b_type, biz.corp_no || "", biz.dart_code || "",
     biz.description || "", biz.credit_rating || "", biz.industry_rank || "", biz.is_sme || "", biz.listing_status || "",
@@ -260,7 +262,8 @@ export async function upsertBusiness(biz: any) {
     biz.newAcqsNmps || 0, biz.lossSbscrbNmps || 0, biz.telNo || "", brandVal,
     biz.ntsLastSyncAt || null, biz.npsLastSyncAt || null,
     biz.taxType || "부가가치세 일반과세자", biz.taxTypeCd || "01",
-    biz.bStt || biz.b_stt || "계속사업자", biz.bSttCd || biz.b_stt_cd || "01"
+    biz.bStt || biz.b_stt || "계속사업자", biz.bSttCd || biz.b_stt_cd || "01",
+    biz.npsChrgAmt || 0
   ]);
 
   // 1.1. 신규 설립일 타임라인 자동 갱신
@@ -636,6 +639,141 @@ export async function saveDisclosures(bNo: string, disclosures: any[]) {
     ]);
   }
   await query("UPDATE businesses SET dart_last_sync_at = CURRENT_TIMESTAMP WHERE b_no = $1", [clean]);
+}
+
+// 22. 동일 업종 내 통계 및 상대적 위치 연산
+export async function getIndustryAnalysis(bSector: string, bNo: string) {
+  const cleanBNo = bNo.replace(/[^0-9]/g, "");
+  if (!bSector || bSector === "미등록 업종") {
+    return {
+      totalCompanies: 0,
+      closeRate: 0,
+      avgRevenue: 0,
+      avgDebtRatio: 0,
+      avgOperatingMargin: 0,
+      rankings: {
+        revenuePercentile: 50,
+        operatingMarginPercentile: 50,
+        debtRatioPercentile: 50,
+        employeePercentile: 50
+      },
+      leaders: []
+    };
+  }
+
+  try {
+    // 1. 업종 내 기본 통계 조회 (전체 기업 수, 평균 폐업률, 평균 매출액 등)
+    const statsResult = await query(`
+      WITH latest_history AS (
+        SELECT DISTINCT ON (b_no) b_no, revenue, operating_income, total_liabilities, total_equity, employees
+        FROM business_history
+        ORDER BY b_no, year DESC
+      )
+      SELECT 
+        COUNT(*) as total_companies,
+        COALESCE(SUM(CASE WHEN b_stt_cd = '03' THEN 1 ELSE 0 END)::float / NULLIF(COUNT(*), 0)::float * 100, 0) as close_rate,
+        COALESCE(AVG(h.revenue), 0) as avg_revenue,
+        COALESCE(AVG(CASE WHEN h.total_equity > 0 THEN (h.total_liabilities::float / h.total_equity::float)*100 ELSE NULL END), 0) as avg_debt_ratio,
+        COALESCE(AVG(CASE WHEN h.revenue > 0 THEN (h.operating_income::float / h.revenue::float)*100 ELSE NULL END), 0) as avg_operating_margin
+      FROM businesses b
+      LEFT JOIN latest_history h ON b.b_no = h.b_no
+      WHERE b.b_sector = $1 AND b.b_nm != '상호 정보 없음'
+    `, [bSector]);
+
+    const stats = statsResult.rows[0] || {
+      total_companies: 0,
+      close_rate: 0,
+      avg_revenue: 0,
+      avg_debt_ratio: 0,
+      avg_operating_margin: 0
+    };
+
+    // 2. 현재 기업의 업종 내 상대적 백분위 위치 연산
+    const rankingResult = await query(`
+      WITH latest_history AS (
+        SELECT DISTINCT ON (b_no) b_no, revenue, operating_income, total_liabilities, total_equity, employees
+        FROM business_history
+        ORDER BY b_no, year DESC
+      ),
+      percentiles AS (
+        SELECT 
+          b.b_no,
+          percent_rank() OVER (ORDER BY COALESCE(h.revenue, 0) ASC) as rev_pct,
+          percent_rank() OVER (ORDER BY COALESCE(CASE WHEN h.revenue > 0 THEN (h.operating_income::float / h.revenue::float)*100 ELSE NULL END, -999) ASC) as margin_pct,
+          percent_rank() OVER (ORDER BY COALESCE(CASE WHEN h.total_equity > 0 THEN (h.total_liabilities::float / h.total_equity::float)*100 ELSE NULL END, 9999) DESC) as debt_pct,
+          percent_rank() OVER (ORDER BY COALESCE(b.nps_sbscrb_nmps, 0) ASC) as emp_pct
+        FROM businesses b
+        LEFT JOIN latest_history h ON b.b_no = h.b_no
+        WHERE b.b_sector = $1 AND b.b_nm != '상호 정보 없음'
+      )
+      SELECT * FROM percentiles WHERE b_no = $2
+    `, [bSector, cleanBNo]);
+
+    let rankings = {
+      revenuePercentile: 50,
+      operatingMarginPercentile: 50,
+      debtRatioPercentile: 50,
+      employeePercentile: 50
+    };
+
+    if (rankingResult.rows.length > 0) {
+      const row = rankingResult.rows[0];
+      rankings = {
+        revenuePercentile: Math.round(row.rev_pct * 100),
+        operatingMarginPercentile: Math.round(row.margin_pct * 100),
+        debtRatioPercentile: Math.round(row.debt_pct * 100),
+        employeePercentile: Math.round(row.emp_pct * 100)
+      };
+    }
+
+    // 3. 업종 내 순위 리스트 (매출액 기준 상위 3개 업체)
+    const leadersResult = await query(`
+      WITH latest_history AS (
+        SELECT DISTINCT ON (b_no) b_no, revenue, year
+        FROM business_history
+        ORDER BY b_no, year DESC
+      )
+      SELECT b.b_no, b.b_nm, COALESCE(h.revenue, 0) as revenue
+      FROM businesses b
+      JOIN latest_history h ON b.b_no = h.b_no
+      WHERE b.b_sector = $1 AND b.b_nm != '상호 정보 없음' AND b.b_stt_cd = '01'
+      ORDER BY revenue DESC
+      LIMIT 3
+    `, [bSector]);
+
+    const leaders = leadersResult.rows.map(r => ({
+      b_no: r.b_no,
+      b_nm: r.b_nm,
+      revenue: parseInt(r.revenue, 10)
+    }));
+
+    return {
+      totalCompanies: parseInt(stats.total_companies || "0", 10),
+      closeRate: parseFloat(parseFloat(stats.close_rate || "0").toFixed(2)),
+      avgRevenue: Math.round(parseFloat(stats.avg_revenue || "0")),
+      avgDebtRatio: Math.round(parseFloat(stats.avg_debt_ratio || "0")),
+      avgOperatingMargin: parseFloat(parseFloat(stats.avg_operating_margin || "0").toFixed(2)),
+      rankings,
+      leaders
+    };
+
+  } catch (err) {
+    console.error("Failed to compute industry analysis:", err);
+    return {
+      totalCompanies: 0,
+      closeRate: 0,
+      avgRevenue: 0,
+      avgDebtRatio: 0,
+      avgOperatingMargin: 0,
+      rankings: {
+        revenuePercentile: 50,
+        operatingMarginPercentile: 50,
+        debtRatioPercentile: 50,
+        employeePercentile: 50
+      },
+      leaders: []
+    };
+  }
 }
 
 

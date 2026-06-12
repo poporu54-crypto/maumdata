@@ -779,6 +779,309 @@ async function DartKeyDisclosuresSection({ dartCode }: { dartCode: string }) {
   );
 }
 
+// NICE형 예상 연봉/HR 지표 분석 컴포넌트
+function SalarySection({ business }: { business: BusinessData }) {
+  if (!business.npsLinked || !business.npsSbscrbNmps || !business.npsChrgAmt) {
+    return (
+      <div className="card" style={{ padding: "28px", textAlign: "center" }}>
+        <span style={{ fontSize: "1.8rem", display: "block", marginBottom: "8px" }}>💳</span>
+        <div style={{ fontWeight: 700, color: "var(--color-text-sub)", fontSize: "0.95rem", marginBottom: "6px" }}>
+          국민연금 연봉 정보 제공 불가
+        </div>
+        <p style={{ fontSize: "0.85rem", color: "var(--color-text-desc)", lineHeight: 1.5, margin: 0 }}>
+          본 기업은 실시간 국민연금 고지 정보 연동이 지연되었거나 1인 이하 소기업으로, 추정 연봉 통계가 제공되지 않습니다.
+        </p>
+      </div>
+    );
+  }
+
+  const emps = business.npsSbscrbNmps;
+  const chrgAmt = business.npsChrgAmt; // 당월 고지 보험료 총액
+  const avgPremium = chrgAmt / emps;
+  
+  // 국민연금 보험료율 9% (근로자 4.5% + 회사 4.5% = 총 9% 고지)
+  let avgMonthlySalary = avgPremium / 0.09;
+  let isMaxed = false;
+  let isMinified = false;
+
+  // 국민연금 기준 상/하한액 보정
+  if (avgPremium >= 555300) {
+    isMaxed = true;
+    avgMonthlySalary = 6170000;
+  } else if (avgPremium <= 33300) {
+    isMinified = true;
+    avgMonthlySalary = 370000;
+  }
+
+  const avgYearlySalary = Math.round((avgMonthlySalary * 12) / 10000); // 만원 단위
+  const formattedSalary = isMaxed 
+    ? "7,400만원 이상 (국민연금 상한액 도달)" 
+    : isMinified 
+      ? "2,400만원 미만 (최저임금 수준)" 
+      : `${avgYearlySalary.toLocaleString()}만원`;
+
+  const hires = business.newAcqsNmps || 0;
+  const exits = business.lossSbscrbNmps || 0;
+  const hireRate = ((hires / emps) * 100).toFixed(1);
+  const exitRate = ((exits / emps) * 100).toFixed(1);
+
+  return (
+    <div className="card" style={{ padding: "32px", display: "flex", flexDirection: "column", gap: "24px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+        <span style={{ fontSize: "1.2rem" }}>💳</span>
+        <h4 style={{ fontSize: "1.15rem", fontWeight: 800, color: "var(--color-text-main)", margin: 0 }}>
+          NICE형 예상 연봉 및 종업원 HR 지표
+        </h4>
+      </div>
+
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+        gap: "20px"
+      }}>
+        {/* 예상 평균 연봉 */}
+        <div style={{
+          backgroundColor: "var(--bg-color-main)",
+          border: "1px solid var(--color-border)",
+          borderRadius: "16px",
+          padding: "20px",
+          display: "flex",
+          flexDirection: "column",
+          gap: "8px"
+        }}>
+          <span style={{ fontSize: "0.85rem", color: "var(--color-text-desc)", fontWeight: 700 }}>
+            예상 평균 연봉 (국민연금 납부액 기준)
+          </span>
+          <div style={{ marginTop: "4px" }}>
+            <span style={{ fontSize: "1.6rem", fontWeight: 900, color: "var(--color-primary)" }}>
+              {formattedSalary}
+            </span>
+          </div>
+          <span style={{ fontSize: "0.75rem", color: "var(--color-text-desc)", lineHeight: 1.4 }}>
+            * 당월 국민연금 고지총액({(chrgAmt/10000).toLocaleString()}만원)과 상시 가입자수({emps}명)의 9% 요율 역산 추정치입니다.
+          </span>
+        </div>
+
+        {/* 연봉/종업원 가이드 및 신뢰도 */}
+        <div style={{
+          backgroundColor: "var(--bg-color-main)",
+          border: "1px solid var(--color-border)",
+          borderRadius: "16px",
+          padding: "20px",
+          display: "flex",
+          flexDirection: "column",
+          gap: "10px",
+          justifyContent: "center"
+        }}>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem", color: "var(--color-text-sub)" }}>
+            <span>상시 근로자수</span>
+            <span style={{ fontWeight: 700, color: "var(--color-text-main)" }}>{emps}명</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem", color: "var(--color-text-sub)" }}>
+            <span>월평균 고지 보험료</span>
+            <span style={{ fontWeight: 700, color: "var(--color-text-main)" }}>{(avgPremium/1000).toLocaleString()}천원</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem", color: "var(--color-text-sub)" }}>
+            <span>HR 안정성 등급</span>
+            <span style={{
+              fontWeight: 700,
+              color: parseFloat(exitRate) > 10 ? "var(--color-danger)" : "var(--color-success)"
+            }}>
+              {parseFloat(exitRate) > 10 ? "인력 유출 주의" : "고용 안정 기업"}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// NICE형 산업 분석 및 업계 순위 컴포넌트
+async function IndustrySection({ bSector, bNo }: { bSector: string; bNo: string }) {
+  const analysis = await getIndustryAnalysis(bSector, bNo);
+  
+  if (analysis.totalCompanies === 0) {
+    return (
+      <div className="card" style={{ padding: "28px", textAlign: "center" }}>
+        <span style={{ fontSize: "1.8rem", display: "block", marginBottom: "8px" }}>🏢</span>
+        <div style={{ fontWeight: 700, color: "var(--color-text-sub)", fontSize: "0.95rem", marginBottom: "6px" }}>
+          동종 업종 비교 통계 미제공
+        </div>
+        <p style={{ fontSize: "0.85rem", color: "var(--color-text-desc)", lineHeight: 1.5, margin: 0 }}>
+          등록된 동일 업종 분류 기업 정보가 부족하여 산업 내 순위 및 위치 비교가 어렵습니다.
+        </p>
+      </div>
+    );
+  }
+
+  const getPositionText = (pct: number) => {
+    if (pct >= 85) return "최상위";
+    if (pct >= 55) return "상위";
+    if (pct >= 30) return "중위";
+    return "하위";
+  };
+
+  const getBarColor = (pct: number) => {
+    if (pct >= 85) return "var(--color-primary)";
+    if (pct >= 55) return "#3182f6";
+    if (pct >= 30) return "#10b981";
+    return "#718096";
+  };
+
+  const metrics = [
+    { name: "활동성 (매출 규모)", val: analysis.rankings.revenuePercentile },
+    { name: "수익성 (영업이익률)", val: analysis.rankings.operatingMarginPercentile },
+    { name: "안정성 (자본 대비 부채)", val: analysis.rankings.debtRatioPercentile },
+    { name: "규모 (고용인원)", val: analysis.rankings.employeePercentile }
+  ];
+
+  return (
+    <div className="card" style={{ padding: "32px", display: "flex", flexDirection: "column", gap: "28px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <span style={{ fontSize: "1.2rem" }}>🏢</span>
+          <h4 style={{ fontSize: "1.15rem", fontWeight: 800, color: "var(--color-text-main)", margin: 0 }}>
+            NICE형 산업 분석 및 업계 순위
+          </h4>
+        </div>
+        <span style={{
+          backgroundColor: "rgba(49, 130, 246, 0.08)",
+          color: "var(--color-primary)",
+          fontSize: "0.8rem",
+          fontWeight: 700,
+          padding: "4px 12px",
+          borderRadius: "30px",
+          border: "1px solid rgba(49, 130, 246, 0.2)"
+        }}>
+          기준 연도: 2024년 결산
+        </span>
+      </div>
+
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+        gap: "32px"
+      }}>
+        {/* 산업 내 위치 */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+          <h5 style={{ fontSize: "0.95rem", fontWeight: 800, color: "var(--color-text-sub)", margin: 0 }}>
+            📊 동종 업종 내 상대적 위치 (백분위)
+          </h5>
+          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            {metrics.map((m) => (
+              <div key={m.name} style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.82rem", fontWeight: 700 }}>
+                  <span style={{ color: "var(--color-text-sub)" }}>{m.name}</span>
+                  <span style={{ color: getBarColor(m.val) }}>
+                    {getPositionText(m.val)} (상위 {100 - m.val}%)
+                  </span>
+                </div>
+                <div style={{
+                  width: "100%",
+                  height: "10px",
+                  backgroundColor: "rgba(255, 255, 255, 0.06)",
+                  borderRadius: "5px",
+                  overflow: "hidden"
+                }}>
+                  <div style={{
+                    width: `${m.val}%`,
+                    height: "100%",
+                    backgroundColor: getBarColor(m.val),
+                    borderRadius: "5px",
+                    boxShadow: `0 0 8px ${getBarColor(m.val)}55`
+                  }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* 산업 내 순위 & 산업 위험 */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+          {/* 업계 순위 리스트 */}
+          {analysis.leaders.length > 0 && (
+            <div>
+              <h5 style={{ fontSize: "0.95rem", fontWeight: 800, color: "var(--color-text-sub)", margin: "0 0 14px 0" }}>
+                🏆 {bSector.substring(0, 15)}... 매출액 순위
+              </h5>
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                {analysis.leaders.map((l, index) => (
+                  <div key={l.b_no} style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    padding: "10px 14px",
+                    backgroundColor: l.b_no === bNo ? "rgba(49, 130, 246, 0.08)" : "var(--bg-color-main)",
+                    border: l.b_no === bNo ? "1px solid rgba(49, 130, 246, 0.3)" : "1px solid var(--color-border)",
+                    borderRadius: "12px",
+                    fontSize: "0.85rem"
+                  }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <span style={{
+                        fontWeight: 900,
+                        color: index === 0 ? "#ffd700" : index === 1 ? "#c0c0c0" : "#cd7f32"
+                      }}>
+                        {index + 1}위
+                      </span>
+                      <strong style={{ color: "var(--color-text-main)", fontWeight: 700 }}>{l.b_nm}</strong>
+                    </div>
+                    <span style={{ color: "var(--color-text-desc)" }}>
+                      {l.revenue >= 10000 
+                        ? `${(l.revenue / 10000).toFixed(1)}조` 
+                        : `${l.revenue}억 원`}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 산업 위험 지표 */}
+          <div>
+            <h5 style={{ fontSize: "0.95rem", fontWeight: 800, color: "var(--color-text-sub)", margin: "0 0 12px 0" }}>
+              ⚠️ 산업별 거시 위험 통계
+            </h5>
+            <div style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(2, 1fr)",
+              gap: "12px"
+            }}>
+              <div style={{
+                backgroundColor: "var(--bg-color-main)",
+                border: "1px solid var(--color-border)",
+                borderRadius: "12px",
+                padding: "14px",
+                textAlign: "center"
+              }}>
+                <span style={{ fontSize: "0.78rem", color: "var(--color-text-desc)", fontWeight: 600, display: "block", marginBottom: "4px" }}>
+                  업종 평균 폐업률
+                </span>
+                <span style={{ fontSize: "1.3rem", fontWeight: 900, color: analysis.closeRate > 5 ? "var(--color-danger)" : "var(--color-success)" }}>
+                  {analysis.closeRate}%
+                </span>
+              </div>
+              <div style={{
+                backgroundColor: "var(--bg-color-main)",
+                border: "1px solid var(--color-border)",
+                borderRadius: "12px",
+                padding: "14px",
+                textAlign: "center"
+              }}>
+                <span style={{ fontSize: "0.78rem", color: "var(--color-text-desc)", fontWeight: 600, display: "block", marginBottom: "4px" }}>
+                  업종 등록 기업수
+                </span>
+                <span style={{ fontSize: "1.3rem", fontWeight: 900, color: "var(--color-text-main)" }}>
+                  {analysis.totalCompanies}개사
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // 주요 연혁 타임라인 UI 컴포넌트
 function TimelineSection({
   timeline,
@@ -884,7 +1187,7 @@ import AdBanner from "@/components/AdBanner";
 import { getRecentBidsByCompany, getMockBids } from "@/lib/procurementApi";
 import { getPatentsByCompany, getMockPatents } from "@/lib/patentApi";
 import { getRecentDisclosures, getRecentKeyDisclosures } from "@/lib/dartApi";
-import { getBusinessByBNo, getInvalidBusinesses, addInvalidBusiness, upsertBusiness, getRecommendedBusinesses, query } from "@/lib/db";
+import { getBusinessByBNo, getInvalidBusinesses, addInvalidBusiness, upsertBusiness, getRecommendedBusinesses, query, getIndustryAnalysis } from "@/lib/db";
 import { validateBizrNo } from "@/lib/bizValidation";
 import { findDartCode } from "@/lib/dartMap";
 import { getFtcMailOrderInfo } from "@/lib/ftcApi";
@@ -944,6 +1247,7 @@ interface BusinessData {
   // 국민연금 V2 상세 지표
   newAcqsNmps?: number;
   lossSbscrbNmps?: number;
+  npsChrgAmt?: number;
 
   history: Array<{
     year: number;
@@ -1129,9 +1433,10 @@ async function triggerBackgroundSync(
                new_acqs_nmps = $2, 
                loss_sbscrb_nmps = $3, 
                nps_linked = true, 
-               nps_last_sync_at = CURRENT_TIMESTAMP 
-           WHERE b_no = $4`,
-          [npsInfo.npsSbscrbNmps, npsInfo.newAcqsNmps || 0, npsInfo.lossSbscrbNmps || 0, bNo]
+               nps_last_sync_at = CURRENT_TIMESTAMP,
+               nps_chrg_amt = $4
+           WHERE b_no = $5`,
+          [npsInfo.npsSbscrbNmps, npsInfo.newAcqsNmps || 0, npsInfo.lossSbscrbNmps || 0, npsInfo.npsChrgAmt || 0, bNo]
         );
         
         // history 테이블의 최신 연도 종업원 수도 같이 갱신
@@ -1407,6 +1712,7 @@ async function getUnifiedBusinessData(bNo: string): Promise<{
       business.npsSbscrbNmps = npsInfo.npsSbscrbNmps;
       business.newAcqsNmps = npsInfo.newAcqsNmps;
       business.lossSbscrbNmps = npsInfo.lossSbscrbNmps;
+      business.npsChrgAmt = npsInfo.npsChrgAmt;
       const latestHist = business.history[business.history.length - 1];
       if (latestHist) latestHist.employees = npsInfo.npsSbscrbNmps;
     }
@@ -1452,6 +1758,7 @@ async function getUnifiedBusinessData(bNo: string): Promise<{
       business.npsSbscrbNmps = npsInfo.npsSbscrbNmps;
       business.newAcqsNmps = npsInfo.newAcqsNmps;
       business.lossSbscrbNmps = npsInfo.lossSbscrbNmps;
+      business.npsChrgAmt = npsInfo.npsChrgAmt;
     }
   } else if (localBizVal) {
     // 3.3. 공용 API도 다 실패했는데 기존 로컬 DB 캐시 데이터가 있는 경우
@@ -1461,6 +1768,7 @@ async function getUnifiedBusinessData(bNo: string): Promise<{
       localBizVal.npsSbscrbNmps = npsInfo.npsSbscrbNmps;
       localBizVal.newAcqsNmps = npsInfo.newAcqsNmps;
       localBizVal.lossSbscrbNmps = npsInfo.lossSbscrbNmps;
+      localBizVal.npsChrgAmt = npsInfo.npsChrgAmt;
       const latestHist = localBizVal.history[localBizVal.history.length - 1];
       if (latestHist) latestHist.employees = npsInfo.npsSbscrbNmps;
     }
@@ -1495,6 +1803,7 @@ async function getUnifiedBusinessData(bNo: string): Promise<{
       realBiz.npsSbscrbNmps = npsInfo.npsSbscrbNmps;
       realBiz.newAcqsNmps = npsInfo.newAcqsNmps;
       realBiz.lossSbscrbNmps = npsInfo.lossSbscrbNmps;
+      realBiz.npsChrgAmt = npsInfo.npsChrgAmt;
     }
     business = realBiz;
   }
@@ -1506,7 +1815,10 @@ async function getUnifiedBusinessData(bNo: string): Promise<{
     const hasNewDartCode = localBizVal && !localBizVal.dart_code && business.dart_code;
     
     // 로컬 DB의 종업원수와 실시간 API로 가져온 종업원수가 다를 경우 데이터 동기화
-    const hasEmployeeCountDiff = localBizVal && localBizVal.npsSbscrbNmps !== business.npsSbscrbNmps;
+    const hasEmployeeCountDiff = localBizVal && (
+      localBizVal.npsSbscrbNmps !== business.npsSbscrbNmps ||
+      (business.npsChrgAmt && localBizVal.npsChrgAmt !== business.npsChrgAmt)
+    );
 
     if (isNew || wasUnregistered || hasNewDartCode || hasEmployeeCountDiff) {
       try {
@@ -2284,6 +2596,17 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                 {business?.b_adr}
               </p>
             </div>
+
+            {/* NICE형 예상 연봉/HR 지표 및 산업/업계 순위 분석 대시보드 */}
+            {business && (
+              <SalarySection business={business} />
+            )}
+
+            {business && business.b_sector && (
+              <Suspense fallback={<SectionSkeleton />}>
+                <IndustrySection bSector={business.b_sector} bNo={cleanBNo} />
+              </Suspense>
+            )}
 
             {/* 재무/고용 요약 대시보드 */}
             <div className="card" style={{ padding: "32px" }}>

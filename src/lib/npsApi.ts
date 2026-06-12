@@ -4,6 +4,7 @@ export interface NpsBplcInfo {
   npsSbscrbNmps: number;    // 국민연금 가입자수 (종업원수)
   newAcqsNmps?: number;     // 신규취득자수
   lossSbscrbNmps?: number;  // 상실가입자수
+  npsChrgAmt?: number;      // 국민연금 고지금액 (평균연봉 추정용)
 }
 
 const SERVICE_KEY = process.env.DATA_PORTAL_SERVICE_KEY || "";
@@ -143,7 +144,8 @@ export async function getNpsBplcInfo(bzowrRgstNo: string, companyNm: string): Pr
 
     if (targetDetail) {
       const pepCnt = parseInt(targetDetail.jnngpCnt || targetDetail.npsSbscrbNmps || "0");
-      console.log(`[NPS API Success] Found employee count: ${pepCnt} for seq ${seq}`);
+      const npsChrgAmt = parseInt(targetDetail.crrmmNtcAmt || "0", 10);
+      console.log(`[NPS API Success] Found employee count: ${pepCnt}, charge amount: ${npsChrgAmt} for seq ${seq}`);
 
       let newAcqsNmps = 0;
       let lossSbscrbNmps = 0;
@@ -170,6 +172,7 @@ export async function getNpsBplcInfo(bzowrRgstNo: string, companyNm: string): Pr
         npsSbscrbNmps: pepCnt,
         newAcqsNmps,
         lossSbscrbNmps,
+        npsChrgAmt,
       };
     }
 
