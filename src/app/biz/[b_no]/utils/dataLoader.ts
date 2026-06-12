@@ -407,8 +407,14 @@ export async function getUnifiedBusinessData(bNo: string): Promise<{
       business.lossSbscrbNmps = npsInfo.lossSbscrbNmps;
       business.npsChrgAmt = npsInfo.npsChrgAmt;
       
-      if (npsInfo.npsSector && (!business.b_sector || business.b_sector === "기타 서비스업" || business.b_sector === "상장 법인")) {
+      const uselessSectors = ["상장 법인", "상장법인", "대기업", "중소기업", "일반기업", "중견기업", "기타 서비스업", "기타서비스업", "미등록 업종", "미등록업종", "-", ""];
+      const currentSector = (business.b_sector || "").trim();
+      
+      if (npsInfo.npsSector && (!currentSector || uselessSectors.includes(currentSector))) {
         business.b_sector = npsInfo.npsSector;
+        if (business.main_biz === currentSector || !business.main_biz || uselessSectors.includes((business.main_biz || "").trim())) {
+          business.main_biz = npsInfo.npsSector;
+        }
       }
       
       const latestHist = business.history[business.history.length - 1];

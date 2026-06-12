@@ -644,7 +644,9 @@ export async function saveDisclosures(bNo: string, disclosures: any[]) {
 // 22. 동일 업종 내 통계 및 상대적 위치 연산
 export async function getIndustryAnalysis(bSector: string, bNo: string) {
   const cleanBNo = bNo.replace(/[^0-9]/g, "");
-  if (!bSector || bSector === "미등록 업종") {
+  const uselessSectors = ["미등록 업종", "상장 법인", "상장법인", "대기업", "중소기업", "일반기업", "중견기업", "기타 서비스업", "기타서비스업", "-", ""];
+  
+  if (!bSector || uselessSectors.includes(bSector.trim())) {
     return {
       totalCompanies: 0,
       closeRate: 0,

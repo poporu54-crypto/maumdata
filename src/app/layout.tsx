@@ -5,25 +5,35 @@ import Link from "next/link";
 import Script from "next/script";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://www.maumdata.com"),
   title: {
-    template: "%s | 마음데이터 민간 기업 정보 포털",
-    default: "마음데이터(MaumData) | 실시간 사업자 정보 및 민간 데이터 포털",
+    template: "%s | 마음데이터",
+    default: "마음데이터(MaumData)",
   },
-  description: "국세청 실시간 사업자 상태 정보 조회 및 대한민국 기업 트렌드 분석, 업종별/지역별 통계를 아우르는 프리미엄 민간 데이터 포털 서비스입니다.",
+  description: "국세청 실시간 사업자 상태 조회 및 트랜드, 기업분석, 업종분석, 통계, 무료제공 사업자 정보조회 사이트.",
   keywords: ["사업자등록번호 조회", "실시간 사업자 상태", "계속사업자", "휴업", "폐업", "기업 정보 검색", "민간 데이터 포털"],
   authors: [{ name: "MaumData Team" }],
   openGraph: {
-    title: "마음데이터 | 실시간 사업자 정보 및 민간 데이터 포털",
-    description: "대한민국 모든 사업자등록 정보 실시간 검증 및 정교한 기업 통계 지표를 시각화하여 제공합니다.",
+    title: "마음데이터(MaumData)",
+    description: "국세청 실시간 사업자 상태 조회 및 트랜드, 기업분석, 업종분석, 통계, 무료제공 사업자 정보조회 사이트.",
     url: "https://www.maumdata.com",
     siteName: "마음데이터",
     locale: "ko_KR",
     type: "website",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "마음데이터 최첨단 기업분석 포털",
+      }
+    ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "마음데이터 | 실시간 사업자 정보 및 민간 데이터 포털",
-    description: "대한민국 모든 사업자등록 정보 실시간 검증 및 정교한 기업 통계 지표를 시각화하여 제공합니다.",
+    title: "마음데이터(MaumData)",
+    description: "국세청 실시간 사업자 상태 조회 및 트랜드, 기업분석, 업종분석, 통계, 무료제공 사업자 정보조회 사이트.",
+    images: ["/og-image.png"],
   },
 };
 
