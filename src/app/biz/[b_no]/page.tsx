@@ -1759,10 +1759,10 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                       </span>
                     </div>
                   )}
-                  <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--color-border)", paddingBottom: "10px" }}>
-                    <span style={{ color: "var(--color-text-sub)", fontWeight: 500 }}>종업원 수 (국민연금)</span>
-                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                      <span style={{ fontWeight: 700, color: "var(--color-primary)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--color-border)", paddingBottom: "10px", alignItems: "center" }}>
+                    <span style={{ color: "var(--color-text-sub)", fontWeight: 500 }}>종업원 수</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px", whiteSpace: "nowrap", flexShrink: 0 }}>
+                      <span style={{ fontWeight: 700, color: "var(--color-primary)", whiteSpace: "nowrap" }}>
                         {latestEmployees > 0 ? `${latestEmployees.toLocaleString()}명` : "-"}
                       </span>
                       {business?.npsLinked && (
@@ -1773,7 +1773,8 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                           borderRadius: "4px",
                           fontSize: "0.7rem",
                           fontWeight: 700,
-                          border: "1px solid rgba(45, 202, 115, 0.2)"
+                          border: "1px solid rgba(45, 202, 115, 0.2)",
+                          whiteSpace: "nowrap"
                         }}>
                           국민연금 연동
                         </span>

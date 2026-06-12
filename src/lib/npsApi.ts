@@ -110,18 +110,24 @@ export async function getNpsBplcInfo(bzowrRgstNo: string, companyNm: string): Pr
 
   const seq = matchedBplc.seq;
   
-  // Step 2. 획득한 고유 seq를 사용하여 상세정보(가입자수) 쿼리
+  // Step 2. 획득한 고유 seq를 사용하여 상세정보(가입자수) 및 기간별 현황(취득/상실자수) 쿼리
   const detailUrl = `http://apis.data.go.kr/B552015/NpsBplcInfoInqireServiceV2/getDetailInfoSearchV2?serviceKey=${SERVICE_KEY}&dataType=json&seq=${seq}`;
-  console.log(`[NPS API Step 2] Fetching detail for seq: ${seq}`);
+  const periodUrl = `http://apis.data.go.kr/B552015/NpsBplcInfoInqireServiceV2/getPdAcctoSttusInfoSearchV2?serviceKey=${SERVICE_KEY}&dataType=json&seq=${seq}`;
+  console.log(`[NPS API Step 2] Fetching detail and period status for seq: ${seq}`);
 
   try {
-    const detailResponse = await fetch(detailUrl, {
-      method: "GET",
-      headers: {
-        "Accept": "application/json",
-      },
-      cache: "no-store",
-    });
+    const [detailResponse, periodResponse] = await Promise.all([
+      fetch(detailUrl, {
+        method: "GET",
+        headers: { "Accept": "application/json" },
+        cache: "no-store",
+      }),
+      fetch(periodUrl, {
+        method: "GET",
+        headers: { "Accept": "application/json" },
+        cache: "no-store",
+      }).catch(() => null)
+    ]);
 
     if (!detailResponse.ok) return null;
     const detailText = await detailResponse.text();
@@ -139,12 +145,31 @@ export async function getNpsBplcInfo(bzowrRgstNo: string, companyNm: string): Pr
       const pepCnt = parseInt(targetDetail.jnngpCnt || targetDetail.npsSbscrbNmps || "0");
       console.log(`[NPS API Success] Found employee count: ${pepCnt} for seq ${seq}`);
 
+      let newAcqsNmps = 0;
+      let lossSbscrbNmps = 0;
+
+      if (periodResponse && periodResponse.ok) {
+        try {
+          const periodText = await periodResponse.text();
+          const periodJson = JSON.parse(periodText);
+          const periodItem = periodJson?.response?.body?.items?.item;
+          const targetPeriod = Array.isArray(periodItem) ? periodItem[0] : periodItem;
+          if (targetPeriod) {
+            newAcqsNmps = parseInt(targetPeriod.nwAcqzrCnt || "0", 10);
+            lossSbscrbNmps = parseInt(targetPeriod.lssJnngpCnt || "0", 10);
+            console.log(`[NPS API Success] Found acquisitions: ${newAcqsNmps}, losses: ${lossSbscrbNmps}`);
+          }
+        } catch (pe) {
+          console.error("Failed to parse NPS period status:", pe);
+        }
+      }
+
       return {
         wkplNm: targetDetail.wkplNm || matchedBplc.wkplNm || "",
         bzowrRgstNo: cleanBNo,
         npsSbscrbNmps: pepCnt,
-        newAcqsNmps: 0,
-        lossSbscrbNmps: 0,
+        newAcqsNmps,
+        lossSbscrbNmps,
       };
     }
 
