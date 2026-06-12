@@ -942,15 +942,15 @@ async function getUnifiedBusinessData(bNo: string): Promise<{
   );
 
   // 로컬 DB 캐시 히트 조건 만족 시, 국세청 API 호출 없이 즉시 캐시 데이터 반환
-  // DB에 데이터가 존재하기만 하면 (정보가 일부 누락되었더라도) 렌더 블로킹 조회를 무조건 건너뜁니다!
-  if (localBiz) {
+  // 단, 상호 정보가 수집되지 않은 ('상호 정보 없음') 불완전 캐시인 경우는 제외하고 실시간 API를 호출하여 보완합니다.
+  if (localBiz && localBiz.b_nm !== "상호 정보 없음") {
     console.log(`[Cache Hit] Business data loaded directly from Neon DB (Skipped NTS API): ${localBiz.b_nm} (${cleanBNo})`);
     
     // UI 렌더링에 지장이 없도록 가상의 mock apiStatus 설정 (대기 시간 0ms)
     const mockApiStatus: NtsCompanyStatus = {
       b_no: cleanBNo,
-      b_stt: localBiz.b_nm === "상호 정보 없음" ? "계속사업자" : (localBiz.b_type?.includes("폐업") ? "폐업자" : "계속사업자"),
-      b_stt_cd: localBiz.b_type?.includes("폐업") ? "02" : "01",
+      b_stt: localBiz.b_type?.includes("폐업") ? "폐업자" : "계속사업자",
+      b_stt_cd: localBiz.b_type?.includes("폐업") ? "03" : "01",
       tax_type: "부가가치세 일반과세자",
       tax_type_cd: "01",
       end_dt: "",
@@ -1548,11 +1548,18 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                   </div>
                   <h1 style={{ fontSize: "2.2rem", fontWeight: 800, color: "var(--color-text-main)", letterSpacing: "-0.02em" }}>
                     {business?.b_nm}
-                    {business?.brand_name && business.brand_name.split(",")[0].trim() !== business.b_nm && (
-                      <span style={{ fontSize: "1.3rem", fontWeight: 600, color: "var(--color-text-desc)", marginLeft: "12px", display: "inline-block", verticalAlign: "middle" }}>
-                        ({business.brand_name.split(",")[0].trim()})
-                      </span>
-                    )}
+                    {(() => {
+                      const brandPrefix = business?.brand_name?.split(",")[0].trim() || "";
+                      const hasValidBrand = brandPrefix && 
+                                            brandPrefix !== business?.b_nm && 
+                                            brandPrefix !== "상호 미등록 사업자" && 
+                                            brandPrefix !== "상호 정보 없음";
+                      return hasValidBrand ? (
+                        <span style={{ fontSize: "1.3rem", fontWeight: 600, color: "var(--color-text-desc)", marginLeft: "12px", display: "inline-block", verticalAlign: "middle" }}>
+                          ({brandPrefix})
+                        </span>
+                      ) : null;
+                    })()}
                   </h1>
                 </div>
 

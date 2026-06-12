@@ -35,7 +35,10 @@ export default async function MainPage() {
     quickLinks = popularBizRes.rows.map((row: any) => {
       let shortName = row.b_nm;
       if (row.brand_name) {
-        shortName = row.brand_name.split(",")[0].trim();
+        const brandPrefix = row.brand_name.split(",")[0].trim();
+        if (brandPrefix && brandPrefix !== "상호 미등록 사업자" && brandPrefix !== "상호 정보 없음") {
+          shortName = brandPrefix;
+        }
       }
       return { name: shortName, no: row.b_no };
     });

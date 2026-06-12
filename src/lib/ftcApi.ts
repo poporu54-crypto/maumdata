@@ -61,7 +61,7 @@ export async function getFtcMailOrderInfo(bNo: string): Promise<FtcMailOrderBusi
       return null;
     }
 
-    const items = json?.response?.body?.items?.item;
+    const items = json?.items || json?.response?.body?.items?.item || json?.response?.body?.items;
     if (items && items.length > 0) {
       const item = items[0];
       return {

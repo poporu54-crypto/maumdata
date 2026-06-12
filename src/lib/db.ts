@@ -455,4 +455,40 @@ export async function updateEditRequestStatus(id: number, status: string) {
   );
 }
 
+// 14. 관리자용 종합 통계 조회
+export async function getAdminStats() {
+  const totalCountResult = await query("SELECT COUNT(*) as count FROM businesses");
+  const noNameCountResult = await query("SELECT COUNT(*) as count FROM businesses WHERE b_nm = '상호 정보 없음'");
+  const pendingRequestsResult = await query("SELECT COUNT(*) as count FROM business_edit_requests WHERE status = 'pending'");
+  const totalViewsResult = await query("SELECT SUM(view_count) as count FROM businesses");
+
+  return {
+    totalBusinesses: parseInt(totalCountResult.rows[0]?.count || "0", 10),
+    noNameBusinesses: parseInt(noNameCountResult.rows[0]?.count || "0", 10),
+    pendingRequests: parseInt(pendingRequestsResult.rows[0]?.count || "0", 10),
+    totalViews: parseInt(totalViewsResult.rows[0]?.count || "0", 10),
+  };
+}
+
+// 15. 상호 정보 없는 기업 리스트 조회 (정렬: b_no DESC)
+export async function getNoNameBusinesses(limit = 100, offset = 0) {
+  const result = await query(
+    `SELECT b_no, b_nm, p_nm, b_adr, b_sector, view_count as "viewCount"
+     FROM businesses
+     WHERE b_nm = '상호 정보 없음'
+     ORDER BY b_no DESC
+     LIMIT $1 OFFSET $2`,
+    [limit, offset]
+  );
+  return result.rows.map(row => ({
+    b_no: row.b_no,
+    b_nm: row.b_nm,
+    p_nm: row.p_nm || "",
+    b_adr: row.b_adr || "",
+    b_sector: row.b_sector || "",
+    viewCount: row.viewCount || 0
+  }));
+}
+
+
 
