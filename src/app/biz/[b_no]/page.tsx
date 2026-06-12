@@ -798,28 +798,9 @@ async function getUnifiedBusinessData(bNo: string): Promise<{
     };
   }
 
-  // 1. 국세청 실시간 상태 조회
-  const apiStatus = await getNtsCompanyStatus(cleanBNo);
-  const isInvalid = !apiStatus || apiStatus.tax_type === "국세청에 등록되지 않은 사업자등록번호입니다";
-
-  if (isInvalid) {
-    // 블랙리스트 캐시 등록
-    if (!invalidList.includes(cleanBNo)) {
-      try {
-        await addInvalidBusiness(cleanBNo);
-        console.log(`Added invalid business number to blacklist in Neon DB: ${cleanBNo}`);
-      } catch (e) {
-        console.error("Failed to write invalid list to Neon DB:", e);
-      }
-    }
-    return { apiStatus, business: null, isInvalid: true };
-  }
-
-  // 2. 로컬 DB 조회
+  // 1. [최적화] 로컬 DB 선조회 (NTS API 대기 전 캐시 히트 검사)
   const localBiz = await getLocalBusiness(cleanBNo);
   
-  // 2.1. DB에 이미 온전한 기업 정보가 적재되어 있는 경우 외부 API 호출을 완전히 생략하고 캐시 데이터 즉시 사용
-  // (단, 이전에 정보 없음으로 잘못 캐싱된 오염 데이터인 "상호 미등록 사업자"는 제외하고 실시간 재조회)
   const isListedOrAudited = 
     localBiz?.listing_status?.includes("상장") || 
     localBiz?.b_type?.includes("상장") || 
@@ -840,30 +821,57 @@ async function getUnifiedBusinessData(bNo: string): Promise<{
     ))
   );
 
+  // 로컬 DB 캐시 히트 조건 만족 시, 국세청 API 호출 없이 즉시 캐시 데이터 반환
   if (localBiz && localBiz.b_nm !== "상호 미등록 사업자" && !isCacheIncomplete) {
-    console.log(`[Cache Hit] Business data loaded directly from Neon DB: ${localBiz.b_nm} (${cleanBNo})`);
+    console.log(`[Cache Hit] Business data loaded directly from Neon DB (Skipped NTS API): ${localBiz.b_nm} (${cleanBNo})`);
     
-    // 최종 동기화 시각과 현재 시각 대조하여 백그라운드 비동기 동기화 여부 검토
+    // UI 렌더링에 지장이 없도록 가상의 mock apiStatus 설정 (대기 시간 0ms)
+    const mockApiStatus: NtsCompanyStatus = {
+      b_no: cleanBNo,
+      b_stt: "계속사업자",
+      b_stt_cd: "01",
+      tax_type: "부가가치세 일반과세자",
+      tax_type_cd: "01",
+      end_dt: "",
+      utcc_yn: "N",
+      tax_type_change_dt: "",
+      invoice_apply_dt: "",
+      rbf_tax_type: "",
+      rbf_tax_type_cd: ""
+    };
+
     const now = new Date();
-    
-    // 국세청 최종 동기화로부터 경과 일수 계산 (기본값 '1970-01-01'일 경우 매우 큰 값)
     const ntsLastSync = localBiz.ntsLastSyncAt ? new Date(localBiz.ntsLastSyncAt) : new Date(0);
     const ntsDiffDays = Math.floor((now.getTime() - ntsLastSync.getTime()) / (1000 * 60 * 60 * 24));
     
-    // 국민연금 최종 동기화로부터 경과 일수 계산
     const npsLastSync = localBiz.npsLastSyncAt ? new Date(localBiz.npsLastSyncAt) : new Date(0);
     const npsDiffDays = Math.floor((now.getTime() - npsLastSync.getTime()) / (1000 * 60 * 60 * 24));
     
     const ntsUpdateNeeded = ntsDiffDays >= 10;
-    // 국민연금이 이미 정상 연동된 곳은 30일 주기, 미연동(실패)된 상태인 곳은 1일 주기로 재시도하여 자가 치유를 앞당깁니다.
     const npsUpdateNeeded = localBiz.npsLinked ? (npsDiffDays >= 30) : (npsDiffDays >= 1);
     
     if (ntsUpdateNeeded || npsUpdateNeeded) {
-      // 비동기 백그라운드 쓰레드로 동기화 실행 (await 없이 호출하여 렌더링에 영향을 미치지 않음)
+      // 정보 갱신 만료 시 백그라운드로 비동기 업데이트 실행 (메인 쓰레드 대기 없음)
       triggerBackgroundSync(cleanBNo, localBiz, ntsUpdateNeeded, npsUpdateNeeded);
     }
     
-    return { apiStatus, business: localBiz, isInvalid: false };
+    return { apiStatus: mockApiStatus, business: localBiz, isInvalid: false };
+  }
+
+  // 2. 캐시가 없거나 불완전한 경우에만 국세청 실시간 조회를 동기적으로 대기
+  const apiStatus = await getNtsCompanyStatus(cleanBNo);
+  const isInvalid = !apiStatus || apiStatus.tax_type === "국세청에 등록되지 않은 사업자등록번호입니다";
+
+  if (isInvalid) {
+    if (!invalidList.includes(cleanBNo)) {
+      try {
+        await addInvalidBusiness(cleanBNo);
+        console.log(`Added invalid business number to blacklist in Neon DB: ${cleanBNo}`);
+      } catch (e) {
+        console.error("Failed to write invalid list to Neon DB:", e);
+      }
+    }
+    return { apiStatus, business: null, isInvalid: true };
   }
 
   // 3. 공공 API 동시(병렬) 호출로 로딩 속도 극대화
