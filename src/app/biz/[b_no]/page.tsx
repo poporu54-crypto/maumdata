@@ -823,7 +823,7 @@ function formatJosa(text?: string): string {
     .replace(/([가-힣a-zA-Z0-9]+)과\(와\)/g, (match, word) => word + getJosa(word, "과와"));
 }
 
-// NICE형 예상 연봉/HR 지표 분석 컴포넌트
+// 예상 연봉/HR 지표 분석 컴포넌트
 function SalarySection({ business }: { business: BusinessData }) {
   if (!business.npsLinked || !business.npsSbscrbNmps || !business.npsChrgAmt) {
     return (
@@ -874,7 +874,7 @@ function SalarySection({ business }: { business: BusinessData }) {
       <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
         <span style={{ fontSize: "1.2rem" }}>💳</span>
         <h4 style={{ fontSize: "1.15rem", fontWeight: 800, color: "var(--color-text-main)", margin: 0 }}>
-          NICE형 예상 연봉 및 종업원 HR 지표
+          예상 평균 연봉 및 고용 HR 지표
         </h4>
       </div>
 
@@ -940,7 +940,7 @@ function SalarySection({ business }: { business: BusinessData }) {
   );
 }
 
-// NICE형 산업 분석 및 업계 순위 컴포넌트
+// 동종 업종 분석 및 업계 순위 컴포넌트
 async function IndustrySection({ bSector, bNo }: { bSector: string; bNo: string }) {
   const analysis = await getIndustryAnalysis(bSector, bNo);
   
@@ -985,7 +985,7 @@ async function IndustrySection({ bSector, bNo }: { bSector: string; bNo: string 
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
           <span style={{ fontSize: "1.2rem" }}>🏢</span>
           <h4 style={{ fontSize: "1.15rem", fontWeight: 800, color: "var(--color-text-main)", margin: 0 }}>
-            NICE형 산업 분석 및 업계 순위
+            동종 업종 분석 및 업계 순위
           </h4>
         </div>
         <span style={{
@@ -2641,7 +2641,7 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
               </p>
             </div>
 
-            {/* NICE형 예상 연봉/HR 지표 및 산업/업계 순위 분석 대시보드 */}
+            {/* 예상 평균 연봉/HR 지표 및 동종 업종/업계 순위 분석 대시보드 */}
             {business && (
               <SalarySection business={business} />
             )}
