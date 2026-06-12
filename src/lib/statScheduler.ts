@@ -1,4 +1,4 @@
-import { getPortalStats, PortalStats } from "./statApi";
+import { fetchPortalStatsFromAPI, PortalStats } from "./statApi";
 import { getStatsHistory, upsertStatsHistory } from "./db";
 
 export interface HistoryEntry extends PortalStats {
@@ -41,8 +41,8 @@ export async function recordSnapshotIfMissing(): Promise<void> {
       return;
     }
     
-    // 오늘의 실시간 공공 통계 데이터 조회
-    const stats = await getPortalStats();
+    // 오늘의 실시간 공공 통계 데이터 조회 (API 직접 호출)
+    const stats = await fetchPortalStatsFromAPI();
     
     const newEntry: HistoryEntry = {
       date: todayStr,

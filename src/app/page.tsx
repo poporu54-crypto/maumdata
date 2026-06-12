@@ -13,8 +13,8 @@ export const dynamic = "force-dynamic";
 export default async function MainPage() {
   // 백그라운드 스케줄러 기동 (서버 기동 최초 1회 가드 처리됨)
   startSnapshotScheduler();
-  // 오늘 자정 스냅샷 기록 여부 점검 및 자동 보정 (지연 동기화)
-  await recordSnapshotIfMissing();
+  // 오늘 자정 스냅샷 기록 여부 점검 및 자동 보정 (지연 동기화 - 비동기 백그라운드 실행)
+  recordSnapshotIfMissing();
 
   // 서버 사이드에서 실시간 국가 통계 API(전국사업체조사 & 100대 생활업종) 집계 조회
   const stats = await getPortalStats();

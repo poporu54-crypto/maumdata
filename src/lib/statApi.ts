@@ -1,3 +1,5 @@
+import { query } from "./db";
+
 export interface PortalStats {
   newBizToday: number;      // 실시간 개업 현황 (오늘 누적 예측)
   newBizTodayDelta: number; // 오늘 증감분
@@ -18,26 +20,24 @@ const SURVEY_API_URL = "https://api.odcloud.kr/api/15087673/v1/uddi:32e6d6f0-6d0
 // 2. 국세청 100대 생활업종 최신 Endpoint (20230731 기준)
 const SECTOR_API_URL = "https://api.odcloud.kr/api/15061118/v1/uddi:71ecccf2-b5e4-4f8e-9523-95677e2e1c59";
 
-/**
- * 실시간 공공 통계 API를 조회 및 집계하여 오늘의 데이터 포털 지표들을 실제 통계 기반으로 연산합니다.
- * API 장애 또는 지연 시 고품질의 국가 공식 통계 폴백 데이터셋을 반환합니다.
- */
-export async function getPortalStats(): Promise<PortalStats> {
-  // 기본 국가 공식 통계 데이터셋 (Fallback용)
-  // - 전국사업체조사 기준 총 사업체 수 비중: 도소매 26.8%, 제조업 11.2%, 정보통신 3.5%, 기타 58.5%
-  // - 100대 생활업종 기준 계속사업자 비율 평균: 약 91.4%
-  const fallbackStats: PortalStats = {
-    newBizToday: 2842,
-    newBizTodayDelta: 142,
-    activeBizRate: 91.4,
-    industryRatios: {
-      retail: 26.8,
-      ict: 3.5,
-      manufacturing: 11.2,
-      others: 58.5
-    }
-  };
+// 기본 국가 공식 통계 데이터셋 (Fallback용)
+const fallbackStats: PortalStats = {
+  newBizToday: 2842,
+  newBizTodayDelta: 142,
+  activeBizRate: 91.4,
+  industryRatios: {
+    retail: 26.8,
+    ict: 3.5,
+    manufacturing: 11.2,
+    others: 58.5
+  }
+};
 
+/**
+ * 실시간 공공 통계 API를 직접 호출하여 오늘의 데이터 포털 지표들을 수집합니다.
+ * (백그라운드 스케줄러 등에서 호출되며, 일반 사용자 요쳥 스레드에서 직접 사용하지 않습니다.)
+ */
+export async function fetchPortalStatsFromAPI(): Promise<PortalStats> {
   try {
     // 1. 전국사업체조사 API 호출 (모든 분류를 훑기 위해 perPage=2000 설정)
     const surveyUrl = `${SURVEY_API_URL}?serviceKey=${SERVICE_KEY}&page=1&perPage=2000`;
@@ -158,4 +158,40 @@ export async function getPortalStats(): Promise<PortalStats> {
     console.error("Failed to query statistical API:", error);
     return fallbackStats;
   }
+}
+
+// 인메모리 캐싱 변수
+let cachedPortalStats: PortalStats | null = null;
+let cachedPortalStatsTime = 0;
+const PORTAL_STATS_CACHE_TTL = 60000; // 1분 메모리 캐시 (DB 조회 횟수도 최적화)
+
+/**
+ * DB에 기록된 가장 최신의 통계 데이터를 즉시 가져와 반환하여 첫 로딩 속도를 극대화합니다.
+ * (DB 조회를 수 ms 내에 끝마치고, 사용자 요청 스레드에서 외부 API 대기가 발생하지 않도록 조치합니다.)
+ */
+export async function getPortalStats(): Promise<PortalStats> {
+  const now = Date.now();
+  if (cachedPortalStats && (now - cachedPortalStatsTime < PORTAL_STATS_CACHE_TTL)) {
+    return cachedPortalStats;
+  }
+
+  try {
+    const res = await query(`
+      SELECT stats_data as "statsData"
+      FROM stats_history
+      ORDER BY bas_dt DESC
+      LIMIT 1
+    `);
+
+    if (res.rows.length > 0) {
+      const dbStats = res.rows[0].statsData;
+      cachedPortalStats = dbStats;
+      cachedPortalStatsTime = now;
+      return dbStats;
+    }
+  } catch (error) {
+    console.error("[Stats API] Failed to fetch latest stats from DB:", error);
+  }
+
+  return fallbackStats;
 }
