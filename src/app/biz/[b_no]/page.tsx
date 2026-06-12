@@ -149,9 +149,9 @@ async function RecommendedSection({
 }
 
 // 1. 조달청 나라장터 입찰공고 컴포넌트
-async function BidsSection({ companyNm }: { companyNm: string }) {
+async function BidsSection({ companyNm, bNo }: { companyNm: string; bNo: string }) {
   // 실시간 조달 정보 로드 (어떠한 가상 Mock 데이터도 강제 결합하지 않음)
-  const bids = await getRecentBidsByKeyword(companyNm);
+  const bids = await getRecentBidsByCompany(companyNm, bNo);
 
   // 1. 총 수주 규모 계산
   const totalAmount = bids.reduce((acc, curr) => acc + (curr.presmptPrce || 0), 0);
@@ -881,7 +881,7 @@ import { getNtsCompanyStatus, NtsCompanyStatus } from "@/lib/ntsApi";
 import { getCorpBasicOutline, getCorpFinanceInfo, CorpBasicOutline, CorpFinanceDetail } from "@/lib/corpApi";
 import { getNpsBplcInfo } from "@/lib/npsApi";
 import AdBanner from "@/components/AdBanner";
-import { getRecentBidsByKeyword, getMockBids } from "@/lib/procurementApi";
+import { getRecentBidsByCompany, getMockBids } from "@/lib/procurementApi";
 import { getPatentsByCompany, getMockPatents } from "@/lib/patentApi";
 import { getRecentDisclosures, getRecentKeyDisclosures } from "@/lib/dartApi";
 import { getBusinessByBNo, getInvalidBusinesses, addInvalidBusiness, upsertBusiness, getRecommendedBusinesses, query } from "@/lib/db";
@@ -2782,7 +2782,7 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                   🏛️ 조달청 나라장터 입찰공고 매칭 내역
                 </h4>
                 <Suspense fallback={<SectionSkeleton />}>
-                  <BidsSection companyNm={business?.b_nm || ""} />
+                  <BidsSection companyNm={business?.b_nm || ""} bNo={cleanBNo} />
                 </Suspense>
               </div>
 

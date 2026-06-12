@@ -105,7 +105,9 @@ export async function getPatentsByCompany(companyNm: string, applicantNm: string
     
     // KIPRIS 에러 체크
     if (text.includes("<resultCode>") && !text.includes("<resultCode>00</resultCode>")) {
-      console.warn("KIPRIS API returned error code. Returning empty.");
+      const matchMsg = /<resultMsg>(.*?)<\/resultMsg>/.exec(text);
+      const errorMsg = matchMsg ? matchMsg[1] : "Unknown KIPRIS Error";
+      console.warn(`KIPRIS API error [${errorMsg}]. Returning empty list.`);
       return [];
     }
 

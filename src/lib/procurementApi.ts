@@ -11,17 +11,20 @@ export interface BidNotice {
 }
 
 const SERVICE_KEY = process.env.DATA_PORTAL_SERVICE_KEY || "";
-const API_URL_BASE = "https://apis.data.go.kr/1230000/ao/PubDataOpnStdService";
+const API_URL_BASE = "https://apis.data.go.kr/1230000/as/ScsbidInfoService";
 
 /**
- * 1. 조달청 나라장터 용역/물품 입찰공고 API를 실시간 쿼리하여 관련 입찰 목록을 수집합니다.
- * @param keyword 검색어 (상호명 또는 주요 업종 키워드)
+ * 1. 조달청 나라장터 낙찰정보 API를 실시간 쿼리하여 관련 수주/낙찰 목록을 수집합니다.
+ * @param companyNm 기업 상호명
+ * @param bNo 사업자등록번호
  */
-export async function getRecentBidsByKeyword(keyword: string): Promise<BidNotice[]> {
-  const cleanKeyword = keyword.trim();
-  if (!cleanKeyword || cleanKeyword.length < 2) return [];
+export async function getRecentBidsByCompany(companyNm: string, bNo: string): Promise<BidNotice[]> {
+  const cleanCompanyNm = companyNm.trim();
+  const cleanBNo = bNo.replace(/[^0-9]/g, "");
+  
+  if (!cleanCompanyNm || cleanCompanyNm.length < 2) return [];
 
-  // 개방표준 가이드라인에 따른 7일(1주일) 조회 범위 설정
+  // 1주일(7일) 조회 범위 설정
   const today = new Date();
   const past = new Date();
   past.setDate(today.getDate() - 7);
@@ -33,81 +36,97 @@ export async function getRecentBidsByKeyword(keyword: string): Promise<BidNotice
     return `${y}${m}${day}0000`;
   };
 
-  const searchKeyword = cleanKeyword
-    .replace(/\(.*?\)/g, "")
-    .replace(/주식회사/g, "")
-    .replace(/\(주\)/g, "")
-    .trim();
-
   const bgnDt = formatDateString(past);
   const endDt = formatDateString(today);
-  const encodedKeyword = encodeURIComponent(searchKeyword);
 
-  // 데이터셋 개방표준에 따른 입찰공고정보 조회 API
-  const url = `${API_URL_BASE}/getDataSetOpnStdBidPblancInfo?serviceKey=${SERVICE_KEY}&numOfRows=5&pageNo=1&inqryBgnDt=${bgnDt}&inqryEndDt=${endDt}&bidNtceNm=${encodedKeyword}&type=json`;
+  // 용역, 물품, 공사의 낙찰정보를 병렬로 호출하는 헬퍼 함수
+  const fetchCategory = async (operation: string): Promise<any[]> => {
+    const url = `${API_URL_BASE}/${operation}?serviceKey=${SERVICE_KEY}&numOfRows=100&pageNo=1&inqryDiv=1&inqryBgnDt=${bgnDt}&inqryEndDt=${endDt}&type=json`;
+    
+    try {
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          "Accept": "application/json",
+        },
+        cache: "no-store",
+      });
+
+      if (!response.ok) {
+        console.error(`Procurement API HTTP error for ${operation}: ${response.status}`);
+        return [];
+      }
+
+      const text = await response.text();
+      if (text.includes("Forbidden") || (text.includes("<resultCode>") && !text.includes("NORMAL SERVICE"))) {
+        console.warn(`Procurement API Key not sync'd or blocked for ${operation}. Returning empty.`);
+        return [];
+      }
+
+      let json;
+      try {
+        json = JSON.parse(text);
+      } catch (e) {
+        return [];
+      }
+
+      const items = json?.response?.body?.items?.item || json?.response?.body?.items;
+      if (items) {
+        return Array.isArray(items) ? items : [items];
+      }
+      return [];
+    } catch (err) {
+      console.error(`Failed to fetch procurement bids for ${operation}:`, err);
+      return [];
+    }
+  };
 
   try {
-    const response = await fetch(url, {
-      method: "GET",
-      headers: {
-        "Accept": "application/json",
-      },
-      cache: "no-store",
+    // 3가지 낙찰정보 API 병렬 호출
+    const [listServc, listThng, listConstc] = await Promise.all([
+      fetchCategory("getScsbidListSttusServc"), // 용역
+      fetchCategory("getScsbidListSttusThng"),  // 물품
+      fetchCategory("getScsbidListSttusConstc") // 공사
+    ]);
+
+    const combinedList = [...listServc, ...listThng, ...listConstc];
+
+    // 사후 정합성 필터링: 낙찰업체 사업자등록번호(scsbidBprcoNo)가 일치하거나 낙찰업체명(scsbidBprcoNm)이 매칭되는 것 필터
+    const targetNmClean = cleanCompanyNm.replace(/\(.*?\)/g, "").replace(/주식회사/g, "").replace(/\(주\)/g, "").replace(/\s+/g, "").toLowerCase();
+    
+    const filteredList = combinedList.filter((item: any) => {
+      const itemBNo = (item.scsbidBprcoNo || "").replace(/[^0-9]/g, "");
+      const itemNm = (item.scsbidBprcoNm || "").replace(/\s+/g, "").toLowerCase();
+      
+      const isBNoMatch = cleanBNo && itemBNo === cleanBNo;
+      const isNmMatch = targetNmClean && itemNm.includes(targetNmClean);
+      
+      return isBNoMatch || isNmMatch;
     });
 
-    if (!response.ok) {
-      console.error(`Procurement API HTTP error: ${response.status}`);
-      return [];
-    }
+    return filteredList.map((item: any) => {
+      const dateStr = item.bidNtceDate || item.opengDate || "";
+      const timeStr = item.bidNtceBgn || item.opengTm || "";
+      const formattedDt = dateStr && timeStr ? `${dateStr} ${timeStr}` : (dateStr || "-");
 
-    const text = await response.text();
-    if (text.includes("Forbidden") || (text.includes("<resultCode>") && !text.includes("NORMAL SERVICE"))) {
-      console.warn("Procurement API Key not sync'd yet or blocked. Returning empty list.");
-      return [];
-    }
-
-    let json;
-    try {
-      json = JSON.parse(text);
-    } catch (e) {
-      return [];
-    }
-
-    const items = json?.response?.body?.items?.item || json?.response?.body?.items;
-    if (items) {
-      const list = Array.isArray(items) ? items : [items];
-      
-      // 사후 정합성 필터링: 공고명(bidNtceNm)에 검색용 회사명(searchKeyword)이 실제로 포함되어 있는 것만 노출
-      const filteredList = list.filter((item: any) => {
-        if (!item.bidNtceNm) return false;
-        return item.bidNtceNm.includes(searchKeyword);
-      });
-
-      return filteredList.map((item: any) => {
-        const dateStr = item.bidNtceDate || "";
-        const timeStr = item.bidNtceBgn || "";
-        const formattedDt = dateStr && timeStr ? `${dateStr} ${timeStr}` : (dateStr || "-");
-
-        return {
-          bidNtceNo: item.bidNtceNo || "",
-          bidNtceOrd: item.bidNtceOrd || "00",
-          bidNtceNm: item.bidNtceNm || "",
-          dminsttNm: item.dmndInsttNm || item.ntceInsttNm || "",
-          opngDt: item.bidNtceOpngDt || "",
-          bidNtceDt: formattedDt,
-          cntrctCnclMthdNm: item.cntrctCnclsMthdNm || "제한경쟁",
-          presmptPrce: parseFloat(item.presmptPrce || "0"),
-          detailUrl: `https://www.g2b.go.kr:8081/ep/invitation/publishBidInvitationDetail.do?bidno=${item.bidNtceNo}&bidseq=${item.bidNtceOrd}`,
-        };
-      });
-    }
-
-    return [];
+      return {
+        bidNtceNo: item.bidNtceNo || "",
+        bidNtceOrd: item.bidNtceOrd || "00",
+        bidNtceNm: item.bidNtceNm || "",
+        dminsttNm: item.dmndInsttNm || item.ntceInsttNm || "",
+        opngDt: item.opengDate || "",
+        bidNtceDt: formattedDt,
+        cntrctCnclMthdNm: item.cntrctCnclsMthdNm || "제한경쟁",
+        presmptPrce: parseFloat(item.scsbidAmt || "0"), // 낙찰금액 매칭
+        detailUrl: `https://www.g2b.go.kr:8081/ep/invitation/publishBidInvitationDetail.do?bidno=${item.bidNtceNo}&bidseq=${item.bidNtceOrd}`,
+      };
+    });
   } catch (err) {
-    console.error("Failed to fetch procurement bids:", err);
+    console.error("Failed to filter procurement bids:", err);
     return [];
   }
 }
+
 
 /**
  * 2. 특정 기업의 실제 수주/입찰 매칭을 재현하기 위한 정교한 공공 입찰 Mock 발전기
