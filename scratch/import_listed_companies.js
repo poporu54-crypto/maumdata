@@ -2,24 +2,35 @@ const { Pool } = require('pg');
 const fs = require('fs');
 const path = require('path');
 
-const SERVICE_KEY = "f36b1b2ca7c1dc5648a1b0d8eb1fff41a6b22f58a653cd7f8895c33cb72c931b";
-
-const connectionString = (() => {
+// .env.local 로드 및 환경변수 주입
+try {
   const envPath = path.join(__dirname, '../.env.local');
   if (fs.existsSync(envPath)) {
     const envContent = fs.readFileSync(envPath, 'utf8');
-    const match = envContent.match(/POSTGRES_URL=([^\r\n]+)/) || envContent.match(/DATABASE_URL=([^\r\n]+)/);
-    if (match) return match[1].trim();
+    envContent.split('\n').forEach(line => {
+      const parts = line.split('=');
+      if (parts.length >= 2) {
+        const key = parts[0].trim();
+        const value = parts.slice(1).join('=').trim().replace(/(^['"]|['"]$)/g, '');
+        if (key && !key.startsWith('#')) {
+          process.env[key] = value;
+        }
+      }
+    });
   }
-  return process.env.POSTGRES_URL || process.env.DATABASE_URL;
-})();
+} catch (e) {
+  console.error("Failed to load .env.local:", e);
+}
+
+const SERVICE_KEY = process.env.DATA_PORTAL_SERVICE_KEY || "f36b1b2ca7c1dc5648a1b0d8eb1fff41a6b22f58a653cd7f8895c33cb72c931b";
+const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL;
 
 const pool = new Pool({
   connectionString,
   ssl: {
     rejectUnauthorized: false
   },
-  max: 15, // 동시 커넥션 개수를 15개로 늘림
+  max: 15,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,
 });

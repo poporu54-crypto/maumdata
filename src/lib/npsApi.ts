@@ -5,6 +5,7 @@ export interface NpsBplcInfo {
   newAcqsNmps?: number;     // 신규취득자수
   lossSbscrbNmps?: number;  // 상실가입자수
   npsChrgAmt?: number;      // 국민연금 고지금액 (평균연봉 추정용)
+  npsSector?: string;       // 국민연금 업종명 (vldtVlKrnNm)
 }
 
 const SERVICE_KEY = process.env.DATA_PORTAL_SERVICE_KEY || "";
@@ -145,7 +146,8 @@ export async function getNpsBplcInfo(bzowrRgstNo: string, companyNm: string): Pr
     if (targetDetail) {
       const pepCnt = parseInt(targetDetail.jnngpCnt || targetDetail.npsSbscrbNmps || "0");
       const npsChrgAmt = parseInt(targetDetail.crrmmNtcAmt || "0", 10);
-      console.log(`[NPS API Success] Found employee count: ${pepCnt}, charge amount: ${npsChrgAmt} for seq ${seq}`);
+      const npsSector = targetDetail.vldtVlKrnNm || "";
+      console.log(`[NPS API Success] Found employee count: ${pepCnt}, charge amount: ${npsChrgAmt}, sector: ${npsSector} for seq ${seq}`);
 
       let newAcqsNmps = 0;
       let lossSbscrbNmps = 0;
@@ -173,6 +175,7 @@ export async function getNpsBplcInfo(bzowrRgstNo: string, companyNm: string): Pr
         newAcqsNmps,
         lossSbscrbNmps,
         npsChrgAmt,
+        npsSector,
       };
     }
 

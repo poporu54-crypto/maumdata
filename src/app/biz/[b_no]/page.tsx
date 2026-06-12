@@ -1470,7 +1470,7 @@ async function triggerBackgroundSync(
     if (npsNeeded) {
       const npsInfo = await getNpsBplcInfo(bNo, localBiz.b_nm);
       if (npsInfo && npsInfo.npsSbscrbNmps > 0) {
-        // businesses 테이블의 종업원 수 및 동기화 일자 갱신
+        // businesses 테이블의 종업원 수 및 동기화 일자, 필요 시 업종명 갱신 (디폴트값인 '기타 서비스업' 오염 방지)
         await query(
           `UPDATE businesses 
            SET nps_sbscrb_nmps = $1, 
@@ -1478,9 +1478,21 @@ async function triggerBackgroundSync(
                loss_sbscrb_nmps = $3, 
                nps_linked = true, 
                nps_last_sync_at = CURRENT_TIMESTAMP,
-               nps_chrg_amt = $4
-           WHERE b_no = $5`,
-          [npsInfo.npsSbscrbNmps, npsInfo.newAcqsNmps || 0, npsInfo.lossSbscrbNmps || 0, npsInfo.npsChrgAmt || 0, bNo]
+               nps_chrg_amt = $4,
+               b_sector = CASE 
+                 WHEN b_sector IS NULL OR b_sector = '' OR b_sector = '기타 서비스업' OR b_sector = '상장 법인'
+                 THEN COALESCE(NULLIF($5, ''), b_sector)
+                 ELSE b_sector
+               END
+           WHERE b_no = $6`,
+          [
+            npsInfo.npsSbscrbNmps, 
+            npsInfo.newAcqsNmps || 0, 
+            npsInfo.lossSbscrbNmps || 0, 
+            npsInfo.npsChrgAmt || 0, 
+            npsInfo.npsSector || "", 
+            bNo
+          ]
         );
         
         // history 테이블의 최신 연도 종업원 수도 같이 갱신
@@ -1589,7 +1601,9 @@ async function getUnifiedBusinessData(bNo: string): Promise<{
       );
 
     const ntsUpdateNeeded = ntsDiffDays >= 10 || !!isCacheIncomplete;
-    const npsUpdateNeeded = localBiz.npsLinked ? (npsDiffDays >= 30) : (npsDiffDays >= 1);
+    const npsUpdateNeeded = localBiz.npsLinked 
+      ? (npsDiffDays >= 30 || ((localBiz.b_sector === "기타 서비스업" || localBiz.b_sector === "상장 법인") && npsDiffDays >= 1)) 
+      : (npsDiffDays >= 1);
     
     if (ntsUpdateNeeded || npsUpdateNeeded) {
       setTimeout(() => {
@@ -1757,6 +1771,12 @@ async function getUnifiedBusinessData(bNo: string): Promise<{
       business.newAcqsNmps = npsInfo.newAcqsNmps;
       business.lossSbscrbNmps = npsInfo.lossSbscrbNmps;
       business.npsChrgAmt = npsInfo.npsChrgAmt;
+      
+      // 국민연금 제공 업종으로 동적 정정 (디폴트값인 기타 서비스업/상장 법인 오염 방지)
+      if (npsInfo.npsSector && (!business.b_sector || business.b_sector === "기타 서비스업" || business.b_sector === "상장 법인")) {
+        business.b_sector = npsInfo.npsSector;
+      }
+      
       const latestHist = business.history[business.history.length - 1];
       if (latestHist) latestHist.employees = npsInfo.npsSbscrbNmps;
     }
@@ -1813,6 +1833,12 @@ async function getUnifiedBusinessData(bNo: string): Promise<{
       localBizVal.newAcqsNmps = npsInfo.newAcqsNmps;
       localBizVal.lossSbscrbNmps = npsInfo.lossSbscrbNmps;
       localBizVal.npsChrgAmt = npsInfo.npsChrgAmt;
+      
+      // 국민연금 제공 업종으로 동적 정정
+      if (npsInfo.npsSector && (!localBizVal.b_sector || localBizVal.b_sector === "기타 서비스업" || localBizVal.b_sector === "상장 법인")) {
+        localBizVal.b_sector = npsInfo.npsSector;
+      }
+      
       const latestHist = localBizVal.history[localBizVal.history.length - 1];
       if (latestHist) latestHist.employees = npsInfo.npsSbscrbNmps;
     }
@@ -1848,6 +1874,11 @@ async function getUnifiedBusinessData(bNo: string): Promise<{
       realBiz.newAcqsNmps = npsInfo.newAcqsNmps;
       realBiz.lossSbscrbNmps = npsInfo.lossSbscrbNmps;
       realBiz.npsChrgAmt = npsInfo.npsChrgAmt;
+      
+      // 국민연금 제공 업종으로 동적 정정
+      if (npsInfo.npsSector && (!realBiz.b_sector || realBiz.b_sector === "미등록 업종")) {
+        realBiz.b_sector = npsInfo.npsSector;
+      }
     }
     business = realBiz;
   }
