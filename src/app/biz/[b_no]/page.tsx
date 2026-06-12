@@ -1176,7 +1176,70 @@ async function getUnifiedBusinessData(bNo: string): Promise<{
     };
   }
 
-  // 0.1. 미등록 블랙리스트 캐시 검사 (2차 방어)
+  // 1. [최적화] 로컬 DB 선조회 (NTS API 대기 전 캐시 히트 검사)
+  const localBiz = await getLocalBusiness(cleanBNo);
+  const localBizVal = localBiz;
+  
+  // 로컬 DB 캐시 히트 조건 만족 시, 국세청 API 호출 없이 즉시 캐시 데이터 반환 (블랙리스트보다 우선 순위)
+  if (localBiz && localBiz.b_nm !== "상호 정보 없음") {
+    console.log(`[Cache Hit] Business data loaded directly from Neon DB (Skipped NTS and Blacklist): ${localBiz.b_nm} (${cleanBNo})`);
+    
+    // UI 렌더링에 지장이 없도록 가상의 mock apiStatus 설정 (대기 시간 0ms)
+    const mockApiStatus: NtsCompanyStatus = {
+      b_no: cleanBNo,
+      b_stt: localBiz.b_type?.includes("폐업") ? "폐업자" : "계속사업자",
+      b_stt_cd: localBiz.b_type?.includes("폐업") ? "03" : "01",
+      tax_type: localBiz.taxType || "부가가치세 일반과세자",
+      tax_type_cd: localBiz.taxTypeCd || "01",
+      end_dt: "",
+      utcc_yn: "N",
+      tax_type_change_dt: "",
+      invoice_apply_dt: "",
+      rbf_tax_type: "",
+      rbf_tax_type_cd: ""
+    };
+
+    const now = new Date();
+    const ntsLastSync = localBiz.ntsLastSyncAt ? new Date(localBiz.ntsLastSyncAt) : new Date(0);
+    const ntsDiffDays = Math.floor((now.getTime() - ntsLastSync.getTime()) / (1000 * 60 * 60 * 24));
+    
+    const npsLastSync = localBiz.npsLastSyncAt ? new Date(localBiz.npsLastSyncAt) : new Date(0);
+    const npsDiffDays = Math.floor((now.getTime() - npsLastSync.getTime()) / (1000 * 60 * 60 * 24));
+    
+    const isListedOrAudited = 
+      localBiz.listing_status?.includes("상장") || 
+      localBiz.b_type?.includes("상장") || 
+      localBiz.b_type?.includes("대기업") || 
+      localBiz.b_type?.includes("중견기업") || 
+      localBiz.is_audited === true;
+
+    // 상장사/외감기업인데 주요 핵심 정보가 누락된 경우에만 불완전 캐시
+    const isCacheIncomplete = 
+      isListedOrAudited && (
+        !localBiz.crno || 
+        localBiz.crno === "-" ||
+        !localBiz.history || 
+        localBiz.history.length === 0 ||
+        !localBiz.credit_rating ||
+        localBiz.credit_rating === "-" ||
+        !localBiz.industry_rank ||
+        localBiz.industry_rank === "-"
+      );
+
+    const ntsUpdateNeeded = ntsDiffDays >= 10 || !!isCacheIncomplete;
+    const npsUpdateNeeded = localBiz.npsLinked ? (npsDiffDays >= 30) : (npsDiffDays >= 1);
+    
+    if (ntsUpdateNeeded || npsUpdateNeeded) {
+      setTimeout(() => {
+        triggerBackgroundSync(cleanBNo, localBizVal, ntsUpdateNeeded, npsUpdateNeeded)
+          .catch(err => console.error("Background sync error:", err));
+      }, 0);
+    }
+    
+    return { apiStatus: mockApiStatus, business: localBiz, isInvalid: false };
+  }
+
+  // 2. 미등록 블랙리스트 캐시 검사 (로컬 캐시가 없을 때만 2차 방어)
   let invalidList: string[] = [];
   try {
     invalidList = await getInvalidBusinesses();
@@ -1204,72 +1267,6 @@ async function getUnifiedBusinessData(bNo: string): Promise<{
     };
   }
 
-  // 1. [최적화] 로컬 DB 선조회 (NTS API 대기 전 캐시 히트 검사)
-  const localBiz = await getLocalBusiness(cleanBNo);
-  const localBizVal = localBiz;
-  
-  const isListedOrAudited = 
-    localBiz?.listing_status?.includes("상장") || 
-    localBiz?.b_type?.includes("상장") || 
-    localBiz?.b_type?.includes("대기업") || 
-    localBiz?.b_type?.includes("중견기업") || 
-    localBiz?.is_audited === true;
-
-  // 상장사/외감기업인데 주요 핵심 정보(법인번호, 재무이력, 신용도 등)가 누락된 경우에만 불완전 캐시로 정의
-  const isCacheIncomplete = localBiz && (
-    isListedOrAudited && (
-      !localBiz.crno || 
-      localBiz.crno === "-" ||
-      !localBiz.history || 
-      localBiz.history.length === 0 ||
-      !localBiz.credit_rating ||
-      localBiz.credit_rating === "-" ||
-      !localBiz.industry_rank ||
-      localBiz.industry_rank === "-"
-    )
-  );
-
-  // 로컬 DB 캐시 히트 조건 만족 시, 국세청 API 호출 없이 즉시 캐시 데이터 반환
-  // 단, 상호 정보가 수집되지 않은 ('상호 정보 없음') 불완전 캐시인 경우는 제외하고 실시간 API를 호출하여 보완합니다.
-  if (localBiz && localBiz.b_nm !== "상호 정보 없음") {
-    console.log(`[Cache Hit] Business data loaded directly from Neon DB (Skipped NTS API): ${localBiz.b_nm} (${cleanBNo})`);
-    
-    // UI 렌더링에 지장이 없도록 가상의 mock apiStatus 설정 (대기 시간 0ms)
-    const mockApiStatus: NtsCompanyStatus = {
-      b_no: cleanBNo,
-      b_stt: localBiz.b_type?.includes("폐업") ? "폐업자" : "계속사업자",
-      b_stt_cd: localBiz.b_type?.includes("폐업") ? "03" : "01",
-      tax_type: localBiz.taxType || "부가가치세 일반과세자",
-      tax_type_cd: localBiz.taxTypeCd || "01",
-      end_dt: "",
-      utcc_yn: "N",
-      tax_type_change_dt: "",
-      invoice_apply_dt: "",
-      rbf_tax_type: "",
-      rbf_tax_type_cd: ""
-    };
-
-    const now = new Date();
-    const ntsLastSync = localBiz.ntsLastSyncAt ? new Date(localBiz.ntsLastSyncAt) : new Date(0);
-    const ntsDiffDays = Math.floor((now.getTime() - ntsLastSync.getTime()) / (1000 * 60 * 60 * 24));
-    
-    const npsLastSync = localBiz.npsLastSyncAt ? new Date(localBiz.npsLastSyncAt) : new Date(0);
-    const npsDiffDays = Math.floor((now.getTime() - npsLastSync.getTime()) / (1000 * 60 * 60 * 24));
-    
-    // NTS는 10일 만료, NPS는 30일 만료, 혹은 캐시가 불완전한 상태(isCacheIncomplete)일 때도 백그라운드에서 비동기로 수집하도록 설정합니다.
-    const ntsUpdateNeeded = ntsDiffDays >= 10 || !!isCacheIncomplete;
-    const npsUpdateNeeded = localBiz.npsLinked ? (npsDiffDays >= 30) : (npsDiffDays >= 1);
-    
-    if (ntsUpdateNeeded || npsUpdateNeeded) {
-      // 정보 갱신 만료 시 백그라운드로 비동기 업데이트 실행 (완전한 비동기 예약을 위해 setTimeout으로 감싸서 렌더링 스레드 차단 원천 해결)
-      setTimeout(() => {
-        triggerBackgroundSync(cleanBNo, localBizVal, ntsUpdateNeeded, npsUpdateNeeded)
-          .catch(err => console.error("Background sync error:", err));
-      }, 0);
-    }
-    
-    return { apiStatus: mockApiStatus, business: localBiz, isInvalid: false };
-  }
 
   // 2. 캐시가 없거나 불완전한 경우에만 국세청 실시간 조회를 동기적으로 대기
   const apiStatus = await getNtsCompanyStatus(cleanBNo);
