@@ -235,6 +235,42 @@ export async function getUnifiedBusinessData(bNo: string): Promise<{
   
   // DB 캐시가 이미 존재하고 유효한 기업명이 있는 경우 ➔ 실시간 외부 API 동기화 없이 즉시 DB 캐시 서빙 (Zero External Network Requests)
   if (localBiz && localBiz.b_nm !== "상호 정보 없음") {
+    // [보완] 상세 페이지 로딩 속도는 0.1초 수준으로 유지하되, 누락된 부가 정보(입찰, 특허, DART 공시)가 있다면
+    // 사용자 응답 대기(await) 없이 백그라운드 비동기로 데이터를 수집하여 DB에 박제합니다.
+    const dartCode = (localBiz as any).dart_code || "";
+    const dartLastSync = (localBiz as any).dart_last_sync_at;
+    const patentsLastSync = (localBiz as any).patents_last_sync_at;
+    const bidsLastSync = (localBiz as any).bids_last_sync_at;
+
+    if (dartCode && !dartLastSync) {
+      console.log(`[Background Detail Sync] Syncing DART disclosures for ${localBiz.b_nm} (${cleanBNo})`);
+      syncDisclosuresByCompany(cleanBNo, dartCode)
+        .then(() => {
+          query("UPDATE businesses SET dart_last_sync_at = CURRENT_TIMESTAMP WHERE b_no = $1", [cleanBNo])
+            .catch(err => console.error("Failed to update dart_last_sync_at:", err));
+        })
+        .catch(err => console.error("Background DART sync failed:", err));
+    }
+
+    if (!bidsLastSync) {
+      console.log(`[Background Detail Sync] Syncing recent bids for ${localBiz.b_nm} (${cleanBNo})`);
+      syncRecentBidsByCompany(localBiz.b_nm, cleanBNo)
+        .then(() => {
+          query("UPDATE businesses SET bids_last_sync_at = CURRENT_TIMESTAMP WHERE b_no = $1", [cleanBNo])
+            .catch(err => console.error("Failed to update bids_last_sync_at:", err));
+        })
+        .catch(err => console.error("Background Bids sync failed:", err));
+    }
+
+    if (!patentsLastSync) {
+      console.log(`[Background Detail Sync] Syncing patents for ${localBiz.b_nm} (${cleanBNo})`);
+      syncPatentsByCompany(localBiz.b_nm, localBiz.p_nm || "")
+        .then(() => {
+          query("UPDATE businesses SET patents_last_sync_at = CURRENT_TIMESTAMP WHERE b_no = $1", [cleanBNo])
+            .catch(err => console.error("Failed to update patents_last_sync_at:", err));
+        })
+        .catch(err => console.error("Background Patents sync failed:", err));
+    }
 
     console.log(`[Database Hit] Serving from DB cache (Zero External Network Requests): ${localBiz.b_nm} (${cleanBNo})`);
     
