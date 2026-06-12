@@ -56,12 +56,17 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       console.error("Failed to read Neon DB for search:", err);
     }
 
-    // 2. 금융위 기업기본정보 API 검색
+    // 2. [최적화] 로컬 매칭 데이터가 전혀 없을 때만 금융위 기업기본정보 API 검색을 동기식으로 수행
     let publicMatches: CorpBasicOutline[] = [];
-    try {
-      publicMatches = await searchCorpOutline(searchQuery);
-    } catch (err) {
-      console.error("Failed to fetch public api for search:", err);
+    if (localMatches.length === 0) {
+      try {
+        console.log(`[Search API] No local matches for "${searchQuery}". Querying public API...`);
+        publicMatches = await searchCorpOutline(searchQuery);
+      } catch (err) {
+        console.error("Failed to fetch public api for search:", err);
+      }
+    } else {
+      console.log(`[Search Cache Hit] Found ${localMatches.length} local matches for "${searchQuery}". Skipped public API query.`);
     }
 
     // 3. 로컬 DB 검색결과와 공공 API 검색결과의 중복 제거 및 병합

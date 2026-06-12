@@ -37,7 +37,7 @@ export async function getStoreListInDong(adongCd: string): Promise<StoreInfo[]> 
       headers: {
         "Accept": "application/json",
       },
-      cache: "no-store",
+      next: { revalidate: 86400 }, // 24시간 캐시 적용 (매 접속 시 공공 API 호출 방지)
     });
 
     console.log(`[Market API] Response Status: ${response.status}`);
