@@ -808,21 +808,23 @@ async function getUnifiedBusinessData(bNo: string): Promise<{
     localBiz?.b_type?.includes("중견기업") || 
     localBiz?.is_audited === true;
 
+  // 상장사/외감기업인데 주요 핵심 정보(법인번호, 재무이력, 신용도 등)가 누락된 경우에만 불완전 캐시로 정의
   const isCacheIncomplete = localBiz && (
-    !localBiz.crno || 
-    localBiz.crno === "-" ||
-    (isListedOrAudited && (
+    isListedOrAudited && (
+      !localBiz.crno || 
+      localBiz.crno === "-" ||
       !localBiz.history || 
       localBiz.history.length === 0 ||
       !localBiz.credit_rating ||
       localBiz.credit_rating === "-" ||
       !localBiz.industry_rank ||
       localBiz.industry_rank === "-"
-    ))
+    )
   );
 
   // 로컬 DB 캐시 히트 조건 만족 시, 국세청 API 호출 없이 즉시 캐시 데이터 반환
-  if (localBiz && localBiz.b_nm !== "상호 미등록 사업자" && !isCacheIncomplete) {
+  // ("상호 미등록 사업자" 임시 캐시를 포함해 한 번 적재된 데이터라면 렌더 블로킹 조회를 건너뜁니다)
+  if (localBiz && !isCacheIncomplete) {
     console.log(`[Cache Hit] Business data loaded directly from Neon DB (Skipped NTS API): ${localBiz.b_nm} (${cleanBNo})`);
     
     // UI 렌더링에 지장이 없도록 가상의 mock apiStatus 설정 (대기 시간 0ms)
@@ -1174,6 +1176,29 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
     return crnoStr;
   };
 
+  const formatSyncTime = (syncAt: any) => {
+    if (!syncAt) return "방금 전 (실시간)";
+    try {
+      const d = new Date(syncAt);
+      if (isNaN(d.getTime())) return "방금 전 (실시간)";
+      
+      // 1970년 등 미동기화 초기값의 경우 처리
+      if (d.getFullYear() <= 1970) {
+        return "미동기화 (대기 중)";
+      }
+      
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const date = String(d.getDate()).padStart(2, "0");
+      const hours = String(d.getHours()).padStart(2, "0");
+      const minutes = String(d.getMinutes()).padStart(2, "0");
+      
+      return `${year}년 ${month}월 ${date}일 ${hours}:${minutes}`;
+    } catch (e) {
+      return "방금 전 (실시간)";
+    }
+  };
+
   const jsonLd = business ? {
     "@context": "https://schema.org",
     "@type": "LocalBusiness",
@@ -1493,7 +1518,7 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                   <div style={{ display: "flex", justifyContent: "space-between", paddingBottom: "2px" }}>
                     <span style={{ color: "var(--color-text-sub)", fontWeight: 500 }}>마음데이터 검증 시각</span>
                     <span style={{ fontWeight: 600, color: "var(--color-text-desc)" }}>
-                      방금 전 (실시간)
+                      {business ? formatSyncTime(business.ntsLastSyncAt) : "방금 전 (실시간)"}
                     </span>
                   </div>
                 </div>
