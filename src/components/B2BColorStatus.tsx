@@ -51,13 +51,18 @@ export default function B2BColorStatus({
     try {
       const d = new Date(time);
       if (isNaN(d.getTime())) return "방금 전 (실시간)";
-      if (d.getFullYear() <= 1970) return "미동기화 (대기 중)";
       
-      const year = d.getFullYear();
-      const month = String(d.getMonth() + 1).padStart(2, "0");
-      const date = String(d.getDate()).padStart(2, "0");
-      const hours = String(d.getHours()).padStart(2, "0");
-      const minutes = String(d.getMinutes()).padStart(2, "0");
+      // UTC+9(한국 표준시) 강제 적용을 위한 오프셋 연산
+      const kstTime = d.getTime() + (9 * 60 * 60 * 1000);
+      const kstDate = new Date(kstTime);
+      
+      if (kstDate.getUTCFullYear() <= 1970) return "미동기화 (대기 중)";
+      
+      const year = kstDate.getUTCFullYear();
+      const month = String(kstDate.getUTCMonth() + 1).padStart(2, "0");
+      const date = String(kstDate.getUTCDate()).padStart(2, "0");
+      const hours = String(kstDate.getUTCHours()).padStart(2, "0");
+      const minutes = String(kstDate.getUTCMinutes()).padStart(2, "0");
       return `${year}.${month}.${date} ${hours}:${minutes}`;
     } catch (e) {
       return "방금 전 (실시간)";
