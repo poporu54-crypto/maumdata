@@ -130,7 +130,7 @@ export async function getPatentsByCompany(companyNm: string, applicantNm: string
 /**
  * 2. 기술력/SEO 롱테일 인덱싱을 위한 초정밀 결정론적 특허(IP) 생성기
  */
-function getMockPatents(companyNm: string, applicantNm: string): PatentInfo[] {
+export function getMockPatents(companyNm: string, applicantNm: string): PatentInfo[] {
   const cleanComp = companyNm.replace(/\(가상.*\)/g, "").trim();
   const seed = cleanComp.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
   

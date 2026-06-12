@@ -112,7 +112,7 @@ export async function getRecentBidsByKeyword(keyword: string): Promise<BidNotice
 /**
  * 2. 특정 기업의 실제 수주/입찰 매칭을 재현하기 위한 정교한 공공 입찰 Mock 발전기
  */
-function getMockBids(keyword: string): BidNotice[] {
+export function getMockBids(keyword: string): BidNotice[] {
   const cleanKeyword = keyword.trim();
   const seed = cleanKeyword.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
   
