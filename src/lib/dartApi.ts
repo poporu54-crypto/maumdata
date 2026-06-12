@@ -160,7 +160,8 @@ export async function syncDisclosuresByCompany(bNo: string, corpCode: string): P
         `INSERT INTO business_disclosures (
           b_no, rcept_no, report_nm, flr_nm, rcept_dt, rm, detail_url, is_key_disclosure
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-        ON CONFLICT (b_no, rcept_no) DO UPDATE SET
+        ON CONFLICT (rcept_no) DO UPDATE SET
+          b_no = EXCLUDED.b_no,
           report_nm = EXCLUDED.report_nm,
           flr_nm = EXCLUDED.flr_nm,
           rcept_dt = EXCLUDED.rcept_dt,
