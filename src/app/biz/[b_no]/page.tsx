@@ -1772,6 +1772,19 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
     : "0.0";
   const latestEmployees = latestFinance?.employees || 0;
 
+  // 1인당 매출액 (생산성) 및 매출 성장률 (YoY) 산출
+  const productivity = latestFinance && latestEmployees > 0
+    ? formatMoney(latestFinance.revenue / latestEmployees)
+    : "-";
+
+  const prevFinance = business?.history && business.history.length > 1
+    ? business.history[business.history.length - 2]
+    : null;
+  const revenueGrowth = latestFinance && prevFinance && prevFinance.revenue > 0
+    ? `${(((latestFinance.revenue - prevFinance.revenue) / prevFinance.revenue) * 100).toFixed(1)}%`
+    : "-";
+  const isGrowthPositive = latestFinance && prevFinance && latestFinance.revenue >= prevFinance.revenue;
+
   return (
     <div className="animate-fade-in" style={{ padding: "24px 0 80px 0" }}>
       {jsonLd && (
@@ -2314,11 +2327,11 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
 
                     {/* 차트 2: 초정밀 HR 고용 건전성 및 퇴사율 */}
                     <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                        <span style={{ fontWeight: 700, color: "var(--color-text-sub)", fontSize: "0.95rem" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: "8px" }}>
+                        <span style={{ fontWeight: 700, color: "var(--color-text-sub)", fontSize: "0.95rem", whiteSpace: "nowrap" }}>
                           초정밀 HR 고용 건전성 분석
                         </span>
-                        <span style={{ color: "var(--color-primary)", fontWeight: 700, fontSize: "0.9rem" }}>
+                        <span style={{ color: "var(--color-primary)", fontWeight: 700, fontSize: "0.9rem", whiteSpace: "nowrap" }}>
                           국민연금 실시간 연동
                         </span>
                       </div>
@@ -2490,6 +2503,36 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                       </div>
                       <div style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--color-primary)" }}>
                         {operatingMargin}%
+                      </div>
+                    </div>
+
+                    <div style={{
+                      backgroundColor: "var(--bg-color-main)",
+                      padding: "16px 20px",
+                      borderRadius: "14px",
+                      border: "1px solid var(--color-border)",
+                      textAlign: "center"
+                    }}>
+                      <div style={{ fontSize: "0.85rem", color: "var(--color-text-desc)", fontWeight: 700, marginBottom: "4px" }}>
+                        1인당 매출액 (생산성)
+                      </div>
+                      <div style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--color-primary)" }}>
+                        {productivity}
+                      </div>
+                    </div>
+
+                    <div style={{
+                      backgroundColor: "var(--bg-color-main)",
+                      padding: "16px 20px",
+                      borderRadius: "14px",
+                      border: "1px solid var(--color-border)",
+                      textAlign: "center"
+                    }}>
+                      <div style={{ fontSize: "0.85rem", color: "var(--color-text-desc)", fontWeight: 700, marginBottom: "4px" }}>
+                        전년 대비 매출 성장률
+                      </div>
+                      <div style={{ fontSize: "1.6rem", fontWeight: 800, color: isGrowthPositive ? "var(--color-success)" : "var(--color-danger)" }}>
+                        {revenueGrowth !== "-" && isGrowthPositive ? `+${revenueGrowth}` : revenueGrowth}
                       </div>
                     </div>
                   </div>
