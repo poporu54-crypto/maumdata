@@ -82,8 +82,10 @@ export async function POST(req: NextRequest) {
                 mail_order_no = $9,
                 zip_cd = $10,
                 nts_last_sync_at = CURRENT_TIMESTAMP,
-                nps_last_sync_at = CURRENT_TIMESTAMP
-            WHERE b_no = $11
+                nps_last_sync_at = CURRENT_TIMESTAMP,
+                tax_type = $11,
+                tax_type_cd = $12
+            WHERE b_no = $13
           `, [
             ftcInfo.cmpNm,
             ftcInfo.rprsNm || "-",
@@ -95,6 +97,8 @@ export async function POST(req: NextRequest) {
             ftcInfo.telNo || "",
             ftcInfo.mailOrderNo || "",
             ftcInfo.zipCd || "",
+            apiStatus.tax_type || "부가가치세 일반과세자",
+            apiStatus.tax_type_cd || "01",
             bNo
           ]);
           console.log(`[Bulk Sync] Successfully resolved ${bNo} -> ${ftcInfo.cmpNm}`);

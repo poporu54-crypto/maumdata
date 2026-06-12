@@ -105,6 +105,8 @@ export async function getBusinessByBNo(bNo: string) {
     brand_name: business.brand_name || "",
     ntsLastSyncAt: business.nts_last_sync_at,
     npsLastSyncAt: business.nps_last_sync_at,
+    taxType: business.tax_type || "부가가치세 일반과세자",
+    taxTypeCd: business.tax_type_cd || "01",
     historyTimeline: timelineResult.rows.map((r: any) => ({
       eventDate: r.eventDate,
       eventTitle: r.eventTitle,
@@ -192,10 +194,12 @@ export async function upsertBusiness(biz: any) {
       enp_stac_nm, enp_main_biz_nm, data_source,
       mail_order_no, declare_org, goods_type, sell_type, close_date, rep_email, zip_cd,
       new_acqs_nmps, loss_sbscrb_nmps, tel_no, brand_name,
-      nts_last_sync_at, nps_last_sync_at
+      nts_last_sync_at, nps_last_sync_at,
+      tax_type, tax_type_cd
     ) VALUES (
       $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27,
-      $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, $40
+      $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, $40,
+      $41, $42
     ) ON CONFLICT (b_no) DO UPDATE SET
       b_nm = EXCLUDED.b_nm,
       p_nm = EXCLUDED.p_nm,
@@ -235,7 +239,9 @@ export async function upsertBusiness(biz: any) {
       tel_no = EXCLUDED.tel_no,
       brand_name = EXCLUDED.brand_name,
       nts_last_sync_at = COALESCE(EXCLUDED.nts_last_sync_at, businesses.nts_last_sync_at),
-      nps_last_sync_at = COALESCE(EXCLUDED.nps_last_sync_at, businesses.nps_last_sync_at)
+      nps_last_sync_at = COALESCE(EXCLUDED.nps_last_sync_at, businesses.nps_last_sync_at),
+      tax_type = EXCLUDED.tax_type,
+      tax_type_cd = EXCLUDED.tax_type_cd
   `, [
     clean, biz.b_nm, biz.p_nm, biz.start_dt, biz.b_adr, biz.b_sector, biz.b_type, biz.corp_no || "", biz.dart_code || "",
     biz.description || "", biz.credit_rating || "", biz.industry_rank || "", biz.is_sme || "", biz.listing_status || "",
@@ -244,7 +250,8 @@ export async function upsertBusiness(biz: any) {
     biz.enpMainBizNm || "", biz.dataSource || "local",
     biz.mailOrderNo || "", biz.declareOrg || "", biz.goodsType || "", biz.sellType || "", biz.closeDate || "", biz.repEmail || "", biz.zipCd || "",
     biz.newAcqsNmps || 0, biz.lossSbscrbNmps || 0, biz.telNo || "", brandVal,
-    biz.ntsLastSyncAt || null, biz.npsLastSyncAt || null
+    biz.ntsLastSyncAt || null, biz.npsLastSyncAt || null,
+    biz.taxType || "부가가치세 일반과세자", biz.taxTypeCd || "01"
   ]);
 
   // 1.1. 신규 설립일 타임라인 자동 갱신

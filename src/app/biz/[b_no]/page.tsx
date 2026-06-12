@@ -680,6 +680,8 @@ interface BusinessData {
   }>;
   ntsLastSyncAt?: any;
   npsLastSyncAt?: any;
+  taxType?: string;
+  taxTypeCd?: string;
 }
 
 // 로컬 Neon DB에서 사업자 번호로 기업 조회
@@ -951,8 +953,8 @@ async function getUnifiedBusinessData(bNo: string): Promise<{
       b_no: cleanBNo,
       b_stt: localBiz.b_type?.includes("폐업") ? "폐업자" : "계속사업자",
       b_stt_cd: localBiz.b_type?.includes("폐업") ? "03" : "01",
-      tax_type: "부가가치세 일반과세자",
-      tax_type_cd: "01",
+      tax_type: localBiz.taxType || "부가가치세 일반과세자",
+      tax_type_cd: localBiz.taxTypeCd || "01",
       end_dt: "",
       utcc_yn: "N",
       tax_type_change_dt: "",
@@ -1099,7 +1101,9 @@ async function getUnifiedBusinessData(bNo: string): Promise<{
       enpKoseYn: basicInfo.enpKoseYn,
       enpKonexYn: basicInfo.enpKonexYn,
       
-      history
+      history,
+      taxType: apiStatus?.tax_type || "부가가치세 일반과세자",
+      taxTypeCd: apiStatus?.tax_type_cd || "01"
     };
 
     if (npsInfo && npsInfo.npsSbscrbNmps > 0) {
@@ -1142,7 +1146,9 @@ async function getUnifiedBusinessData(bNo: string): Promise<{
       telNo: ftcInfo.telNo,
       zipCd: ftcInfo.zipCd,
       
-      history: []
+      history: [],
+      taxType: apiStatus?.tax_type || "부가가치세 일반과세자",
+      taxTypeCd: apiStatus?.tax_type_cd || "01"
     };
     
     if (npsInfo && npsInfo.npsSbscrbNmps > 0) {
@@ -1183,6 +1189,8 @@ async function getUnifiedBusinessData(bNo: string): Promise<{
       main_biz: "-",
       is_audited: false,
       history: [],
+      taxType: apiStatus?.tax_type || "부가가치세 일반과세자",
+      taxTypeCd: apiStatus?.tax_type_cd || "01"
     };
 
     const npsInfo = await getNpsBplcInfo(cleanBNo, "상호 정보 없음");
