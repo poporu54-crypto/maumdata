@@ -7,6 +7,7 @@ function SectionSkeleton() {
   return (
     <div style={{
       width: "100%",
+      minHeight: "120px",
       padding: "24px",
       borderRadius: "14px",
       border: "1px solid var(--color-border)",
@@ -28,6 +29,121 @@ function SectionSkeleton() {
       <div className="skeleton-item" style={{ width: "35%", height: "14px", borderRadius: "4px", backgroundColor: "var(--color-border)" }}></div>
       <div className="skeleton-item" style={{ width: "80%", height: "20px", borderRadius: "6px", backgroundColor: "var(--color-border)" }}></div>
       <div className="skeleton-item" style={{ width: "55%", height: "14px", borderRadius: "4px", backgroundColor: "var(--color-border)" }}></div>
+    </div>
+  );
+}
+
+// 테이블 형태의 스트리밍 스켈레톤 (CLS 완화용)
+function TableSkeleton() {
+  return (
+    <div style={{
+      width: "100%",
+      borderRadius: "14px",
+      border: "1px solid var(--color-border)",
+      backgroundColor: "var(--bg-color-card)",
+      overflow: "hidden",
+      boxSizing: "border-box"
+    }}>
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes pulse-custom {
+          0%, 100% { opacity: 0.6; }
+          50% { opacity: 0.3; }
+        }
+        .skeleton-item {
+          animation: pulse-custom 1.5s infinite ease-in-out;
+        }
+      `}} />
+      <div style={{ padding: "14px 16px", backgroundColor: "var(--bg-color-main)", borderBottom: "1px solid var(--color-border)", display: "flex", gap: "20px" }}>
+        <div className="skeleton-item" style={{ width: "25%", height: "14px", borderRadius: "4px", backgroundColor: "var(--color-border)" }} />
+        <div className="skeleton-item" style={{ width: "40%", height: "14px", borderRadius: "4px", backgroundColor: "var(--color-border)" }} />
+        <div className="skeleton-item" style={{ width: "15%", height: "14px", borderRadius: "4px", backgroundColor: "var(--color-border)" }} />
+        <div className="skeleton-item" style={{ width: "10%", height: "14px", borderRadius: "4px", backgroundColor: "var(--color-border)", marginLeft: "auto" }} />
+      </div>
+      {[1, 2, 3].map((i) => (
+        <div key={i} style={{ padding: "20px 16px", borderBottom: i === 3 ? "none" : "1px solid var(--color-border)", display: "flex", gap: "20px", alignItems: "center" }}>
+          <div className="skeleton-item" style={{ width: "20%", height: "16px", borderRadius: "4px", backgroundColor: "var(--color-border)" }} />
+          <div className="skeleton-item" style={{ width: "45%", height: "16px", borderRadius: "4px", backgroundColor: "var(--color-border)" }} />
+          <div className="skeleton-item" style={{ width: "15%", height: "16px", borderRadius: "4px", backgroundColor: "var(--color-border)" }} />
+          <div className="skeleton-item" style={{ width: "8%", height: "20px", borderRadius: "6px", backgroundColor: "var(--color-border)", marginLeft: "auto" }} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// 추천 기업 스켈레톤 (그리드 CLS 완화용)
+function RecommendedSkeleton() {
+  return (
+    <div style={{
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
+      gap: "12px"
+    }}>
+      {[1, 2, 3, 4].map((i) => (
+        <div
+          key={i}
+          className="related-card skeleton-item"
+          style={{
+            height: "78px",
+            boxSizing: "border-box",
+            display: "flex",
+            flexDirection: "column",
+            gap: "8px",
+            backgroundColor: "var(--bg-color-card)",
+            border: "1px solid var(--color-border)",
+            borderRadius: "12px",
+            padding: "16px",
+            animation: "pulse-custom 1.5s infinite ease-in-out"
+          }}
+        >
+          <div style={{ width: "60%", height: "12px", borderRadius: "3px", backgroundColor: "var(--color-border)" }} />
+          <div style={{ width: "90%", height: "16px", borderRadius: "4px", backgroundColor: "var(--color-border)" }} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// 추천 비즈니스 연동용 비동기 컴포넌트
+async function RecommendedSection({
+  cleanBNo,
+  bAdr,
+  bSector,
+  isSme
+}: {
+  cleanBNo: string;
+  bAdr: string;
+  bSector: string;
+  isSme: string;
+}) {
+  const recommended = await getRecommendedBusinesses(cleanBNo, bAdr, bSector, isSme);
+  const relatedList = recommended.map(r => ({
+    name: r.b_nm,
+    no: r.b_no
+  }));
+
+  if (relatedList.length === 0) return null;
+
+  return (
+    <div style={{
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
+      gap: "12px"
+    }}>
+      {relatedList.map((item) => (
+        <Link
+          key={item.no}
+          href={`/biz/${item.no}`}
+          className="related-card"
+        >
+          <div style={{ fontSize: "0.75rem", color: "var(--color-text-desc)", fontWeight: 700, marginBottom: "6px" }}>
+            {item.no.replace(/(\d{3})(\d{2})(\d{5})/, "$1-$2-$3")}
+          </div>
+          <div style={{ fontSize: "0.95rem", fontWeight: 700, color: "var(--color-text-main)" }}>
+            {item.name}
+          </div>
+        </Link>
+      ))}
     </div>
   );
 }
@@ -1217,17 +1333,7 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
     "foundingDate": business.start_dt.replace(/(\d{4})(\d{2})(\d{2})/, "$1-$2-$3")
   } : null;
 
-  const recommended = await getRecommendedBusinesses(
-    cleanBNo,
-    business?.b_adr || "",
-    business?.b_sector || "",
-    business?.is_sme || ""
-  );
 
-  const relatedList = recommended.map(r => ({
-    name: r.b_nm,
-    no: r.b_no
-  }));
 
   // 차트 1: 매출액 & 영업이익 듀얼 꺾은선 차트 그리기
   const renderDualChart = () => {
@@ -2164,7 +2270,7 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                 <h4 style={{ fontSize: "1.2rem", fontWeight: 800, color: "var(--color-text-main)", marginBottom: "12px" }}>
                   💡 보유 특허 및 지식재산권(IP) 포트폴리오
                 </h4>
-                <Suspense fallback={<SectionSkeleton />}>
+                <Suspense fallback={<TableSkeleton />}>
                   <PatentsSection companyNm={business?.b_nm || ""} pNm={business?.p_nm || ""} />
                 </Suspense>
               </div>
@@ -2176,7 +2282,7 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                     🏛️ 금융감독원 DART 실시간 공시 내역
                   </h4>
                   {business.dart_code ? (
-                    <Suspense fallback={<SectionSkeleton />}>
+                    <Suspense fallback={<TableSkeleton />}>
                       <DartDisclosuresSection dartCode={business.dart_code} />
                     </Suspense>
                   ) : (
@@ -2202,7 +2308,7 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                     📊 금융감독원 DART 분기별 실적/정기 보고서
                   </h4>
                   {business.dart_code ? (
-                    <Suspense fallback={<SectionSkeleton />}>
+                    <Suspense fallback={<TableSkeleton />}>
                       <DartKeyDisclosuresSection dartCode={business.dart_code} />
                     </Suspense>
                   ) : (
@@ -2253,26 +2359,14 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
               }}>
                 주변 기업 및 추천 관련 사업자
               </h3>
-              <div style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
-                gap: "12px"
-              }}>
-                {relatedList.map((item) => (
-                  <Link
-                    key={item.no}
-                    href={`/biz/${item.no}`}
-                    className="related-card"
-                  >
-                    <div style={{ fontSize: "0.75rem", color: "var(--color-text-desc)", fontWeight: 700, marginBottom: "6px" }}>
-                      {item.no.replace(/(\d{3})(\d{2})(\d{5})/, "$1-$2-$3")}
-                    </div>
-                    <div style={{ fontSize: "0.95rem", fontWeight: 700, color: "var(--color-text-main)" }}>
-                      {item.name}
-                    </div>
-                  </Link>
-                ))}
-              </div>
+              <Suspense fallback={<RecommendedSkeleton />}>
+                <RecommendedSection
+                  cleanBNo={cleanBNo}
+                  bAdr={business?.b_adr || ""}
+                  bSector={business?.b_sector || ""}
+                  isSme={business?.is_sme || ""}
+                />
+              </Suspense>
             </div>
 
           </div>
