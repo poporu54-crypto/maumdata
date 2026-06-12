@@ -105,6 +105,21 @@ export async function getNpsBplcInfo(bzowrRgstNo: string, companyNm: string): Pr
     }
   }
 
+  // 3단계: 2단계 실패 시, 주식회사를 앞뒤로 명시적으로 붙여서 검색 시도 (예: "대상" -> "대상주식회사", "주식회사대상")
+  if (!matchedBplc) {
+    const cleanCompanyNm = companyNm
+      .replace(/\(.*?\)/g, "")
+      .replace(/주식회사/g, "")
+      .replace(/\(주\)/g, "")
+      .trim();
+    if (cleanCompanyNm) {
+      matchedBplc = await searchNpsBplcList(`${cleanCompanyNm}주식회사`, targetBNo6, 100);
+      if (!matchedBplc) {
+        matchedBplc = await searchNpsBplcList(`주식회사${cleanCompanyNm}`, targetBNo6, 100);
+      }
+    }
+  }
+
   if (!matchedBplc || !matchedBplc.seq) {
     console.warn(`[NPS API] No matched company found for ${companyNm} (RegNo prefix: ${targetBNo6})`);
     return null;
