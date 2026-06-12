@@ -275,14 +275,29 @@ export async function upsertBusiness(biz: any) {
     `, [clean, biz.start_dt, "법인 설립", `${biz.b_nm} 설립 및 개업`]);
   }
 
-  // 2. 재무이력 갱신 (전체 삭제 후 다시 등록)
+  // 2. 재무이력 갱신 (ON CONFLICT 방식으로 동시성 레이스 컨디션 해결 및 연도 중복 방어)
   if (biz.history && Array.isArray(biz.history)) {
-    await query("DELETE FROM business_history WHERE b_no = $1", [clean]);
+    // 연도별 중복 제거 (동일 연도가 여러 개 존재할 경우, 마지막 항목을 사용하여 중복 방어)
+    const uniqueHistoryMap = new Map<number, any>();
     for (const h of biz.history) {
+      if (h && typeof h.year === "number") {
+        uniqueHistoryMap.set(h.year, h);
+      }
+    }
+
+    for (const h of uniqueHistoryMap.values()) {
       await query(`
         INSERT INTO business_history (
           b_no, year, revenue, operating_income, net_income, total_assets, total_liabilities, total_equity, employees
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        ON CONFLICT (b_no, year) DO UPDATE SET
+          revenue = EXCLUDED.revenue,
+          operating_income = EXCLUDED.operating_income,
+          net_income = EXCLUDED.net_income,
+          total_assets = EXCLUDED.total_assets,
+          total_liabilities = EXCLUDED.total_liabilities,
+          total_equity = EXCLUDED.total_equity,
+          employees = EXCLUDED.employees
       `, [
         clean, h.year, h.revenue || 0, h.operatingIncome || 0, h.netIncome || 0,
         h.totalAssets || 0, h.totalLiabilities || 0, h.totalEquity || 0, h.employees || 0
