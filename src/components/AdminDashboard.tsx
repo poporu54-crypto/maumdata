@@ -113,7 +113,7 @@ export default function AdminDashboard({ initialRequests }: AdminDashboardProps)
             🛡️ 어드민 컨트롤 타워
           </h1>
           <p style={{ color: "var(--color-text-desc)", fontSize: "0.9rem", margin: "4px 0 0 0" }}>
-            나무위키형 기업 정보 수정 제안 승인/반려 대시보드
+            기업 정보 수정 제안 승인/반려 대시보드
           </p>
         </div>
         <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>

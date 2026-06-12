@@ -164,7 +164,7 @@ export default function EditRequestModal({
         {/* 헤더 */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <h3 style={{ fontSize: "1.4rem", fontWeight: 800, color: "var(--color-text-main)", margin: 0 }}>
-            ✏️ 기업 정보 수정 제안하기 (나무위키형)
+            ✏️ 기업 정보 수정 제안하기
           </h3>
           <button 
             onClick={onClose}
