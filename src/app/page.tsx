@@ -26,7 +26,7 @@ export default async function MainPage() {
       SELECT b.b_no, b.b_nm, b.brand_name, COUNT(l.id) AS recent_views
       FROM businesses b
       LEFT JOIN business_view_logs l ON b.b_no = l.b_no AND l.viewed_at >= NOW() - INTERVAL '24 hours'
-      WHERE b.b_nm != '상호 미등록 사업자'
+      WHERE b.b_nm != '상호 정보 없음'
       GROUP BY b.b_no, b.b_nm, b.brand_name, b.view_count, b.nps_sbscrb_nmps
       ORDER BY recent_views DESC, b.view_count DESC, b.nps_sbscrb_nmps DESC
       LIMIT 6

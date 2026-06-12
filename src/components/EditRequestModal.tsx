@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 
 interface EditRequestModalProps {
   bNo: string;
+  currentBusinessName: string;
   currentBrandName: string;
   currentHomepage: string;
   currentDescription: string;
@@ -20,6 +21,7 @@ interface TimelineEventInput {
 
 export default function EditRequestModal({
   bNo,
+  currentBusinessName,
   currentBrandName,
   currentHomepage,
   currentDescription,
@@ -35,6 +37,7 @@ export default function EditRequestModal({
 
   const [requesterType, setRequesterType] = useState<"visitor" | "relation">("visitor");
   const [requesterEmail, setRequesterEmail] = useState("");
+  const [proposedBusinessName, setProposedBusinessName] = useState("");
   const [proposedBrandName, setProposedBrandName] = useState(currentBrandName || "");
   const [proposedHomepage, setProposedHomepage] = useState(currentHomepage || "");
   const [proposedDescription, setProposedDescription] = useState(currentDescription || "");
@@ -91,6 +94,12 @@ export default function EditRequestModal({
       return;
     }
 
+    if (currentBusinessName === "상호 정보 없음" && !proposedBusinessName.trim()) {
+      setError("공식 상호명을 입력해 주세요.");
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await fetch(`/api/biz/${bNo}/edit-request`, {
         method: "POST",
@@ -103,7 +112,8 @@ export default function EditRequestModal({
           proposedBrandName,
           proposedHomepage,
           proposedDescription,
-          proposedTimeline
+          proposedTimeline,
+          proposedBusinessName: currentBusinessName === "상호 정보 없음" ? proposedBusinessName.trim() : undefined
         })
       });
 
@@ -118,6 +128,7 @@ export default function EditRequestModal({
         onClose();
         // 폼 완전 초기화
         setProposedTimeline([]);
+        setProposedBusinessName("");
       }, 2000);
     } catch (err: any) {
       setError(err.message || "에러가 발생했습니다.");
@@ -266,6 +277,31 @@ export default function EditRequestModal({
                 }}
               />
             </div>
+
+            {currentBusinessName === "상호 정보 없음" && (
+              <div>
+                <label style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--color-text-sub)", display: "block", marginBottom: "8px" }}>
+                  공식 상호명 (회사명) *
+                </label>
+                <input 
+                  type="text" 
+                  required
+                  value={proposedBusinessName}
+                  onChange={(e) => setProposedBusinessName(e.target.value)}
+                  placeholder="예: 천일냉동 (공식 법인/개인 상호명)"
+                  style={{
+                    width: "100%",
+                    padding: "12px 16px",
+                    borderRadius: "10px",
+                    border: "1px solid var(--color-border)",
+                    backgroundColor: "var(--bg-color-main)",
+                    color: "var(--color-text-main)",
+                    fontSize: "0.9rem",
+                    boxSizing: "border-box"
+                  }}
+                />
+              </div>
+            )}
 
             <hr style={{ border: 0, borderTop: "1px solid var(--color-border)", margin: "8px 0" }} />
 

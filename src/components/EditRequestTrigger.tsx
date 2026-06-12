@@ -5,6 +5,7 @@ import EditRequestModal from "./EditRequestModal";
 
 interface EditRequestTriggerProps {
   bNo: string;
+  currentBusinessName: string;
   currentBrandName: string;
   currentHomepage: string;
   currentDescription: string;
@@ -12,6 +13,7 @@ interface EditRequestTriggerProps {
 
 export default function EditRequestTrigger({
   bNo,
+  currentBusinessName,
   currentBrandName,
   currentHomepage,
   currentDescription
@@ -59,6 +61,7 @@ export default function EditRequestTrigger({
 
       <EditRequestModal
         bNo={bNo}
+        currentBusinessName={currentBusinessName}
         currentBrandName={currentBrandName}
         currentHomepage={currentHomepage}
         currentDescription={currentDescription}

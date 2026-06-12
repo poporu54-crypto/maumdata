@@ -17,7 +17,8 @@ export async function POST(
       proposedBrandName,
       proposedHomepage,
       proposedDescription,
-      proposedTimeline
+      proposedTimeline,
+      proposedBusinessName
     } = body;
 
     if (!requesterType || !requesterEmail) {
@@ -34,7 +35,8 @@ export async function POST(
       proposed_brand_name: proposedBrandName,
       proposed_homepage: proposedHomepage,
       proposed_description: proposedDescription,
-      proposed_timeline: proposedTimeline
+      proposed_timeline: proposedTimeline,
+      proposed_b_nm: proposedBusinessName
     });
 
     return NextResponse.json({ success: true, requestId: id });

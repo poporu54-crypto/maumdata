@@ -24,6 +24,7 @@ interface EditRequest {
   proposedTimeline: TimelineEvent[];
   status: string;
   createdAt: string;
+  proposedBusinessName?: string;
 }
 
 interface AdminDashboardProps {
@@ -216,6 +217,7 @@ export default function AdminDashboard({ initialRequests }: AdminDashboardProps)
         <div style={{ display: "flex", flexDirection: "column", gap: "32px" }}>
           {requests.map((req) => {
             // 비교 결과 변경 여부 체크
+            const isBusinessNameDiff = (req.proposedBusinessName || "").trim() !== "" && (req.proposedBusinessName !== req.b_nm);
             const isBrandDiff = (req.proposedBrandName || "").trim() !== "" && (req.proposedBrandName !== req.currentBrandName);
             const isHomepageDiff = (req.proposedHomepage || "").trim() !== "" && (req.proposedHomepage !== req.currentHomepage);
             const isDescDiff = (req.proposedDescription || "").trim() !== "" && (req.proposedDescription !== req.currentDescription);
@@ -276,6 +278,52 @@ export default function AdminDashboard({ initialRequests }: AdminDashboardProps)
 
                 {/* 1:1 병렬 대조 영역 */}
                 <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+
+                  {/* 공식 상호명 대조 */}
+                  {isBusinessNameDiff && (
+                    <div style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+                      gap: "16px",
+                      backgroundColor: "rgba(49, 130, 246, 0.03)",
+                      padding: "16px",
+                      borderRadius: "12px",
+                      border: "1px dashed rgba(49, 130, 246, 0.2)"
+                    }}>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                        <span style={{ fontSize: "0.8rem", color: "var(--color-text-desc)", fontWeight: 700 }}>
+                          [기존] 공식 상호명
+                        </span>
+                        <div style={{
+                          padding: "12px 16px",
+                          borderRadius: "10px",
+                          backgroundColor: "rgba(240, 68, 56, 0.08)",
+                          color: "#f87171",
+                          fontSize: "0.9rem",
+                          border: "1px solid rgba(240, 68, 56, 0.2)",
+                          textDecoration: "line-through"
+                        }}>
+                          {req.b_nm || "(기존 등록 없음)"}
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                        <span style={{ fontSize: "0.8rem", color: "var(--color-primary)", fontWeight: 700 }}>
+                          [제안] 공식 상호명 ✦ 변경됨
+                        </span>
+                        <div style={{
+                          padding: "12px 16px",
+                          borderRadius: "10px",
+                          backgroundColor: "rgba(16, 185, 129, 0.12)",
+                          color: "#34d399",
+                          fontSize: "0.9rem",
+                          border: "1px solid rgba(16, 185, 129, 0.2)",
+                          fontWeight: 700
+                        }}>
+                          {req.proposedBusinessName}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   
                   {/* 브랜드 별칭 대조 */}
                   <div style={{

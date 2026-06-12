@@ -64,13 +64,15 @@ export async function POST(
       UPDATE businesses 
       SET brand_name = COALESCE($1, brand_name),
           homepage = COALESCE($2, homepage),
-          description = COALESCE($3, description)
+          description = COALESCE($3, description),
+          b_nm = COALESCE($5, b_nm)
       WHERE b_no = $4
     `, [
       reqData.proposedBrandName || null,
       reqData.proposedHomepage || null,
       reqData.proposedDescription || null,
-      reqData.b_no
+      reqData.b_no,
+      reqData.proposedBusinessName || null
     ]);
 
     // 2. 제안된 연혁 목록이 있는 경우 business_timeline에 반영

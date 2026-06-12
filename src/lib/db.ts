@@ -337,7 +337,7 @@ export async function getRecommendedBusinesses(
   const queryText = `
     SELECT b_no, b_nm, b_adr, b_sector, is_sme, listing_status, data_source
     FROM businesses
-    WHERE b_no != $1 AND b_nm != '상호 미등록 사업자'
+    WHERE b_no != $1 AND b_nm != '상호 정보 없음'
     ORDER BY 
       (CASE WHEN b_adr LIKE $2 THEN 50 ELSE 0 END) +
       (CASE WHEN b_sector LIKE $3 THEN 40 ELSE 0 END) +
@@ -367,12 +367,13 @@ export async function addEditRequest(req: {
   proposed_homepage?: string;
   proposed_description?: string;
   proposed_timeline?: any;
+  proposed_b_nm?: string;
 }) {
   const cleanBNo = req.b_no.replace(/[^0-9]/g, "");
   const result = await query(`
     INSERT INTO business_edit_requests (
-      b_no, requester_type, requester_email, proposed_brand_name, proposed_homepage, proposed_description, proposed_timeline
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+      b_no, requester_type, requester_email, proposed_brand_name, proposed_homepage, proposed_description, proposed_timeline, proposed_b_nm
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
     RETURNING id
   `, [
     cleanBNo,
@@ -381,7 +382,8 @@ export async function addEditRequest(req: {
     req.proposed_brand_name || null,
     req.proposed_homepage || null,
     req.proposed_description || null,
-    req.proposed_timeline ? JSON.stringify(req.proposed_timeline) : null
+    req.proposed_timeline ? JSON.stringify(req.proposed_timeline) : null,
+    req.proposed_b_nm || null
   ]);
   return result.rows[0]?.id;
 }
@@ -393,7 +395,7 @@ export async function getPendingEditRequests() {
            b.description as "currentDescription", r.requester_type as "requesterType", r.requester_email as "requesterEmail",
            r.proposed_brand_name as "proposedBrandName", r.proposed_homepage as "proposedHomepage",
            r.proposed_description as "proposedDescription", r.proposed_timeline as "proposedTimeline",
-           r.status, r.created_at as "createdAt"
+           r.status, r.created_at as "createdAt", r.proposed_b_nm as "proposedBusinessName"
     FROM business_edit_requests r
     JOIN businesses b ON r.b_no = b.b_no
     WHERE r.status = 'pending'
@@ -415,7 +417,8 @@ export async function getPendingEditRequests() {
       ? JSON.parse(row.proposedTimeline) 
       : (row.proposedTimeline || []),
     status: row.status,
-    createdAt: row.createdAt
+    createdAt: row.createdAt,
+    proposedBusinessName: row.proposedBusinessName || ""
   }));
 }
 
@@ -439,7 +442,8 @@ export async function getEditRequestById(id: number) {
       ? JSON.parse(row.proposed_timeline)
       : (row.proposed_timeline || []),
     status: row.status,
-    createdAt: row.created_at
+    createdAt: row.created_at,
+    proposedBusinessName: row.proposed_b_nm || ""
   };
 }
 

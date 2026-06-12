@@ -583,6 +583,7 @@ function TimelineSection({
         <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "12px", borderTop: "1px solid var(--color-border)", paddingTop: "20px" }}>
           <EditRequestTrigger
             bNo={bNo}
+            currentBusinessName={brandName}
             currentBrandName={brandName}
             currentHomepage={homepage}
             currentDescription={description}
@@ -948,7 +949,7 @@ async function getUnifiedBusinessData(bNo: string): Promise<{
     // UI 렌더링에 지장이 없도록 가상의 mock apiStatus 설정 (대기 시간 0ms)
     const mockApiStatus: NtsCompanyStatus = {
       b_no: cleanBNo,
-      b_stt: localBiz.b_nm === "상호 미등록 사업자" ? "계속사업자" : (localBiz.b_type?.includes("폐업") ? "폐업자" : "계속사업자"),
+      b_stt: localBiz.b_nm === "상호 정보 없음" ? "계속사업자" : (localBiz.b_type?.includes("폐업") ? "폐업자" : "계속사업자"),
       b_stt_cd: localBiz.b_type?.includes("폐업") ? "02" : "01",
       tax_type: "부가가치세 일반과세자",
       tax_type_cd: "01",
@@ -1166,13 +1167,13 @@ async function getUnifiedBusinessData(bNo: string): Promise<{
     // 3.4. 모든 공시 정보가 없어 최후 수단으로 미등록 사업자 Fallback
     const realBiz: BusinessData = {
       b_no: cleanBNo,
-      b_nm: "상호 미등록 사업자",
+      b_nm: "상호 정보 없음",
       p_nm: "-",
       start_dt: "-",
       b_adr: "주소 정보 없음 (공시 비대상)",
       b_sector: "미등록 업종",
       b_type: "소상공인/개인사업자",
-      description: `국세청 실시간 계속사업자 상태가 검증된 개인 사업자등록번호(${cleanBNo})입니다.`,
+      description: `국세청 실시간 계속사업자 상태가 검증되었으나 상호명이 등록되지 않은 개인 사업자등록번호(${cleanBNo})입니다.`,
       credit_rating: "-",
       industry_rank: "-",
       dataSource: "estimated",
@@ -1184,7 +1185,7 @@ async function getUnifiedBusinessData(bNo: string): Promise<{
       history: [],
     };
 
-    const npsInfo = await getNpsBplcInfo(cleanBNo, "상호 미등록 사업자");
+    const npsInfo = await getNpsBplcInfo(cleanBNo, "상호 정보 없음");
     if (npsInfo && npsInfo.npsSbscrbNmps > 0) {
       realBiz.npsLinked = true;
       realBiz.npsSbscrbNmps = npsInfo.npsSbscrbNmps;
@@ -1197,7 +1198,7 @@ async function getUnifiedBusinessData(bNo: string): Promise<{
   // 5. 신규 기업 데이터 Neon DB 자동 적재 및 실시간 갱신 정보 동기화 (온디맨드 동기화 및 DART 코드 갱신)
   if (business) {
     const isNew = !localBizVal;
-    const wasUnregistered = localBizVal && localBizVal.b_nm === "상호 미등록 사업자" && business.b_nm !== "상호 미등록 사업자";
+    const wasUnregistered = localBizVal && localBizVal.b_nm === "상호 정보 없음" && business.b_nm !== "상호 정보 없음";
     const hasNewDartCode = localBizVal && !localBizVal.dart_code && business.dart_code;
     
     // 로컬 DB의 종업원수와 실시간 API로 가져온 종업원수가 다를 경우 데이터 동기화
@@ -1583,10 +1584,23 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                 lineHeight: 1.6,
                 fontWeight: 500,
                 borderLeft: "4px solid var(--color-primary)",
-                paddingLeft: "16px"
+                paddingLeft: "16px",
+                margin: 0
               }}>
                 {business?.description}
               </p>
+
+              {business?.b_nm === "상호 정보 없음" && (
+                <div style={{ borderTop: "1px solid var(--color-border)", paddingTop: "12px", marginTop: "12px" }}>
+                  <EditRequestTrigger
+                    bNo={cleanBNo}
+                    currentBusinessName={business.b_nm}
+                    currentBrandName={business.brand_name || ""}
+                    currentHomepage={business.homepage || ""}
+                    currentDescription={business.description || ""}
+                  />
+                </div>
+              )}
             </div>
 
             {/* 기본 정보 그리드 */}
