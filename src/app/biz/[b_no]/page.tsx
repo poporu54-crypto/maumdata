@@ -965,6 +965,8 @@ interface BusinessData {
   npsLastSyncAt?: any;
   taxType?: string;
   taxTypeCd?: string;
+  bStt?: string;
+  bSttCd?: string;
 }
 
 // 로컬 Neon DB에서 사업자 번호로 기업 조회
@@ -1093,12 +1095,26 @@ async function triggerBackgroundSync(
     if (ntsNeeded) {
       const apiStatus = await getNtsCompanyStatus(bNo);
       if (apiStatus) {
-        // 국세청 동기화 시각 업데이트
+        // 국세청 동기화 시각 및 상태 정보 전체 갱신
         await query(
-          "UPDATE businesses SET nts_last_sync_at = CURRENT_TIMESTAMP WHERE b_no = $1",
-          [bNo]
+          `UPDATE businesses 
+           SET nts_last_sync_at = CURRENT_TIMESTAMP,
+               tax_type = $1,
+               tax_type_cd = $2,
+               b_stt = $3,
+               b_stt_cd = $4,
+               close_date = COALESCE(NULLIF($5, ''), close_date)
+           WHERE b_no = $6`,
+          [
+            apiStatus.tax_type,
+            apiStatus.tax_type_cd,
+            apiStatus.b_stt,
+            apiStatus.b_stt_cd,
+            apiStatus.end_dt || "",
+            bNo
+          ]
         );
-        console.log(`[Background Sync] NTS sync time updated for ${bNo}`);
+        console.log(`[Background Sync] NTS sync status updated for ${bNo}: ${apiStatus.b_stt}`);
       }
     }
     
@@ -1184,11 +1200,11 @@ async function getUnifiedBusinessData(bNo: string): Promise<{
     // UI 렌더링에 지장이 없도록 가상의 mock apiStatus 설정 (대기 시간 0ms)
     const mockApiStatus: NtsCompanyStatus = {
       b_no: cleanBNo,
-      b_stt: localBiz.b_type?.includes("폐업") ? "폐업자" : "계속사업자",
-      b_stt_cd: localBiz.b_type?.includes("폐업") ? "03" : "01",
+      b_stt: localBiz.bStt || (localBiz.b_type?.includes("폐업") ? "폐업자" : "계속사업자"),
+      b_stt_cd: localBiz.bSttCd || (localBiz.b_type?.includes("폐업") ? "03" : "01"),
       tax_type: localBiz.taxType || "부가가치세 일반과세자",
       tax_type_cd: localBiz.taxTypeCd || "01",
-      end_dt: "",
+      end_dt: localBiz.closeDate || "",
       utcc_yn: "N",
       tax_type_change_dt: "",
       invoice_apply_dt: "",
@@ -1349,7 +1365,7 @@ async function getUnifiedBusinessData(bNo: string): Promise<{
 
     business = {
       b_no: cleanBNo,
-      b_nm: basicInfo.corpNm,
+      b_nm: basicInfo.corpNm && !basicInfo.corpNm.includes("SAMPO FUND") ? basicInfo.corpNm : (localBizVal?.b_nm || basicInfo.corpNm),
       p_nm: basicInfo.enpRprFnm,
       start_dt: basicInfo.enpEstbDt,
       b_adr: basicInfo.enpBsadr,
@@ -2277,7 +2293,7 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
               <p style={{ fontSize: "0.85rem", color: "var(--color-text-desc)", marginBottom: "28px" }}>
                 {business?.history && business.history.length > 0 
                   ? "수집된 재무 및 고용 데이터를 바탕으로 분석된 핵심 트렌드입니다." 
-                  : "국민연금 실시간 연동 데이터를 바탕으로 분석된 기업의 실시간 고용 트렌드입니다."}
+                  : "실시간 고용 데이터를 바탕으로 분석된 기업의 고용 트렌드입니다."}
               </p>
 
               {business?.history && business.history.length > 0 ? (
@@ -2287,27 +2303,30 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                     display: "grid",
                     gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
                     gap: "32px",
-                    marginBottom: "32px"
+                    marginBottom: "32px",
+                    alignItems: "stretch"
                   }}>
                     {/* 차트 1: 매출액 & 영업이익 꺾은선 차트 */}
-                    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "16px", height: "100%" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
                         <span style={{ fontWeight: 700, color: "var(--color-text-sub)", fontSize: "0.95rem" }}>
                           연간 매출액 & 영업이익 추이
                         </span>
                         <span style={{ color: "var(--color-primary)", fontWeight: 800, fontSize: "0.95rem" }}>
-                          공식재무제표
+                          재무 종합 분석
                         </span>
                       </div>
                       <div style={{
-                        height: "150px",
+                        flex: 1,
+                        minHeight: "160px",
                         backgroundColor: "var(--bg-color-main)",
                         borderRadius: "14px",
-                        padding: "12px",
+                        padding: "20px",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
-                        border: "1px solid var(--color-border)"
+                        border: "1px solid var(--color-border)",
+                        boxSizing: "border-box"
                       }}>
                         {renderDualChart()}
                       </div>
@@ -2324,17 +2343,15 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                     </div>
 
                     {/* 차트 2: 초정밀 HR 고용 건전성 및 퇴사율 */}
-                    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "16px", height: "100%" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: "8px" }}>
                         <span style={{ fontWeight: 700, color: "var(--color-text-sub)", fontSize: "0.95rem", whiteSpace: "nowrap" }}>
                           초정밀 HR 고용 건전성 분석
                         </span>
-                        <span style={{ color: "var(--color-primary)", fontWeight: 700, fontSize: "0.9rem", whiteSpace: "nowrap" }}>
-                          국민연금 실시간 연동
-                        </span>
                       </div>
                       <div style={{
-                        minHeight: "150px",
+                        flex: 1,
+                        minHeight: "160px",
                         backgroundColor: "var(--bg-color-main)",
                         borderRadius: "14px",
                         padding: "20px",

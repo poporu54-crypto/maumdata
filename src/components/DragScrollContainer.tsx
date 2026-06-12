@@ -56,6 +56,11 @@ export default function DragScrollContainer({ children, className, style }: Drag
     }
   };
 
+  // 브라우저의 기본 이미지/링크 드래그 섀도우 동작 차단 (PC 드래그 스크롤 필수 가드)
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+  };
+
   // 링크 클릭 시 드래그 동작 중이었으면 상세페이지 이동 링크가 바로 실행되지 않도록 방지
   const handleClick = (e: MouseEvent<HTMLDivElement>) => {
     if (isDragging) {
@@ -72,6 +77,7 @@ export default function DragScrollContainer({ children, className, style }: Drag
       onMouseLeave={handleMouseLeave}
       onMouseUp={handleMouseUp}
       onMouseMove={handleMouseMove}
+      onDragStart={handleDragStart}
       onClickCapture={handleClick}
       style={{ 
         cursor: "grab", 
@@ -83,3 +89,4 @@ export default function DragScrollContainer({ children, className, style }: Drag
     </div>
   );
 }
+

@@ -82,6 +82,8 @@ export async function getBusinessByBNo(bNo: string) {
     homepage: business.homepage || "",
     main_biz: business.main_biz || "",
     is_audited: business.is_audited || false,
+    bStt: business.b_stt || "계속사업자",
+    bSttCd: business.b_stt_cd || "01",
     npsSbscrbNmps: business.nps_sbscrb_nmps || 0,
     npsLinked: business.nps_linked || false,
     corpEnm: business.corp_enm || "",
@@ -105,6 +107,9 @@ export async function getBusinessByBNo(bNo: string) {
     brand_name: business.brand_name || "",
     ntsLastSyncAt: business.nts_last_sync_at,
     npsLastSyncAt: business.nps_last_sync_at,
+    patentsLastSyncAt: business.patents_last_sync_at,
+    bidsLastSyncAt: business.bids_last_sync_at,
+    dartLastSyncAt: business.dart_last_sync_at,
     taxType: business.tax_type || "부가가치세 일반과세자",
     taxTypeCd: business.tax_type_cd || "01",
     historyTimeline: timelineResult.rows.map((r: any) => ({
@@ -195,11 +200,12 @@ export async function upsertBusiness(biz: any) {
       mail_order_no, declare_org, goods_type, sell_type, close_date, rep_email, zip_cd,
       new_acqs_nmps, loss_sbscrb_nmps, tel_no, brand_name,
       nts_last_sync_at, nps_last_sync_at,
-      tax_type, tax_type_cd
+      tax_type, tax_type_cd,
+      b_stt, b_stt_cd
     ) VALUES (
       $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27,
       $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, $40,
-      $41, $42
+      $41, $42, $43, $44
     ) ON CONFLICT (b_no) DO UPDATE SET
       b_nm = EXCLUDED.b_nm,
       p_nm = EXCLUDED.p_nm,
@@ -241,7 +247,9 @@ export async function upsertBusiness(biz: any) {
       nts_last_sync_at = COALESCE(EXCLUDED.nts_last_sync_at, businesses.nts_last_sync_at),
       nps_last_sync_at = COALESCE(EXCLUDED.nps_last_sync_at, businesses.nps_last_sync_at),
       tax_type = EXCLUDED.tax_type,
-      tax_type_cd = EXCLUDED.tax_type_cd
+      tax_type_cd = EXCLUDED.tax_type_cd,
+      b_stt = EXCLUDED.b_stt,
+      b_stt_cd = EXCLUDED.b_stt_cd
   `, [
     clean, biz.b_nm, biz.p_nm, biz.start_dt, biz.b_adr, biz.b_sector, biz.b_type, biz.corp_no || "", biz.dart_code || "",
     biz.description || "", biz.credit_rating || "", biz.industry_rank || "", biz.is_sme || "", biz.listing_status || "",
@@ -251,7 +259,8 @@ export async function upsertBusiness(biz: any) {
     biz.mailOrderNo || "", biz.declareOrg || "", biz.goodsType || "", biz.sellType || "", biz.closeDate || "", biz.repEmail || "", biz.zipCd || "",
     biz.newAcqsNmps || 0, biz.lossSbscrbNmps || 0, biz.telNo || "", brandVal,
     biz.ntsLastSyncAt || null, biz.npsLastSyncAt || null,
-    biz.taxType || "부가가치세 일반과세자", biz.taxTypeCd || "01"
+    biz.taxType || "부가가치세 일반과세자", biz.taxTypeCd || "01",
+    biz.bStt || biz.b_stt || "계속사업자", biz.bSttCd || biz.b_stt_cd || "01"
   ]);
 
   // 1.1. 신규 설립일 타임라인 자동 갱신
@@ -495,6 +504,138 @@ export async function getNoNameBusinesses(limit = 100, offset = 0) {
     b_sector: row.b_sector || "",
     viewCount: row.viewCount || 0
   }));
+}
+
+// 16. 특허 캐시 조회
+export async function getPatentsByBNo(bNo: string) {
+  const clean = bNo.replace(/[^0-9]/g, "");
+  const result = await query(
+    `SELECT application_number as "applicationNumber", application_date as "applicationDate",
+            invention_title as "inventionTitle", register_number as "registerNumber",
+            register_date as "registerDate", applicant_name as "applicantName",
+            patent_status as "patentStatus", detail_url as "detailUrl"
+     FROM business_patents
+     WHERE b_no = $1
+     ORDER BY application_date DESC`,
+    [clean]
+  );
+  return result.rows;
+}
+
+// 17. 특허 캐시 저장
+export async function savePatents(bNo: string, patents: any[]) {
+  const clean = bNo.replace(/[^0-9]/g, "");
+  await query("DELETE FROM business_patents WHERE b_no = $1", [clean]);
+  for (const p of patents) {
+    await query(`
+      INSERT INTO business_patents (
+        b_no, application_number, application_date, invention_title,
+        register_number, register_date, applicant_name, patent_status, detail_url
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      ON CONFLICT (application_number) DO UPDATE SET
+        b_no = EXCLUDED.b_no,
+        application_date = EXCLUDED.application_date,
+        invention_title = EXCLUDED.invention_title,
+        register_number = EXCLUDED.register_number,
+        register_date = EXCLUDED.register_date,
+        applicant_name = EXCLUDED.applicant_name,
+        patent_status = EXCLUDED.patent_status,
+        detail_url = EXCLUDED.detail_url
+    `, [
+      clean, p.applicationNumber, p.applicationDate, p.inventionTitle,
+      p.registerNumber || null, p.registerDate || null, p.applicantName, p.patentStatus, p.detailUrl || null
+    ]);
+  }
+  await query("UPDATE businesses SET patents_last_sync_at = CURRENT_TIMESTAMP WHERE b_no = $1", [clean]);
+}
+
+// 18. 입찰/낙찰 캐시 조회
+export async function getBidsByBNo(bNo: string) {
+  const clean = bNo.replace(/[^0-9]/g, "");
+  const result = await query(
+    `SELECT bid_ntce_no as "bidNtceNo", bid_ntce_ord as "bidNtceOrd",
+            bid_ntce_nm as "bidNtceNm", dminstt_nm as "dminsttNm",
+            opng_dt as "opngDt", bid_ntce_dt as "bidNtceDt",
+            cntrct_cncl_mthd_nm as "cntrctCnclMthdNm", presmpt_prce as "presmptPrce",
+            detail_url as "detailUrl"
+     FROM business_bids
+     WHERE b_no = $1
+     ORDER BY bid_ntce_dt DESC`,
+    [clean]
+  );
+  return result.rows.map(r => ({
+    ...r,
+    presmptPrce: parseFloat(r.presmptPrce || "0")
+  }));
+}
+
+// 19. 입찰/낙찰 캐시 저장
+export async function saveBids(bNo: string, bids: any[]) {
+  const clean = bNo.replace(/[^0-9]/g, "");
+  await query("DELETE FROM business_bids WHERE b_no = $1", [clean]);
+  for (const b of bids) {
+    await query(`
+      INSERT INTO business_bids (
+        b_no, bid_ntce_no, bid_ntce_ord, bid_ntce_nm, dminstt_nm,
+        opng_dt, bid_ntce_dt, cntrct_cncl_mthd_nm, presmpt_prce, detail_url
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      ON CONFLICT (bid_ntce_no, bid_ntce_ord) DO UPDATE SET
+        b_no = EXCLUDED.b_no,
+        bid_ntce_nm = EXCLUDED.bid_ntce_nm,
+        dminstt_nm = EXCLUDED.dminstt_nm,
+        opng_dt = EXCLUDED.opng_dt,
+        bid_ntce_dt = EXCLUDED.bid_ntce_dt,
+        cntrct_cncl_mthd_nm = EXCLUDED.cntrct_cncl_mthd_nm,
+        presmpt_prce = EXCLUDED.presmpt_prce,
+        detail_url = EXCLUDED.detail_url
+    `, [
+      clean, b.bidNtceNo, b.bidNtceOrd, b.bidNtceNm, b.dminsttNm,
+      b.opngDt, b.bidNtceDt, b.cntrctCnclMthdNm, b.presmptPrce, b.detailUrl
+    ]);
+  }
+  await query("UPDATE businesses SET bids_last_sync_at = CURRENT_TIMESTAMP WHERE b_no = $1", [clean]);
+}
+
+// 20. 공시 캐시 조회
+export async function getDisclosuresByBNo(bNo: string) {
+  const clean = bNo.replace(/[^0-9]/g, "");
+  const result = await query(
+    `SELECT rcept_no as "rceptNo", corp_code as "corpCode",
+            report_nm as "reportNm", flr_nm as "flrNm",
+            rcept_dt as "rceptDt", rm, detail_url as "detailUrl",
+            is_key_disclosure as "isKeyDisclosure"
+     FROM business_disclosures
+     WHERE b_no = $1
+     ORDER BY rcept_dt DESC`,
+    [clean]
+  );
+  return result.rows;
+}
+
+// 21. 공시 캐시 저장
+export async function saveDisclosures(bNo: string, disclosures: any[]) {
+  const clean = bNo.replace(/[^0-9]/g, "");
+  await query("DELETE FROM business_disclosures WHERE b_no = $1", [clean]);
+  for (const d of disclosures) {
+    await query(`
+      INSERT INTO business_disclosures (
+        b_no, rcept_no, corp_code, report_nm, flr_nm, rcept_dt, rm, detail_url, is_key_disclosure
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      ON CONFLICT (rcept_no) DO UPDATE SET
+        b_no = EXCLUDED.b_no,
+        corp_code = EXCLUDED.corp_code,
+        report_nm = EXCLUDED.report_nm,
+        flr_nm = EXCLUDED.flr_nm,
+        rcept_dt = EXCLUDED.rcept_dt,
+        rm = EXCLUDED.rm,
+        detail_url = EXCLUDED.detail_url,
+        is_key_disclosure = EXCLUDED.is_key_disclosure
+    `, [
+      clean, d.rceptNo, d.corpCode || null, d.reportNm, d.flrNm,
+      d.rceptDt, d.rm || null, d.detailUrl, d.isKeyDisclosure || false
+    ]);
+  }
+  await query("UPDATE businesses SET dart_last_sync_at = CURRENT_TIMESTAMP WHERE b_no = $1", [clean]);
 }
 
 

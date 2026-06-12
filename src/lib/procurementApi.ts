@@ -24,10 +24,10 @@ export async function getRecentBidsByCompany(companyNm: string, bNo: string): Pr
   
   if (!cleanCompanyNm || cleanCompanyNm.length < 2) return [];
 
-  // 1주일(7일) 조회 범위 설정
+  // 최근 30일간의 수주 실적 조회 범위 설정 (더 넓은 실적 매칭 보장)
   const today = new Date();
   const past = new Date();
-  past.setDate(today.getDate() - 7);
+  past.setDate(today.getDate() - 30);
 
   const formatDateString = (d: Date) => {
     const y = d.getFullYear();
@@ -86,7 +86,7 @@ export async function getRecentBidsByCompany(companyNm: string, bNo: string): Pr
     const [listServc, listThng, listConstc] = await Promise.all([
       fetchCategory("getScsbidListSttusServc"), // 용역
       fetchCategory("getScsbidListSttusThng"),  // 물품
-      fetchCategory("getScsbidListSttusConstc") // 공사
+      fetchCategory("getScsbidListSttusCnstwk") // 공사
     ]);
 
     const combinedList = [...listServc, ...listThng, ...listConstc];
