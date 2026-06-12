@@ -35,16 +35,10 @@ function getCorpFinance(crno) {
 }
 
 async function main() {
-  const ediya = await getCorpFinance('1101112487753');
-  const twosome = await getCorpFinance('1101116648062');
-  const dongsuh = await getCorpFinance('1201110000464');
+  const hwami = await getCorpFinance('1201110628521');
   
-  console.log("=== Ediya Finance Raw ===");
-  console.log(JSON.stringify(ediya, null, 2));
-  console.log("\n=== Twosome Finance Raw ===");
-  console.log(JSON.stringify(twosome, null, 2));
-  console.log("\n=== Dongsuh Finance Raw ===");
-  console.log(JSON.stringify(dongsuh, null, 2));
+  console.log("=== Hwami Finance Raw ===");
+  console.log(JSON.stringify(hwami, null, 2));
 }
 
 main();

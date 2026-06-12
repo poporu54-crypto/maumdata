@@ -21,8 +21,8 @@ async function run() {
   
   await client.connect();
   try {
-    const biz = await client.query("SELECT b_no, b_nm, b_sector, crno FROM businesses WHERE b_no = '1398701725'");
-    const hist = await client.query("SELECT * FROM business_history WHERE b_no = '1398701725' ORDER BY year");
+    const biz = await client.query("SELECT * FROM businesses WHERE b_no = '1218619950'");
+    const hist = await client.query("SELECT * FROM business_history WHERE b_no = '1218619950' ORDER BY year");
     console.log("=== Master ===");
     console.log(biz.rows);
     console.log("=== History ===");

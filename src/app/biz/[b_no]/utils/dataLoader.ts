@@ -349,6 +349,7 @@ export async function getUnifiedBusinessData(bNo: string): Promise<{
     }
 
     let history: BusinessData["history"] = [];
+    let isEstimated = false;
     if (financeDetail && financeDetail.length > 0) {
       history = financeDetail.map((fd) => ({
         year: fd.year,
@@ -360,6 +361,31 @@ export async function getUnifiedBusinessData(bNo: string): Promise<{
         totalLiabilities: fd.totalLiabilities,
         totalEquity: fd.totalEquity
       }));
+    } else if (npsInfo && npsInfo.npsSbscrbNmps > 0) {
+      // [폴백] 금융위 API에 재무 데이터가 누락된 경우, 국민연금 종업원 수 기반 합리적 추정 재무 히스토리 빌드
+      const empCount = npsInfo.npsSbscrbNmps;
+      const baseRevenuePerEmp = 2.5; // 1인당 평균 매출액 2.5억 원
+      const estRev = Math.round(empCount * baseRevenuePerEmp);
+      
+      history = [2023, 2024, 2025].map((year) => {
+        const rev = estRev;
+        const operatingIncome = Math.round(rev * 0.06);
+        const netIncome = Math.round(operatingIncome * 0.8);
+        const totalAssets = Math.round(rev * 1.2);
+        const totalLiabilities = Math.round(totalAssets * 0.5);
+        const totalEquity = totalAssets - totalLiabilities;
+        return {
+          year,
+          revenue: rev,
+          employees: empCount,
+          operatingIncome,
+          netIncome,
+          totalAssets,
+          totalLiabilities,
+          totalEquity
+        };
+      });
+      isEstimated = true;
     }
 
     business = {
@@ -375,7 +401,7 @@ export async function getUnifiedBusinessData(bNo: string): Promise<{
       description: localBizVal?.description || `${basicInfo.corpNm}${getJosa(basicInfo.corpNm, "은는")} 금융위원회 공시 정보가 등록된 대한민국 공식 ${scale}입니다.`,
       credit_rating: localBizVal?.credit_rating || credit_rating,
       industry_rank: localBizVal?.industry_rank || industry_rank,
-      dataSource: "public",
+      dataSource: isEstimated ? "estimated" : "public",
       is_sme: scale,
       listing_status: localBizVal?.listing_status || (scale.includes("대기업") ? "코스피 상장" : "비상장"),
       homepage: localBizVal?.homepage && localBizVal.homepage !== "-" ? localBizVal.homepage : (basicInfo.enpHpaddr || "-"),
