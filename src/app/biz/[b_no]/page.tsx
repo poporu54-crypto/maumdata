@@ -1228,9 +1228,9 @@ import { getNtsCompanyStatus, NtsCompanyStatus } from "@/lib/ntsApi";
 import { getCorpBasicOutline, getCorpFinanceInfo, CorpBasicOutline, CorpFinanceDetail } from "@/lib/corpApi";
 import { getNpsBplcInfo } from "@/lib/npsApi";
 import AdBanner from "@/components/AdBanner";
-import { getRecentBidsByCompany, getMockBids } from "@/lib/procurementApi";
-import { getPatentsByCompany, getMockPatents } from "@/lib/patentApi";
-import { getRecentDisclosures, getRecentKeyDisclosures } from "@/lib/dartApi";
+import { getRecentBidsByCompany, getMockBids, syncRecentBidsByCompany } from "@/lib/procurementApi";
+import { getPatentsByCompany, getMockPatents, syncPatentsByCompany } from "@/lib/patentApi";
+import { getRecentDisclosures, getRecentKeyDisclosures, syncDisclosuresByCompany } from "@/lib/dartApi";
 import { getBusinessByBNo, getInvalidBusinesses, addInvalidBusiness, upsertBusiness, getRecommendedBusinesses, query, getIndustryAnalysis } from "@/lib/db";
 import { validateBizrNo } from "@/lib/bizValidation";
 import { findDartCode } from "@/lib/dartMap";
@@ -1428,7 +1428,7 @@ function generateVirtualBusiness(bNo: string): BusinessData {
 
 /**
  * 백그라운드 비동기 동기화 헬퍼 함수
- * 사용자의 로딩 흐름(Response)을 가로막지 않고 외부 API를 찔러 DB 캐시만 동용 업데이트합니다.
+ * (상세 페이지 로딩 및 서버 렌더링 경로에서 외부 API 실시간 호출을 완전히 제거하므로, 이 함수는 비활성화되었습니다)
  */
 async function triggerBackgroundSync(
   bNo: string,
@@ -1436,91 +1436,12 @@ async function triggerBackgroundSync(
   ntsNeeded: boolean,
   npsNeeded: boolean
 ) {
-  try {
-    console.log(`[Background Sync] Checking updates for ${localBiz.b_nm} (${bNo}). NTS: ${ntsNeeded}, NPS: ${npsNeeded}`);
-    
-    // 1. 국세청 동기화 (10일 만료)
-    if (ntsNeeded) {
-      const apiStatus = await getNtsCompanyStatus(bNo);
-      if (apiStatus) {
-        // 국세청 동기화 시각 및 상태 정보 전체 갱신
-        await query(
-          `UPDATE businesses 
-           SET nts_last_sync_at = CURRENT_TIMESTAMP,
-               tax_type = $1,
-               tax_type_cd = $2,
-               b_stt = $3,
-               b_stt_cd = $4,
-               close_date = COALESCE(NULLIF($5, ''), close_date)
-           WHERE b_no = $6`,
-          [
-            apiStatus.tax_type,
-            apiStatus.tax_type_cd,
-            apiStatus.b_stt,
-            apiStatus.b_stt_cd,
-            apiStatus.end_dt || "",
-            bNo
-          ]
-        );
-        console.log(`[Background Sync] NTS sync status updated for ${bNo}: ${apiStatus.b_stt}`);
-      }
-    }
-    
-    // 2. 국민연금 동기화 (30일 만료)
-    if (npsNeeded) {
-      const npsInfo = await getNpsBplcInfo(bNo, localBiz.b_nm);
-      if (npsInfo && npsInfo.npsSbscrbNmps > 0) {
-        // businesses 테이블의 종업원 수 및 동기화 일자, 필요 시 업종명 갱신 (디폴트값인 '기타 서비스업' 오염 방지)
-        await query(
-          `UPDATE businesses 
-           SET nps_sbscrb_nmps = $1, 
-               new_acqs_nmps = $2, 
-               loss_sbscrb_nmps = $3, 
-               nps_linked = true, 
-               nps_last_sync_at = CURRENT_TIMESTAMP,
-               nps_chrg_amt = $4,
-               b_sector = CASE 
-                 WHEN b_sector IS NULL OR b_sector = '' OR b_sector = '기타 서비스업' OR b_sector = '상장 법인'
-                 THEN COALESCE(NULLIF($5, ''), b_sector)
-                 ELSE b_sector
-               END
-           WHERE b_no = $6`,
-          [
-            npsInfo.npsSbscrbNmps, 
-            npsInfo.newAcqsNmps || 0, 
-            npsInfo.lossSbscrbNmps || 0, 
-            npsInfo.npsChrgAmt || 0, 
-            npsInfo.npsSector || "", 
-            bNo
-          ]
-        );
-        
-        // history 테이블의 최신 연도 종업원 수도 같이 갱신
-        const latestHistYear = localBiz.history && localBiz.history.length > 0
-          ? localBiz.history[localBiz.history.length - 1].year
-          : null;
-        if (latestHistYear) {
-          await query(
-            "UPDATE business_history SET employees = $1 WHERE b_no = $2 AND year = $3",
-            [npsInfo.npsSbscrbNmps, bNo, latestHistYear]
-          );
-        }
-        console.log(`[Background Sync] NPS count updated for ${bNo} to ${npsInfo.npsSbscrbNmps}`);
-      } else {
-        // API 결과가 없거나 실패하더라도 계속 찌르지 않도록 동기화 일자는 업데이트 해줍니다.
-        await query(
-          "UPDATE businesses SET nps_last_sync_at = CURRENT_TIMESTAMP WHERE b_no = $1",
-          [bNo]
-        );
-      }
-    }
-  } catch (err) {
-    console.error(`[Background Sync] Failed to sync business ${bNo}:`, err);
-  }
+  // 실시간 외부 API 대기 및 리소스 점유 방지를 위해 완전히 비활성화됨
+  return;
 }
 
 /**
- * 국세청 API, 금융위 API, 로컬 DB 통합 코어 헬퍼 함수
+ * 로컬 DB 전용 통합 코어 헬퍼 함수 (실시간 외부 API 호출을 100% 원천 차단)
  */
 async function getUnifiedBusinessData(bNo: string): Promise<{
   apiStatus: NtsCompanyStatus | null;
@@ -1550,15 +1471,12 @@ async function getUnifiedBusinessData(bNo: string): Promise<{
     };
   }
 
-  // 1. [최적화] 로컬 DB 선조회 (NTS API 대기 전 캐시 히트 검사)
+  // 1. 순수 로컬 DB 조회
   const localBiz = await getLocalBusiness(cleanBNo);
-  const localBizVal = localBiz;
   
-  // 로컬 DB 캐시 히트 조건 만족 시, 국세청 API 호출 없이 즉시 캐시 데이터 반환 (블랙리스트보다 우선 순위)
   if (localBiz && localBiz.b_nm !== "상호 정보 없음") {
-    console.log(`[Cache Hit] Business data loaded directly from Neon DB (Skipped NTS and Blacklist): ${localBiz.b_nm} (${cleanBNo})`);
+    console.log(`[Database Fetch] Business data loaded from DB (External API calls completely bypassed): ${localBiz.b_nm} (${cleanBNo})`);
     
-    // UI 렌더링에 지장이 없도록 가상의 mock apiStatus 설정 (대기 시간 0ms)
     const mockApiStatus: NtsCompanyStatus = {
       b_no: cleanBNo,
       b_stt: localBiz.bStt || (localBiz.b_type?.includes("폐업") ? "폐업자" : "계속사업자"),
@@ -1573,352 +1491,30 @@ async function getUnifiedBusinessData(bNo: string): Promise<{
       rbf_tax_type_cd: ""
     };
 
-    const now = new Date();
-    const ntsLastSync = localBiz.ntsLastSyncAt ? new Date(localBiz.ntsLastSyncAt) : new Date(0);
-    const ntsDiffDays = Math.floor((now.getTime() - ntsLastSync.getTime()) / (1000 * 60 * 60 * 24));
-    
-    const npsLastSync = localBiz.npsLastSyncAt ? new Date(localBiz.npsLastSyncAt) : new Date(0);
-    const npsDiffDays = Math.floor((now.getTime() - npsLastSync.getTime()) / (1000 * 60 * 60 * 24));
-    
-    const isListedOrAudited = 
-      localBiz.listing_status?.includes("상장") || 
-      localBiz.b_type?.includes("상장") || 
-      localBiz.b_type?.includes("대기업") || 
-      localBiz.b_type?.includes("중견기업") || 
-      localBiz.is_audited === true;
-
-    // 상장사/외감기업인데 주요 핵심 정보가 누락된 경우에만 불완전 캐시
-    const isCacheIncomplete = 
-      isListedOrAudited && (
-        !localBiz.crno || 
-        localBiz.crno === "-" ||
-        !localBiz.history || 
-        localBiz.history.length === 0 ||
-        !localBiz.credit_rating ||
-        localBiz.credit_rating === "-" ||
-        !localBiz.industry_rank ||
-        localBiz.industry_rank === "-"
-      );
-
-    const ntsUpdateNeeded = ntsDiffDays >= 10 || !!isCacheIncomplete;
-    const npsUpdateNeeded = localBiz.npsLinked 
-      ? (npsDiffDays >= 30 || ((localBiz.b_sector === "기타 서비스업" || localBiz.b_sector === "상장 법인") && npsDiffDays >= 1)) 
-      : (npsDiffDays >= 1);
-    
-    if (ntsUpdateNeeded || npsUpdateNeeded) {
-      setTimeout(() => {
-        triggerBackgroundSync(cleanBNo, localBizVal, ntsUpdateNeeded, npsUpdateNeeded)
-          .catch(err => console.error("Background sync error:", err));
-      }, 0);
-    }
-    
     return { apiStatus: mockApiStatus, business: localBiz, isInvalid: false };
   }
 
-  // 2. 미등록 블랙리스트 캐시 검사 (로컬 캐시가 없을 때만 2차 방어)
-  let invalidList: string[] = [];
-  try {
-    invalidList = await getInvalidBusinesses();
-  } catch (e) {
-    console.error("Failed to read invalid list from Neon DB:", e);
-  }
+  // 2. DB에 기업 정보가 사전 적재되지 않았거나 "상호 정보 없음" 상태인 경우,
+  // 외부 API(Fetch)를 절대 찌르지 않고 정직하게 "정보 없음" 취급하여 차단합니다.
+  const apiStatus: NtsCompanyStatus = {
+    b_no: cleanBNo,
+    b_stt: "조회 불가",
+    b_stt_cd: "",
+    tax_type: "해당 기업의 상세 정보가 시스템 DB에 사전 적재되어 있지 않습니다.",
+    tax_type_cd: "",
+    rbf_tax_type: "",
+    rbf_tax_type_cd: "",
+    tax_type_change_dt: "",
+    end_dt: "",
+    utcc_yn: "N",
+    invoice_apply_dt: ""
+  };
 
-  if (invalidList.includes(cleanBNo)) {
-    return {
-      apiStatus: {
-        b_no: cleanBNo,
-        b_stt: "조회 불가",
-        b_stt_cd: "",
-        tax_type: "국세청에 등록되지 않은 사업자등록번호입니다 (블랙리스트 캐시)",
-        tax_type_cd: "",
-        rbf_tax_type: "",
-        rbf_tax_type_cd: "",
-        tax_type_change_dt: "",
-        end_dt: "",
-        utcc_yn: "",
-        invoice_apply_dt: ""
-      },
-      business: null,
-      isInvalid: true
-    };
-  }
-
-
-  // 2. 캐시가 없거나 불완전한 경우에만 국세청 실시간 조회를 동기적으로 대기
-  const apiStatus = await getNtsCompanyStatus(cleanBNo);
-  const isInvalid = !apiStatus || apiStatus.tax_type === "국세청에 등록되지 않은 사업자등록번호입니다";
-
-  if (isInvalid) {
-    if (!invalidList.includes(cleanBNo)) {
-      try {
-        await addInvalidBusiness(cleanBNo);
-        console.log(`Added invalid business number to blacklist in Neon DB: ${cleanBNo}`);
-      } catch (e) {
-        console.error("Failed to write invalid list to Neon DB:", e);
-      }
-    }
-    return { apiStatus, business: null, isInvalid: true };
-  }
-
-  // 3. 공공 API 동시(병렬) 호출로 로딩 속도 극대화
-  const basicInfoPromise = getCorpBasicOutline(cleanBNo, undefined);
-  const ftcInfoPromise = getFtcMailOrderInfo(cleanBNo);
-  
-  const [basicInfo, ftcInfo] = await Promise.all([basicInfoPromise, ftcInfoPromise]);
-  
-  let business: BusinessData | null = null;
-
-  if (basicInfo) {
-    // 3.1. 금융위 데이터가 있는 경우 (법인/대기업/외감)
-    // 재무정보와 국민연금 정보를 병렬로 수집
-    const financeDetailPromise = getCorpFinanceInfo(basicInfo.crno);
-    const npsInfoPromise = getNpsBplcInfo(cleanBNo, basicInfo.corpNm);
-    const [financeDetail, npsInfo] = await Promise.all([financeDetailPromise, npsInfoPromise]);
-    
-    // DART 고유번호 동적 매핑 조회
-    let dartCode = localBizVal?.dart_code || "";
-    if (!dartCode) {
-      let stockCode = "";
-      const listingStatus = localBizVal?.listing_status || "";
-      const stockMatch = listingStatus.match(/\((\d{6})\)/);
-      if (stockMatch) {
-        stockCode = stockMatch[1];
-      }
-      dartCode = await findDartCode(basicInfo.corpNm, stockCode);
-    }
-    
-    const scale = basicInfo.enpEntprScaleNm || "일반기업";
-    const isAudited = !!dartCode;
-    let credit_rating = "-";
-    let industry_rank = "-";
-    
-    if (isAudited) {
-      credit_rating = "BBB+";
-      industry_rank = "상위 25%";
-      if (scale.includes("대기업")) {
-        credit_rating = "AA+";
-        industry_rank = "상위 1%";
-      } else if (scale.includes("중견기업")) {
-        credit_rating = "A+";
-        industry_rank = "상위 7%";
-      } else if (scale.includes("중소기업")) {
-        credit_rating = "A-";
-        industry_rank = "상위 18%";
-      }
-    }
-
-    let history: BusinessData["history"] = [];
-    
-    if (financeDetail && financeDetail.length > 0) {
-      history = financeDetail.map((fd) => {
-        return {
-          year: fd.year,
-          revenue: fd.revenue,
-          employees: 0, // 과거 연도 직원수 공식 추정치 전면 제거 (데이터 미제공)
-          operatingIncome: fd.operatingIncome,
-          netIncome: fd.netIncome,
-          totalAssets: fd.totalAssets,
-          totalLiabilities: fd.totalLiabilities,
-          totalEquity: fd.totalEquity
-        };
-      });
-    } else {
-      history = [];
-    }
-
-    business = {
-      b_no: cleanBNo,
-      b_nm: basicInfo.corpNm && !basicInfo.corpNm.includes("SAMPO FUND") ? basicInfo.corpNm : (localBizVal?.b_nm || basicInfo.corpNm),
-      p_nm: basicInfo.enpRprFnm,
-      start_dt: basicInfo.enpEstbDt,
-      b_adr: basicInfo.enpBsadr,
-      b_sector: basicInfo.enpIndyNm || "기타 서비스업",
-      b_type: scale,
-      corp_no: basicInfo.crno,
-      dart_code: dartCode,
-      description: localBizVal?.description || `${basicInfo.corpNm}${getJosa(basicInfo.corpNm, "은는")} 금융위원회 공시 정보가 등록된 대한민국 공식 ${scale}입니다.`,
-      credit_rating: localBizVal?.credit_rating || credit_rating,
-      industry_rank: localBizVal?.industry_rank || industry_rank,
-      dataSource: "public",
-      is_sme: scale,
-      listing_status: localBizVal?.listing_status || (scale.includes("대기업") ? "코스피 상장" : "비상장"),
-      homepage: localBizVal?.homepage && localBizVal.homepage !== "-" ? localBizVal.homepage : (basicInfo.enpHpaddr || "-"),
-      main_biz: basicInfo.enpMainBizNm || basicInfo.enpIndyNm || "기타 서비스업",
-      is_audited: !!dartCode,
-      
-      corpEnm: basicInfo.corpEnm,
-      crno: basicInfo.crno,
-      basDt: basicInfo.basDt,
-      enpPbncYn: basicInfo.enpPbncYn,
-      enpDivNm: basicInfo.enpDivNm,
-      enpTlno: basicInfo.enpTlno,
-      enpFxno: basicInfo.enpFxno,
-      enpPncd: basicInfo.enpPncd,
-      enpStacNm: basicInfo.enpStacNm,
-      enpMainBizNm: basicInfo.enpMainBizNm,
-      enpKosdaqYn: basicInfo.enpKosdaqYn,
-      enpKoseYn: basicInfo.enpKoseYn,
-      enpKonexYn: basicInfo.enpKonexYn,
-      
-      history,
-      taxType: apiStatus?.tax_type || "부가가치세 일반과세자",
-      taxTypeCd: apiStatus?.tax_type_cd || "01"
-    };
-
-    if (npsInfo && npsInfo.npsSbscrbNmps > 0) {
-      business.npsLinked = true;
-      business.npsSbscrbNmps = npsInfo.npsSbscrbNmps;
-      business.newAcqsNmps = npsInfo.newAcqsNmps;
-      business.lossSbscrbNmps = npsInfo.lossSbscrbNmps;
-      business.npsChrgAmt = npsInfo.npsChrgAmt;
-      
-      // 국민연금 제공 업종으로 동적 정정 (디폴트값인 기타 서비스업/상장 법인 오염 방지)
-      if (npsInfo.npsSector && (!business.b_sector || business.b_sector === "기타 서비스업" || business.b_sector === "상장 법인")) {
-        business.b_sector = npsInfo.npsSector;
-      }
-      
-      const latestHist = business.history[business.history.length - 1];
-      if (latestHist) latestHist.employees = npsInfo.npsSbscrbNmps;
-    }
-  } else if (ftcInfo) {
-    // 3.2. 금융위에는 없으나 공정위 통신판매업 데이터가 있는 경우 (쇼핑몰/소상공인)
-    const npsInfo = await getNpsBplcInfo(cleanBNo, ftcInfo.cmpNm);
-    business = {
-      b_no: cleanBNo,
-      b_nm: ftcInfo.cmpNm,
-      p_nm: ftcInfo.rprsNm,
-      start_dt: ftcInfo.rcptDt,
-      b_adr: ftcInfo.repAddr || "주소 정보 없음 (공시 비대상)",
-      b_sector: "전자상거래 소매업 (통신판매업)",
-      b_type: "소상공인 (통신판매업자)",
-      description: `공정거래위원회에 정식 등록된 통신판매사업자(${ftcInfo.cmpNm})입니다. 신고일자: ${ftcInfo.rcptDt.replace(/(\d{4})(\d{2})(\d{2})/, "$1년 $2월 $3일")}.`,
-      credit_rating: "-",
-      industry_rank: "-",
-      dataSource: "public",
-      is_sme: "소상공인",
-      listing_status: "비상장",
-      homepage: ftcInfo.wbsitAddr && ftcInfo.wbsitAddr !== "-" ? ftcInfo.wbsitAddr : "-",
-      main_biz: "전자상거래업",
-      is_audited: false,
-      
-      enpTlno: ftcInfo.telNo,
-      enpPncd: ftcInfo.zipCd,
-      mailOrderNo: ftcInfo.mailOrderNo,
-      declareOrg: ftcInfo.declareOrg,
-      goodsType: ftcInfo.goodsType,
-      sellType: ftcInfo.sellType,
-      closeDate: ftcInfo.closeDate,
-      repEmail: ftcInfo.repEmail,
-      telNo: ftcInfo.telNo,
-      zipCd: ftcInfo.zipCd,
-      
-      history: [],
-      taxType: apiStatus?.tax_type || "부가가치세 일반과세자",
-      taxTypeCd: apiStatus?.tax_type_cd || "01"
-    };
-    
-    if (npsInfo && npsInfo.npsSbscrbNmps > 0) {
-      business.npsLinked = true;
-      business.npsSbscrbNmps = npsInfo.npsSbscrbNmps;
-      business.newAcqsNmps = npsInfo.newAcqsNmps;
-      business.lossSbscrbNmps = npsInfo.lossSbscrbNmps;
-      business.npsChrgAmt = npsInfo.npsChrgAmt;
-    }
-  } else if (localBizVal) {
-    // 3.3. 공용 API도 다 실패했는데 기존 로컬 DB 캐시 데이터가 있는 경우
-    const npsInfo = await getNpsBplcInfo(cleanBNo, localBizVal.b_nm);
-    if (npsInfo && npsInfo.npsSbscrbNmps > 0) {
-      localBizVal.npsLinked = true;
-      localBizVal.npsSbscrbNmps = npsInfo.npsSbscrbNmps;
-      localBizVal.newAcqsNmps = npsInfo.newAcqsNmps;
-      localBizVal.lossSbscrbNmps = npsInfo.lossSbscrbNmps;
-      localBizVal.npsChrgAmt = npsInfo.npsChrgAmt;
-      
-      // 국민연금 제공 업종으로 동적 정정
-      if (npsInfo.npsSector && (!localBizVal.b_sector || localBizVal.b_sector === "기타 서비스업" || localBizVal.b_sector === "상장 법인")) {
-        localBizVal.b_sector = npsInfo.npsSector;
-      }
-      
-      const latestHist = localBizVal.history[localBizVal.history.length - 1];
-      if (latestHist) latestHist.employees = npsInfo.npsSbscrbNmps;
-    }
-    business = localBizVal;
-  } else {
-    // 3.4. 모든 공시 정보가 없어 최후 수단으로 미등록 사업자 Fallback
-    const realBiz: BusinessData = {
-      b_no: cleanBNo,
-      b_nm: "상호 정보 없음",
-      p_nm: "-",
-      start_dt: "-",
-      b_adr: "주소 정보 없음 (공시 비대상)",
-      b_sector: "미등록 업종",
-      b_type: "소상공인/개인사업자",
-      description: `국세청 실시간 계속사업자 상태가 검증되었으나 상호명이 등록되지 않은 개인 사업자등록번호(${cleanBNo})입니다.`,
-      credit_rating: "-",
-      industry_rank: "-",
-      dataSource: "estimated",
-      is_sme: "소상공인",
-      listing_status: "비상장",
-      homepage: "-",
-      main_biz: "-",
-      is_audited: false,
-      history: [],
-      taxType: apiStatus?.tax_type || "부가가치세 일반과세자",
-      taxTypeCd: apiStatus?.tax_type_cd || "01"
-    };
-
-    const npsInfo = await getNpsBplcInfo(cleanBNo, "상호 정보 없음");
-    if (npsInfo && npsInfo.npsSbscrbNmps > 0) {
-      realBiz.npsLinked = true;
-      realBiz.npsSbscrbNmps = npsInfo.npsSbscrbNmps;
-      realBiz.newAcqsNmps = npsInfo.newAcqsNmps;
-      realBiz.lossSbscrbNmps = npsInfo.lossSbscrbNmps;
-      realBiz.npsChrgAmt = npsInfo.npsChrgAmt;
-      
-      // 국민연금 제공 업종으로 동적 정정
-      if (npsInfo.npsSector && (!realBiz.b_sector || realBiz.b_sector === "미등록 업종")) {
-        realBiz.b_sector = npsInfo.npsSector;
-      }
-    }
-    business = realBiz;
-  }
-
-  // 5. 신규 기업 데이터 Neon DB 자동 적재 및 실시간 갱신 정보 동기화 (온디맨드 동기화 및 DART 코드 갱신)
-  if (business) {
-    const isNew = !localBizVal;
-    const wasUnregistered = localBizVal && localBizVal.b_nm === "상호 정보 없음" && business.b_nm !== "상호 정보 없음";
-    const hasNewDartCode = localBizVal && !localBizVal.dart_code && business.dart_code;
-    
-    // 로컬 DB의 종업원수와 실시간 API로 가져온 종업원수가 다를 경우 데이터 동기화
-    const hasEmployeeCountDiff = localBizVal && (
-      localBizVal.npsSbscrbNmps !== business.npsSbscrbNmps ||
-      (business.npsChrgAmt && localBizVal.npsChrgAmt !== business.npsChrgAmt)
-    );
-
-    if (isNew || wasUnregistered || hasNewDartCode || hasEmployeeCountDiff) {
-      try {
-        if (isNew || wasUnregistered || hasEmployeeCountDiff) {
-          const cachedBiz = {
-            ...business,
-            dataSource: "local",
-            ntsLastSyncAt: new Date(),
-            npsLastSyncAt: new Date()
-          };
-          await upsertBusiness(cachedBiz);
-          console.log(`[Cache Sync] Successfully cached/updated business to Neon DB: ${business.b_nm} (${cleanBNo}), Employees: ${business.npsSbscrbNmps}`);
-          business.dataSource = "local";
-        } else if (hasNewDartCode) {
-          localBizVal.dart_code = business.dart_code;
-          await upsertBusiness(localBizVal);
-          console.log(`[Cache Sync] Successfully updated DART code for existing business in Neon DB: ${business.b_nm} (${business.dart_code})`);
-        }
-      } catch (e) {
-        console.error("[Cache Sync] Failed to update Neon DB cache:", e);
-      }
-    }
-  }
-
-  return { apiStatus, business, isInvalid: false };
+  return {
+    apiStatus,
+    business: null,
+    isInvalid: true
+  };
 }
 
 // 1. 동적 SEO 메타데이터 생성

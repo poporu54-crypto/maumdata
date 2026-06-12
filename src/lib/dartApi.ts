@@ -1,3 +1,5 @@
+import { query } from "./db";
+
 export interface DartDisclosure {
   corpCode: string;   // 고유번호
   corpName: string;   // 회사명
@@ -12,88 +14,90 @@ export interface DartDisclosure {
 const DART_API_KEY = "0ee2cc9103b1efb7f69767eee411270a9a1fc4a7";
 
 /**
- * OpenDART 공시검색 API를 호출하여 해당 기업의 최근 공시 목록을 가져옵니다.
- * @param corpCode DART 8자리 고유번호
- * @param limit 가져올 최대 공시 개수 (기본 8개)
+ * 1. 로컬 DB에서 해당 기업의 최근 공시 목록을 가져옵니다. (실시간 외부 API 호출 차단)
  */
 export async function getRecentDisclosures(corpCode: string, limit = 8): Promise<DartDisclosure[]> {
   if (!corpCode || corpCode.trim().length !== 8) return [];
-
-  // 날짜 범위: 오늘부터 약 2년 전까지 조회하여 충분한 공시 서류를 수집합니다.
-  const today = new Date();
-  const twoYearsAgo = new Date();
-  twoYearsAgo.setFullYear(today.getFullYear() - 2);
-
-  const formatDate = (date: Date) => {
-    const yyyy = date.getFullYear();
-    const mm = String(date.getMonth() + 1).padStart(2, "0");
-    const dd = String(date.getDate()).padStart(2, "0");
-    return `${yyyy}${mm}${dd}`;
-  };
-
-  const bgnDe = formatDate(twoYearsAgo);
-  const endDe = formatDate(today);
-
-  const url = `https://opendart.fss.or.kr/api/list.json?crtfc_key=${DART_API_KEY}&corp_code=${corpCode}&bgn_de=${bgnDe}&end_de=${endDe}&page_no=1&page_count=${limit}`;
-
   try {
-    const response = await fetch(url, {
-      method: "GET",
-      cache: "no-store",
-    });
+    const res = await query(
+      `SELECT d.rcept_no as "rceptNo",
+              d.report_nm as "reportNm",
+              d.flr_nm as "flrNm",
+              d.rcept_dt as "rceptDt",
+              d.rm as "rm",
+              d.detail_url as "detailUrl",
+              b.dart_code as "corpCode",
+              b.b_nm as "corpName"
+       FROM business_disclosures d
+       JOIN businesses b ON d.b_no = b.b_no
+       WHERE b.dart_code = $1
+       ORDER BY d.rcept_dt DESC
+       LIMIT $2`,
+      [corpCode, limit]
+    );
 
-    if (!response.ok) {
-      console.error(`OpenDART API HTTP error: ${response.status}`);
-      return [];
-    }
-
-    const json = await response.json();
-    
-    // OpenDART API의 상태 체크 (status: "000" 이 정상 상태)
-    if (json.status !== "000") {
-      // 013: 조회된 데이타가 없습니다.
-      if (json.status === "013") {
-        return [];
-      }
-      console.error(`OpenDART API Error: [${json.status}] ${json.message}`);
-      return [];
-    }
-
-    const list = json.list;
-    if (!list || !Array.isArray(list)) return [];
-
-    return list.map((item: any) => {
-      const rceptDtStr = item.rcept_dt || "";
-      const formattedDt = rceptDtStr.length === 8 
-        ? `${rceptDtStr.slice(0, 4)}-${rceptDtStr.slice(4, 6)}-${rceptDtStr.slice(6, 8)}`
-        : rceptDtStr;
-
-      return {
-        corpCode: item.corp_code || "",
-        corpName: item.corp_name || "",
-        reportNm: item.report_nm || "",
-        rceptNo: item.rcept_no || "",
-        flrNm: item.flr_nm || "",
-        rceptDt: formattedDt,
-        rm: item.rm || "",
-        detailUrl: `https://dart.fss.or.kr/dsaf001/main.do?rcpNo=${item.rcept_no}`,
-      };
-    });
-  } catch (error) {
-    console.error("Failed to fetch OpenDART disclosures:", error);
+    return res.rows.map(r => ({
+      corpCode: r.corpCode || "",
+      corpName: r.corpName || "",
+      reportNm: r.reportNm || "",
+      rceptNo: r.rceptNo || "",
+      flrNm: r.flrNm || "",
+      rceptDt: r.rceptDt || "",
+      rm: r.rm || "",
+      detailUrl: r.detailUrl || ""
+    }));
+  } catch (err) {
+    console.error("Failed to query business disclosures from DB:", err);
     return [];
   }
 }
 
 /**
- * OpenDART 공시검색 API를 호출하여 해당 기업의 주요 정기 공시(사업보고서, 반기보고서, 분기보고서) 목록을 가져옵니다.
- * @param corpCode DART 8자리 고유번호
- * @param limit 가져올 최대 공시 개수 (기본 8개)
+ * 2. 로컬 DB에서 해당 기업의 주요 정기 공시(사업보고서, 반기보고서, 분기보고서) 목록을 가져옵니다.
  */
 export async function getRecentKeyDisclosures(corpCode: string, limit = 8): Promise<DartDisclosure[]> {
   if (!corpCode || corpCode.trim().length !== 8) return [];
+  try {
+    const res = await query(
+      `SELECT d.rcept_no as "rceptNo",
+              d.report_nm as "reportNm",
+              d.flr_nm as "flrNm",
+              d.rcept_dt as "rceptDt",
+              d.rm as "rm",
+              d.detail_url as "detailUrl",
+              b.dart_code as "corpCode",
+              b.b_nm as "corpName"
+       FROM business_disclosures d
+       JOIN businesses b ON d.b_no = b.b_no
+       WHERE b.dart_code = $1 AND d.is_key_disclosure = true
+       ORDER BY d.rcept_dt DESC
+       LIMIT $2`,
+      [corpCode, limit]
+    );
 
-  // 날짜 범위: 정기보고서는 연도별로 올라오므로 넉넉하게 3년 전까지 조회합니다.
+    return res.rows.map(r => ({
+      corpCode: r.corpCode || "",
+      corpName: r.corpName || "",
+      reportNm: r.reportNm || "",
+      rceptNo: r.rceptNo || "",
+      flrNm: r.flrNm || "",
+      rceptDt: r.rceptDt || "",
+      rm: r.rm || "",
+      detailUrl: r.detailUrl || ""
+    }));
+  } catch (err) {
+    console.error("Failed to query business key disclosures from DB:", err);
+    return [];
+  }
+}
+
+/**
+ * 3. 백그라운드에서 OpenDART API를 호출하여 DB에 캐싱합니다.
+ */
+export async function syncDisclosuresByCompany(bNo: string, corpCode: string): Promise<void> {
+  const cleanBNo = bNo.replace(/[^0-9]/g, "");
+  if (!cleanBNo || !corpCode || corpCode.trim().length !== 8) return;
+
   const today = new Date();
   const threeYearsAgo = new Date();
   threeYearsAgo.setFullYear(today.getFullYear() - 3);
@@ -108,52 +112,65 @@ export async function getRecentKeyDisclosures(corpCode: string, limit = 8): Prom
   const bgnDe = formatDate(threeYearsAgo);
   const endDe = formatDate(today);
 
-  // pblntf_ty=A 파라미터를 추가하여 정기공시(사업, 반기, 분기보고서)만 필터링합니다.
-  const url = `https://opendart.fss.or.kr/api/list.json?crtfc_key=${DART_API_KEY}&corp_code=${corpCode}&bgn_de=${bgnDe}&end_de=${endDe}&pblntf_ty=A&page_no=1&page_count=${limit}`;
+  // 일반 공시 및 정기 공시 목록을 각각 수집
+  const fetchDarts = async (isKey: boolean): Promise<any[]> => {
+    const keyParam = isKey ? "&pblntf_ty=A" : "";
+    const limit = 30;
+    const url = `https://opendart.fss.or.kr/api/list.json?crtfc_key=${DART_API_KEY}&corp_code=${corpCode}&bgn_de=${bgnDe}&end_de=${endDe}${keyParam}&page_no=1&page_count=${limit}`;
+    
+    try {
+      const response = await fetch(url, {
+        method: "GET",
+        cache: "no-store",
+      });
+      if (!response.ok) return [];
+      const json = await response.json();
+      if (json.status !== "000") return [];
+      return Array.isArray(json.list) ? json.list : [];
+    } catch (e) {
+      return [];
+    }
+  };
 
   try {
-    const response = await fetch(url, {
-      method: "GET",
-      cache: "no-store",
-    });
+    const [normalList, keyList] = await Promise.all([
+      fetchDarts(false),
+      fetchDarts(true)
+    ]);
 
-    if (!response.ok) {
-      console.error(`OpenDART API HTTP error: ${response.status}`);
-      return [];
-    }
+    const keyRceptNos = new Set(keyList.map((k: any) => k.rcept_no));
 
-    const json = await response.json();
-    
-    if (json.status !== "000") {
-      if (json.status === "013") {
-        return [];
-      }
-      console.error(`OpenDART Key API Error: [${json.status}] ${json.message}`);
-      return [];
-    }
+    // 일반 공시 전체를 돌며 upsert
+    for (const item of normalList) {
+      const rceptNo = item.rcept_no || "";
+      if (!rceptNo) continue;
 
-    const list = json.list;
-    if (!list || !Array.isArray(list)) return [];
-
-    return list.map((item: any) => {
       const rceptDtStr = item.rcept_dt || "";
       const formattedDt = rceptDtStr.length === 8 
         ? `${rceptDtStr.slice(0, 4)}-${rceptDtStr.slice(4, 6)}-${rceptDtStr.slice(6, 8)}`
         : rceptDtStr;
 
-      return {
-        corpCode: item.corp_code || "",
-        corpName: item.corp_name || "",
-        reportNm: item.report_nm || "",
-        rceptNo: item.rcept_no || "",
-        flrNm: item.flr_nm || "",
-        rceptDt: formattedDt,
-        rm: item.rm || "",
-        detailUrl: `https://dart.fss.or.kr/dsaf001/main.do?rcpNo=${item.rcept_no}`,
-      };
-    });
-  } catch (error) {
-    console.error("Failed to fetch OpenDART key disclosures:", error);
-    return [];
+      const reportNm = item.report_nm || "";
+      const flrNm = item.flr_nm || "";
+      const rm = item.rm || "";
+      const detailUrl = `https://dart.fss.or.kr/dsaf001/main.do?rcpNo=${rceptNo}`;
+      const isKeyDisclosure = keyRceptNos.has(rceptNo);
+
+      await query(
+        `INSERT INTO business_disclosures (
+          b_no, rcept_no, report_nm, flr_nm, rcept_dt, rm, detail_url, is_key_disclosure
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        ON CONFLICT (b_no, rcept_no) DO UPDATE SET
+          report_nm = EXCLUDED.report_nm,
+          flr_nm = EXCLUDED.flr_nm,
+          rcept_dt = EXCLUDED.rcept_dt,
+          rm = EXCLUDED.rm,
+          detail_url = EXCLUDED.detail_url,
+          is_key_disclosure = EXCLUDED.is_key_disclosure`,
+        [cleanBNo, rceptNo, reportNm, flrNm, formattedDt, rm, detailUrl, isKeyDisclosure]
+      );
+    }
+  } catch (err) {
+    console.error("Failed to sync DART disclosures:", err);
   }
 }

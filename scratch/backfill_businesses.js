@@ -109,7 +109,7 @@ async function getFtcMailOrderInfo(bNo) {
   return null;
 }
 
-async function getNpsEmployees(bNo, companyNm) {
+async function getNpsDetails(bNo, companyNm) {
   const cleanBNo = bNo.replace(/[^0-9]/g, "");
   const cleanCompanyNm = companyNm
     .replace(/\(.*?\)/g, "")
@@ -165,19 +165,49 @@ async function getNpsEmployees(bNo, companyNm) {
     if (!matched || !matched.seq) return null;
 
     const detailUrl = `http://apis.data.go.kr/B552015/NpsBplcInfoInqireServiceV2/getDetailInfoSearchV2?serviceKey=${DATA_PORTAL_SERVICE_KEY}&dataType=json&seq=${matched.seq}`;
-    const detailResponse = await fetchWithTimeout(detailUrl);
-    if (!detailResponse.ok) return null;
+    const periodUrl = `http://apis.data.go.kr/B552015/NpsBplcInfoInqireServiceV2/getPdAcctoSttusInfoSearchV2?serviceKey=${DATA_PORTAL_SERVICE_KEY}&dataType=json&seq=${matched.seq}`;
 
+    const [detailResponse, periodResponse] = await Promise.all([
+      fetchWithTimeout(detailUrl),
+      fetchWithTimeout(periodUrl).catch(() => null)
+    ]);
+
+    if (!detailResponse.ok) return null;
     const detailText = await detailResponse.text();
     const detailJson = JSON.parse(detailText);
     const detailItem = detailJson?.response?.body?.items?.item;
     const targetDetail = Array.isArray(detailItem) ? detailItem[0] : detailItem;
 
     if (targetDetail) {
-      return parseInt(targetDetail.jnngpCnt || targetDetail.npsSbscrbNmps || "0");
+      const npsSbscrbNmps = parseInt(targetDetail.jnngpCnt || targetDetail.npsSbscrbNmps || "0");
+      let newAcqsNmps = 0;
+      let lossSbscrbNmps = 0;
+
+      if (periodResponse && periodResponse.ok) {
+        try {
+          const periodText = await periodResponse.text();
+          if (periodText) {
+            const periodJson = JSON.parse(periodText);
+            const periodItem = periodJson?.response?.body?.items?.item;
+            const targetPeriod = Array.isArray(periodItem) ? periodItem[0] : periodItem;
+            if (targetPeriod) {
+              newAcqsNmps = parseInt(targetPeriod.nwAcqzrCnt || "0", 10);
+              lossSbscrbNmps = parseInt(targetPeriod.lssJnngpCnt || "0", 10);
+            }
+          }
+        } catch (pe) {
+          console.error("Failed to parse period info:", pe);
+        }
+      }
+
+      return {
+        npsSbscrbNmps,
+        newAcqsNmps,
+        lossSbscrbNmps
+      };
     }
   } catch (err) {
-    console.error(`NPS fetch timeout or error for ${companyNm}`);
+    console.error(`NPS fetch timeout or error for ${companyNm}:`, err);
   }
   return null;
 }
@@ -369,16 +399,20 @@ async function main() {
       const crno = basicInfo.crno;
       
       const financeDetailPromise = getCorpFinance(crno);
-      const npsEmpPromise = getNpsEmployees(cleanBNo, basicInfo.corpNm);
+      const npsDetailsPromise = getNpsDetails(cleanBNo, basicInfo.corpNm);
       
-      const [financeDetail, npsEmp] = await Promise.all([financeDetailPromise, npsEmpPromise]);
+      const [financeDetail, npsDetails] = await Promise.all([financeDetailPromise, npsDetailsPromise]);
 
       let npsLinked = false;
       let npsSbscrbNmps = 0;
-      if (npsEmp) {
-        console.log(`-> NPS Employees found: ${npsEmp}`);
+      let newAcqsNmps = 0;
+      let lossSbscrbNmps = 0;
+      if (npsDetails) {
+        console.log(`-> NPS Details found: ${npsDetails.npsSbscrbNmps} employees`);
         npsLinked = true;
-        npsSbscrbNmps = npsEmp;
+        npsSbscrbNmps = npsDetails.npsSbscrbNmps;
+        newAcqsNmps = npsDetails.newAcqsNmps;
+        lossSbscrbNmps = npsDetails.lossSbscrbNmps;
       }
 
       if (financeDetail && financeDetail.length > 0) {
@@ -389,8 +423,8 @@ async function main() {
             : (scale.includes("중견기업") ? baseEmployees * 2.5 : baseEmployees);
 
           let emp = Math.round(employees);
-          if (npsEmp && fd.year === 2025) {
-            emp = npsEmp;
+          if (npsDetails && fd.year === 2025) {
+            emp = npsDetails.npsSbscrbNmps;
           }
           return {
             ...fd,
@@ -399,10 +433,10 @@ async function main() {
         });
       } else {
         // 기존 history 활용
-        if (npsEmp) {
+        if (npsDetails) {
           history = history.map(h => {
             if (h.year === 2025) {
-              return { ...h, employees: npsEmp };
+              return { ...h, employees: npsDetails.npsSbscrbNmps };
             }
             return h;
           });
@@ -445,8 +479,8 @@ async function main() {
         
         npsLinked,
         npsSbscrbNmps,
-        newAcqsNmps: 0,
-        lossSbscrbNmps: 0,
+        newAcqsNmps,
+        lossSbscrbNmps,
         telNo: basicInfo.enpTlno || "",
         
         history
@@ -466,13 +500,17 @@ async function main() {
       }
     } else if (ftcInfo) {
       console.log(`-> Found FTC MailOrder info for ${dbBiz.b_nm} (No FSC)`);
-      const npsEmp = await getNpsEmployees(cleanBNo, ftcInfo.cmpNm);
+      const npsDetails = await getNpsDetails(cleanBNo, ftcInfo.cmpNm);
       let npsLinked = false;
       let npsSbscrbNmps = 0;
-      if (npsEmp) {
-        console.log(`-> NPS Employees found: ${npsEmp}`);
+      let newAcqsNmps = 0;
+      let lossSbscrbNmps = 0;
+      if (npsDetails) {
+        console.log(`-> NPS Details found: ${npsDetails.npsSbscrbNmps}`);
         npsLinked = true;
-        npsSbscrbNmps = npsEmp;
+        npsSbscrbNmps = npsDetails.npsSbscrbNmps;
+        newAcqsNmps = npsDetails.newAcqsNmps;
+        lossSbscrbNmps = npsDetails.lossSbscrbNmps;
       }
 
       business = {
@@ -506,25 +544,29 @@ async function main() {
         
         npsLinked,
         npsSbscrbNmps,
-        newAcqsNmps: 0,
-        lossSbscrbNmps: 0,
+        newAcqsNmps,
+        lossSbscrbNmps,
         
         history: history.map(h => {
-          if (h.year === 2025 && npsEmp) {
-            return { ...h, employees: npsEmp };
+          if (h.year === 2025 && npsDetails) {
+            return { ...h, employees: npsDetails.npsSbscrbNmps };
           }
           return h;
         })
       };
     } else {
       console.log(`-> No FSC or FTC info found for ${dbBiz.b_nm}. Running NPS only.`);
-      const npsEmp = await getNpsEmployees(cleanBNo, dbBiz.b_nm);
+      const npsDetails = await getNpsDetails(cleanBNo, dbBiz.b_nm);
       let npsLinked = false;
       let npsSbscrbNmps = 0;
-      if (npsEmp) {
-        console.log(`-> NPS Employees found: ${npsEmp}`);
+      let newAcqsNmps = 0;
+      let lossSbscrbNmps = 0;
+      if (npsDetails) {
+        console.log(`-> NPS Details found: ${npsDetails.npsSbscrbNmps}`);
         npsLinked = true;
-        npsSbscrbNmps = npsEmp;
+        npsSbscrbNmps = npsDetails.npsSbscrbNmps;
+        newAcqsNmps = npsDetails.newAcqsNmps;
+        lossSbscrbNmps = npsDetails.lossSbscrbNmps;
       }
       
       business = {
@@ -548,11 +590,11 @@ async function main() {
         dataSource: dbBiz.data_source,
         npsLinked,
         npsSbscrbNmps,
-        newAcqsNmps: 0,
-        lossSbscrbNmps: 0,
+        newAcqsNmps,
+        lossSbscrbNmps,
         history: history.map(h => {
-          if (h.year === 2025 && npsEmp) {
-            return { ...h, employees: npsEmp };
+          if (h.year === 2025 && npsDetails) {
+            return { ...h, employees: npsDetails.npsSbscrbNmps };
           }
           return h;
         })

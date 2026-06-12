@@ -1,3 +1,5 @@
+import { query } from "./db";
+
 export interface BidNotice {
   bidNtceNo: string;      // 입찰공고번호
   bidNtceOrd: string;     // 입찰공고차수
@@ -14,17 +16,54 @@ const SERVICE_KEY = process.env.DATA_PORTAL_SERVICE_KEY || "";
 const API_URL_BASE = "https://apis.data.go.kr/1230000/as/ScsbidInfoService";
 
 /**
- * 1. 조달청 나라장터 낙찰정보 API를 실시간 쿼리하여 관련 수주/낙찰 목록을 수집합니다.
- * @param companyNm 기업 상호명
- * @param bNo 사업자등록번호
+ * 1. 로컬 DB에서 해당 기업의 낙찰정보를 즉시 로드합니다. (실시간 외부 API 호출 차단)
  */
 export async function getRecentBidsByCompany(companyNm: string, bNo: string): Promise<BidNotice[]> {
+  const cleanBNo = bNo.replace(/[^0-9]/g, "");
+  try {
+    const res = await query(
+      `SELECT bid_ntce_no as "bidNtceNo", 
+              bid_ntce_ord as "bidNtceOrd", 
+              bid_ntce_nm as "bidNtceNm", 
+              dminstt_nm as "dminsttNm", 
+              opng_dt as "opngDt", 
+              bid_ntce_dt as "bidNtceDt", 
+              cntrct_cncl_mthd_nm as "cntrctCnclMthdNm", 
+              presmpt_prce as "presmptPrce", 
+              detail_url as "detailUrl"
+       FROM business_bids
+       WHERE b_no = $1
+       ORDER BY bid_ntce_dt DESC
+       LIMIT 10`,
+      [cleanBNo]
+    );
+    
+    return res.rows.map(r => ({
+      bidNtceNo: r.bidNtceNo || "",
+      bidNtceOrd: r.bidNtceOrd || "00",
+      bidNtceNm: r.bidNtceNm || "",
+      dminsttNm: r.dminsttNm || "",
+      opngDt: r.opngDt || "",
+      bidNtceDt: r.bidNtceDt || "",
+      cntrctCnclMthdNm: r.cntrctCnclMthdNm || "제한경쟁",
+      presmptPrce: parseFloat(r.presmptPrce || "0"),
+      detailUrl: r.detailUrl || "https://www.g2b.go.kr"
+    }));
+  } catch (err) {
+    console.error("Failed to query business bids from DB:", err);
+    return [];
+  }
+}
+
+/**
+ * 2. 백그라운드에서 실시간 조달청 나라장터 API를 연동하여 DB에 캐싱합니다.
+ */
+export async function syncRecentBidsByCompany(companyNm: string, bNo: string): Promise<void> {
   const cleanCompanyNm = companyNm.trim();
   const cleanBNo = bNo.replace(/[^0-9]/g, "");
   
-  if (!cleanCompanyNm || cleanCompanyNm.length < 2) return [];
+  if (!cleanCompanyNm || cleanCompanyNm.length < 2) return;
 
-  // 최근 30일간의 수주 실적 조회 범위 설정 (더 넓은 실적 매칭 보장)
   const today = new Date();
   const past = new Date();
   past.setDate(today.getDate() - 30);
@@ -39,7 +78,6 @@ export async function getRecentBidsByCompany(companyNm: string, bNo: string): Pr
   const bgnDt = formatDateString(past);
   const endDt = formatDateString(today);
 
-  // 용역, 물품, 공사의 낙찰정보를 병렬로 호출하는 헬퍼 함수
   const fetchCategory = async (operation: string): Promise<any[]> => {
     const url = `${API_URL_BASE}/${operation}?serviceKey=${SERVICE_KEY}&numOfRows=100&pageNo=1&inqryDiv=1&inqryBgnDt=${bgnDt}&inqryEndDt=${endDt}&type=json`;
     
@@ -52,14 +90,10 @@ export async function getRecentBidsByCompany(companyNm: string, bNo: string): Pr
         cache: "no-store",
       });
 
-      if (!response.ok) {
-        console.error(`Procurement API HTTP error for ${operation}: ${response.status}`);
-        return [];
-      }
+      if (!response.ok) return [];
 
       const text = await response.text();
       if (text.includes("Forbidden") || (text.includes("<resultCode>") && !text.includes("NORMAL SERVICE"))) {
-        console.warn(`Procurement API Key not sync'd or blocked for ${operation}. Returning empty.`);
         return [];
       }
 
@@ -82,7 +116,6 @@ export async function getRecentBidsByCompany(companyNm: string, bNo: string): Pr
   };
 
   try {
-    // 3가지 낙찰정보 API 병렬 호출
     const [listServc, listThng, listConstc] = await Promise.all([
       fetchCategory("getScsbidListSttusServc"), // 용역
       fetchCategory("getScsbidListSttusThng"),  // 물품
@@ -90,8 +123,6 @@ export async function getRecentBidsByCompany(companyNm: string, bNo: string): Pr
     ]);
 
     const combinedList = [...listServc, ...listThng, ...listConstc];
-
-    // 사후 정합성 필터링: 낙찰업체 사업자등록번호(scsbidBprcoNo)가 일치하거나 낙찰업체명(scsbidBprcoNm)이 매칭되는 것 필터
     const targetNmClean = cleanCompanyNm.replace(/\(.*?\)/g, "").replace(/주식회사/g, "").replace(/\(주\)/g, "").replace(/\s+/g, "").toLowerCase();
     
     const filteredList = combinedList.filter((item: any) => {
@@ -104,82 +135,43 @@ export async function getRecentBidsByCompany(companyNm: string, bNo: string): Pr
       return isBNoMatch || isNmMatch;
     });
 
-    return filteredList.map((item: any) => {
+    for (const item of filteredList) {
       const dateStr = item.bidNtceDate || item.opengDate || "";
       const timeStr = item.bidNtceBgn || item.opengTm || "";
       const formattedDt = dateStr && timeStr ? `${dateStr} ${timeStr}` : (dateStr || "-");
 
-      return {
-        bidNtceNo: item.bidNtceNo || "",
-        bidNtceOrd: item.bidNtceOrd || "00",
-        bidNtceNm: item.bidNtceNm || "",
-        dminsttNm: item.dmndInsttNm || item.ntceInsttNm || "",
-        opngDt: item.opengDate || "",
-        bidNtceDt: formattedDt,
-        cntrctCnclMthdNm: item.cntrctCnclsMthdNm || "제한경쟁",
-        presmptPrce: parseFloat(item.scsbidAmt || "0"), // 낙찰금액 매칭
-        detailUrl: `https://www.g2b.go.kr:8081/ep/invitation/publishBidInvitationDetail.do?bidno=${item.bidNtceNo}&bidseq=${item.bidNtceOrd}`,
-      };
-    });
+      const bidNtceNo = item.bidNtceNo || "";
+      const bidNtceOrd = item.bidNtceOrd || "00";
+      const bidNtceNm = item.bidNtceNm || "";
+      const dminsttNm = item.dmndInsttNm || item.ntceInsttNm || "";
+      const opngDt = item.opengDate || "";
+      const cntrctCnclMthdNm = item.cntrctCnclsMthdNm || "제한경쟁";
+      const presmptPrce = parseFloat(item.scsbidAmt || "0");
+      const detailUrl = `https://www.g2b.go.kr:8081/ep/invitation/publishBidInvitationDetail.do?bidno=${item.bidNtceNo}&bidseq=${item.bidNtceOrd}`;
+
+      await query(
+        `INSERT INTO business_bids (
+          b_no, bid_ntce_no, bid_ntce_ord, bid_ntce_nm, dminstt_nm, opng_dt, bid_ntce_dt, cntrct_cncl_mthd_nm, presmpt_prce, detail_url
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        ON CONFLICT (b_no, bid_ntce_no, bid_ntce_ord) DO UPDATE SET
+          bid_ntce_nm = EXCLUDED.bid_ntce_nm,
+          dminstt_nm = EXCLUDED.dminstt_nm,
+          opng_dt = EXCLUDED.opng_dt,
+          bid_ntce_dt = EXCLUDED.bid_ntce_dt,
+          cntrct_cncl_mthd_nm = EXCLUDED.cntrct_cncl_mthd_nm,
+          presmpt_prce = EXCLUDED.presmpt_prce,
+          detail_url = EXCLUDED.detail_url`,
+        [cleanBNo, bidNtceNo, bidNtceOrd, bidNtceNm, dminsttNm, opngDt, formattedDt, cntrctCnclMthdNm, presmptPrce, detailUrl]
+      );
+    }
   } catch (err) {
-    console.error("Failed to filter procurement bids:", err);
-    return [];
+    console.error("Failed to sync procurement bids:", err);
   }
 }
 
-
 /**
- * 2. 특정 기업의 실제 수주/입찰 매칭을 재현하기 위한 정교한 공공 입찰 Mock 발전기
+ * 3. 특정 기업의 실제 수주/입찰 매칭을 재현하기 위한 정교한 공공 입찰 Mock 발전기
  */
 export function getMockBids(keyword: string): BidNotice[] {
-  const cleanKeyword = keyword.trim();
-  const seed = cleanKeyword.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
-  
-  const institutions = [
-    "서울특별시청", "한국토지주택공사", "조달청", "한국전력공사", "국방부",
-    "부산광역시 교육청", "행정안전부", "인천국제공항공사", "한국도로공사", "디지털플랫폼정부위원회"
-  ];
-
-  const bidContracts = [
-    "협상에 의한 계약", "제한(총액)경쟁", "일반(총액)경쟁", "수의계약", "적격심사제"
-  ];
-
-  // 회사명이나 키워드에 따라 맞춤형 프로젝트명 매칭
-  const projects = [
-    "차세대 통합 데이터 플랫폼 고도화 및 인프라 구축 사업",
-    "상반기 공공 데이터 품질 점검 및 정제 지원 용역",
-    "기관 홈페이지 리뉴얼 및 반응형 UI/UX 퍼블리싱 용역",
-    "스마트 시티 공공 와이파이 관제 시스템 위탁 운영",
-    "클라우드 전환 사업 및 마이그레이션 기술 지원 컨설팅",
-    "인공지능 기반 지능형 민원 분류 자동화 시범 사업",
-  ];
-
-  const bids: BidNotice[] = [];
-  const count = 3 + (seed % 3); // 3 ~ 5개 생성
-
-  for (let i = 0; i < count; i++) {
-    const itemSeed = (seed + i * 47) % 100000;
-    const inst = institutions[itemSeed % institutions.length];
-    const contract = bidContracts[itemSeed % bidContracts.length];
-    const proj = projects[itemSeed % projects.length];
-    const price = 50000000 + (itemSeed * 25000) % 850000000; // 5천만원 ~ 9억원
-
-    const date = new Date();
-    date.setDate(date.getDate() - (i + 1) * 3);
-    const dateStr = date.toISOString().replace(/T/, " ").replace(/\..+/, "").slice(0, 16);
-
-    bids.push({
-      bidNtceNo: `2026${String(itemSeed).padStart(7, "0")}`,
-      bidNtceOrd: "00",
-      bidNtceNm: `[${cleanKeyword}] ${proj}`,
-      dminsttNm: inst,
-      opngDt: dateStr,
-      bidNtceDt: dateStr,
-      cntrctCnclMthdNm: contract,
-      presmptPrce: price,
-      detailUrl: "https://www.g2b.go.kr",
-    });
-  }
-
-  return bids;
+  return []; // 가짜 데이터 방지 정책에 따라 Mock 리스트 완전 차단
 }
