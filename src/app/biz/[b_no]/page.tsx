@@ -150,21 +150,17 @@ async function RecommendedSection({
 
 // 1. 조달청 나라장터 입찰공고 컴포넌트
 async function BidsSection({ companyNm }: { companyNm: string }) {
-  // 실시간 조달 정보 로드
-  const realBids = await getRecentBidsByKeyword(companyNm);
-  
-  // 만약 검색 데이터가 충분치 않거나 없을 경우 Mock 데이터를 결합하여 분석 데이터를 보강
-  const mockBids = getMockBids(companyNm);
-  const bids = realBids.length > 0 ? [...realBids, ...mockBids.slice(0, 2)] : mockBids;
+  // 실시간 조달 정보 로드 (어떠한 가상 Mock 데이터도 강제 결합하지 않음)
+  const bids = await getRecentBidsByKeyword(companyNm);
 
   // 1. 총 수주 규모 계산
   const totalAmount = bids.reduce((acc, curr) => acc + (curr.presmptPrce || 0), 0);
 
   // 2. B2G 파트너 등급 판정
-  let b2gGrade = "D";
-  let b2gGradeDesc = "B2G 진입 파트너";
-  let gradeColor = "#a0aec0";
-  let gradeBg = "rgba(160, 174, 192, 0.1)";
+  let b2gGrade = "E";
+  let b2gGradeDesc = "B2G 실적 없음";
+  let gradeColor = "#718096";
+  let gradeBg = "rgba(113, 128, 150, 0.1)";
 
   if (totalAmount >= 1000000000) {
     b2gGrade = "S";
@@ -181,7 +177,7 @@ async function BidsSection({ companyNm }: { companyNm: string }) {
     b2gGradeDesc = "B2G 유망 파트너";
     gradeColor = "#10b981";
     gradeBg = "rgba(16, 185, 129, 0.15)";
-  } else if (totalAmount >= 5000000) {
+  } else if (totalAmount > 0) {
     b2gGrade = "C";
     b2gGradeDesc = "B2G 도약 파트너";
     gradeColor = "#f59e0b";
@@ -193,8 +189,8 @@ async function BidsSection({ companyNm }: { companyNm: string }) {
   const safeContracts = contractTypes.filter(t => t.includes("수의") || t.includes("제한") || t.includes("적격")).length;
   const safeContractRatio = bids.length > 0 ? (safeContracts / bids.length) : 0;
   
-  // 기본점수 60점에 안전계약비율 30점 + 수주건수 보너스 가중치로 최종 현금흐름 안정성 도출 (최대 100점)
-  const cashFlowScore = Math.min(100, Math.round(60 + (safeContractRatio * 30) + (bids.length * 2.5)));
+  // 실적이 있을 때만 점수 산출
+  const cashFlowScore = bids.length > 0 ? Math.min(100, Math.round(60 + (safeContractRatio * 30) + (bids.length * 2.5))) : 0;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
@@ -257,19 +253,19 @@ async function BidsSection({ companyNm }: { companyNm: string }) {
           <span style={{ fontSize: "0.82rem", color: "#a0aec0", fontWeight: 700 }}>안정적 현금 흐름 지수</span>
           <div style={{ marginTop: "8px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "6px" }}>
-              <span style={{ fontSize: "1.7rem", fontWeight: 800, color: cashFlowScore >= 80 ? "#10b981" : "#f59e0b" }}>
-                {cashFlowScore}
+              <span style={{ fontSize: "1.7rem", fontWeight: 800, color: bids.length > 0 ? (cashFlowScore >= 80 ? "#10b981" : "#f59e0b") : "#718096" }}>
+                {bids.length > 0 ? cashFlowScore : "-"}
               </span>
               <span style={{ fontSize: "0.85rem", color: "#718096", fontWeight: 700 }}>/ 100 점</span>
             </div>
             {/* 프로그레스 바 시각화 */}
             <div style={{ width: "100%", height: "6px", backgroundColor: "rgba(255,255,255,0.1)", borderRadius: "3px", overflow: "hidden" }}>
               <div style={{
-                width: `${cashFlowScore}%`,
+                width: `${bids.length > 0 ? cashFlowScore : 0}%`,
                 height: "100%",
-                backgroundColor: cashFlowScore >= 80 ? "#10b981" : "#f59e0b",
+                backgroundColor: bids.length > 0 ? (cashFlowScore >= 80 ? "#10b981" : "#f59e0b") : "#718096",
                 borderRadius: "3px",
-                boxShadow: `0 0 8px ${cashFlowScore >= 80 ? "#10b981" : "#f59e0b"}99`
+                boxShadow: bids.length > 0 ? `0 0 8px ${cashFlowScore >= 80 ? "#10b981" : "#f59e0b"}99` : "none"
               }} />
             </div>
             <div style={{ fontSize: "0.75rem", color: "#718096", marginTop: "8px" }}>
@@ -361,11 +357,7 @@ async function BidsSection({ companyNm }: { companyNm: string }) {
 
 // 2. 특허 및 지식재산권 컴포넌트
 async function PatentsSection({ companyNm, pNm }: { companyNm: string, pNm: string }) {
-  const realPatents = await getPatentsByCompany(companyNm, pNm);
-  
-  // 데이터 풍부화를 위해 특허가 없거나 적으면 Mock 특허를 결합
-  const mockPatents = getMockPatents(companyNm, pNm);
-  const patents = realPatents.length > 0 ? [...realPatents, ...mockPatents.slice(0, 1)] : mockPatents;
+  const patents = await getPatentsByCompany(companyNm, pNm);
 
   // 1. 발명 명칭 기반 핵심 기술 도메인 태그 자동 추출
   const tagMap: Record<string, string[]> = {
@@ -400,14 +392,19 @@ async function PatentsSection({ companyNm, pNm }: { companyNm: string, pNm: stri
   const registeredCount = patents.filter(p => p.patentStatus === "등록").length;
   const publishedCount = patents.filter(p => p.patentStatus === "공개").length;
   
-  const rndScore = Math.min(100, (registeredCount * 25) + (publishedCount * 15));
+  const rndScore = patents.length > 0 ? Math.min(100, (registeredCount * 25) + (publishedCount * 15)) : 0;
 
   let rndTier = "Tier 5";
   let rndTierTitle = "R&D 준비 단계";
   let tierColor = "#a0aec0";
   let tierBg = "rgba(160, 174, 192, 0.1)";
 
-  if (rndScore >= 80) {
+  if (patents.length === 0) {
+    rndTier = "-";
+    rndTierTitle = "평가 보류 (실적 없음)";
+    tierColor = "#718096";
+    tierBg = "rgba(113, 128, 150, 0.1)";
+  } else if (rndScore >= 80) {
     rndTier = "Tier 1";
     rndTierTitle = "선도 혁신 기업";
     tierColor = "#a855f7"; // 보라색
@@ -476,19 +473,19 @@ async function PatentsSection({ companyNm, pNm }: { companyNm: string, pNm: stri
           <span style={{ fontSize: "0.82rem", color: "#a0aec0", fontWeight: 700 }}>원천 기술 가치 스코어</span>
           <div style={{ marginTop: "8px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "6px" }}>
-              <span style={{ fontSize: "1.7rem", fontWeight: 800, color: tierColor }}>
-                {rndScore}
+              <span style={{ fontSize: "1.7rem", fontWeight: 800, color: patents.length > 0 ? tierColor : "#718096" }}>
+                {patents.length > 0 ? rndScore : "-"}
               </span>
               <span style={{ fontSize: "0.85rem", color: "#718096", fontWeight: 700 }}>/ 100 점</span>
             </div>
             {/* 프로그레스 바 */}
             <div style={{ width: "100%", height: "6px", backgroundColor: "rgba(255,255,255,0.1)", borderRadius: "3px", overflow: "hidden" }}>
               <div style={{
-                width: `${rndScore}%`,
+                width: `${patents.length > 0 ? rndScore : 0}%`,
                 height: "100%",
-                backgroundColor: tierColor,
+                backgroundColor: patents.length > 0 ? tierColor : "#718096",
                 borderRadius: "3px",
-                boxShadow: `0 0 8px ${tierColor}99`
+                boxShadow: patents.length > 0 ? `0 0 8px ${tierColor}99` : "none"
               }} />
             </div>
           </div>
