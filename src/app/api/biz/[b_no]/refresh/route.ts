@@ -13,6 +13,14 @@ export async function POST(
   { params }: { params: any }
 ) {
   try {
+    // 개발자 모드 가드 (프로덕션 환경에서는 강제 실시간 갱신 차단)
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json(
+        { error: "실시간 재검증 API는 오직 개발자 모드(development)에서만 사용 가능합니다." },
+        { status: 403 }
+      );
+    }
+
     const resolvedParams = await params;
     const bNo = resolvedParams.b_no;
     const cleanBNo = bNo.replace(/[^0-9]/g, "");

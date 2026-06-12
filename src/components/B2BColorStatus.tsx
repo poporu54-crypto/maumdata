@@ -258,47 +258,49 @@ export default function B2BColorStatus({
           </div>
         </div>
 
-        {/* 온디맨드 실시간 갱신 버튼 */}
-        <button
-          onClick={handleRefresh}
-          disabled={loading}
-          style={{
-            backgroundColor: "rgba(255, 255, 255, 0.08)",
-            border: "1px solid rgba(255, 255, 255, 0.12)",
-            color: "#f7fafc",
-            padding: "10px 16px",
-            borderRadius: "10px",
-            fontSize: "0.85rem",
-            fontWeight: 700,
-            cursor: loading ? "not-allowed" : "pointer",
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            transition: "all 0.2s ease",
-            outline: "none"
-          }}
-          onMouseEnter={(e) => {
-            if (!loading) {
-              e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.15)";
-              e.currentTarget.style.borderColor = "var(--color-primary)";
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (!loading) {
-              e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.08)";
-              e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.12)";
-            }
-          }}
-        >
-          <span style={{
-            display: "inline-block",
-            animation: loading ? "spin-slow 1s infinite linear" : "none",
-            fontSize: "1rem"
-          }}>
-            🔄
-          </span>
-          <span>{loading ? "검증 중..." : "실시간 재검증"}</span>
-        </button>
+        {/* 온디맨드 실시간 갱신 버튼 - 개발 환경(development)에서만 렌더링 */}
+        {process.env.NODE_ENV === "development" && (
+          <button
+            onClick={handleRefresh}
+            disabled={loading}
+            style={{
+              backgroundColor: "rgba(255, 255, 255, 0.08)",
+              border: "1px solid rgba(255, 255, 255, 0.12)",
+              color: "#f7fafc",
+              padding: "10px 16px",
+              borderRadius: "10px",
+              fontSize: "0.85rem",
+              fontWeight: 700,
+              cursor: loading ? "not-allowed" : "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              transition: "all 0.2s ease",
+              outline: "none"
+            }}
+            onMouseEnter={(e) => {
+              if (!loading) {
+                e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.15)";
+                e.currentTarget.style.borderColor = "var(--color-primary)";
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!loading) {
+                e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.08)";
+                e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.12)";
+              }
+            }}
+          >
+            <span style={{
+              display: "inline-block",
+              animation: loading ? "spin-slow 1s infinite linear" : "none",
+              fontSize: "1rem"
+            }}>
+              🔄
+            </span>
+            <span>{loading ? "검증 중..." : "실시간 재검증"}</span>
+          </button>
+        )}
       </div>
 
       <div style={{
