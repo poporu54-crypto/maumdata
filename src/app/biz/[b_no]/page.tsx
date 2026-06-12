@@ -779,6 +779,50 @@ async function DartKeyDisclosuresSection({ dartCode }: { dartCode: string }) {
   );
 }
 
+// 단어의 마지막 글자 받침 유무에 따라 한글 조사 자동 선택
+function getJosa(word: string, josaType: "은는" | "이가" | "을를" | "과와" | "으로로"): string {
+  if (!word) return "";
+  const lastChar = word.charAt(word.length - 1);
+  const charCode = lastChar.charCodeAt(0);
+
+  let hasBatchim = false;
+
+  if (charCode >= 0xAC00 && charCode <= 0xD7A3) {
+    hasBatchim = (charCode - 0xAC00) % 28 > 0;
+  } else if (/[0-9]/.test(lastChar)) {
+    hasBatchim = /[136780]/.test(lastChar);
+  } else if (/[a-zA-Z]/.test(lastChar)) {
+    const lower = lastChar.toLowerCase();
+    hasBatchim = /[lmnrx]/.test(lower);
+  }
+
+  const josaMap = {
+    은는: hasBatchim ? "은" : "는",
+    이가: hasBatchim ? "이" : "가",
+    을를: hasBatchim ? "을" : "를",
+    과와: hasBatchim ? "과" : "와",
+    으로로: hasBatchim ? "으로" : "로"
+  };
+
+  if (josaType === "으로로" && hasBatchim) {
+    const isRBatchim = (charCode - 0xAC00) % 28 === 8;
+    if (isRBatchim) return "로";
+  }
+
+  return josaMap[josaType] || "";
+}
+
+// 텍스트 내의 은(는), 이(가), 을(를), 와(과) 등의 패턴을 올바른 조사로 치환
+function formatJosa(text?: string): string {
+  if (!text) return "";
+  return text
+    .replace(/([가-힣a-zA-Z0-9]+)은\(는\)/g, (match, word) => word + getJosa(word, "은는"))
+    .replace(/([가-힣a-zA-Z0-9]+)이\(가\)/g, (match, word) => word + getJosa(word, "이가"))
+    .replace(/([가-힣a-zA-Z0-9]+)을\(를\)/g, (match, word) => word + getJosa(word, "을를"))
+    .replace(/([가-힣a-zA-Z0-9]+)와\(과\)/g, (match, word) => word + getJosa(word, "과와"))
+    .replace(/([가-힣a-zA-Z0-9]+)과\(와\)/g, (match, word) => word + getJosa(word, "과와"));
+}
+
 // NICE형 예상 연봉/HR 지표 분석 컴포넌트
 function SalarySection({ business }: { business: BusinessData }) {
   if (!business.npsLinked || !business.npsSbscrbNmps || !business.npsChrgAmt) {
@@ -1678,7 +1722,7 @@ async function getUnifiedBusinessData(bNo: string): Promise<{
       b_type: scale,
       corp_no: basicInfo.crno,
       dart_code: dartCode,
-      description: localBizVal?.description || `${basicInfo.corpNm}은(는) 금융위원회 공시 정보가 등록된 대한민국 공식 ${scale}입니다.`,
+      description: localBizVal?.description || `${basicInfo.corpNm}${getJosa(basicInfo.corpNm, "은는")} 금융위원회 공시 정보가 등록된 대한민국 공식 ${scale}입니다.`,
       credit_rating: localBizVal?.credit_rating || credit_rating,
       industry_rank: localBizVal?.industry_rank || industry_rank,
       dataSource: "public",
@@ -2227,7 +2271,7 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                 paddingLeft: "16px",
                 margin: 0
               }}>
-                {business?.description}
+                {formatJosa(business?.description)}
               </p>
 
               {business?.b_nm === "상호 정보 없음" && (
