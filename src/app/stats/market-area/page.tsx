@@ -265,18 +265,19 @@ export default function MarketAreaHub() {
                 }}
                 style={{
                   flex: 1,
+                  minWidth: 0, // 모바일 뷰 잘림 방지용 최소 너비 리셋
                   border: "none",
                   background: "transparent",
                   fontSize: "1.15rem",
                   fontWeight: 600,
                   color: "var(--color-text-main)",
-                  padding: "12px 16px 12px 0"
+                  padding: "12px 12px 12px 0"
                 }}
               />
               <button type="submit" className="btn-primary" style={{
                 borderRadius: "16px",
-                padding: "14px 28px",
-                fontSize: "1rem",
+                padding: "14px 18px", // 모바일 가로 폭 대응을 위해 좌우 패딩 최적화 (기존 28px)
+                fontSize: "0.95rem",
                 whiteSpace: "nowrap"
               }}>
                 상권 분석하기
