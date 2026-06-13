@@ -597,21 +597,25 @@ export async function getUnifiedBusinessData(bNo: string): Promise<{
     business.dataSource = "local";
   }
 
-  // 4. [중요] 최초 등록 상황에 한해 조달청, 특허청, DART 공시 정보 1회성 실시간 수집 및 DB 적재 진행
+  // 4. [중요] 최초 등록 상황에 한해 조달청, 특허청, DART 공시 정보 1회성 실시간 수집 및 DB 적재 진행 (백그라운드 비동기 갱신으로 대기 시간 최소화)
   if (business && business.b_nm !== "상호 정보 없음") {
     console.log(`[First-Time Detail Sync] Crawling bids, patents, disclosures for ${business.b_nm} (${cleanBNo})`);
     const dartCode = business.dart_code || "";
     
-    await Promise.all([
+    // await를 배제하여 입찰/특허/공시 수집이 이루어지는 동안 사용자 페이지가 즉시 서빙되도록 비동기 처리합니다.
+    Promise.all([
       syncRecentBidsByCompany(business.b_nm, cleanBNo)
+        .then(() => query("UPDATE businesses SET bids_last_sync_at = CURRENT_TIMESTAMP WHERE b_no = $1", [cleanBNo]))
         .catch(err => console.error("[Initial bids sync error]", err)),
       syncPatentsByCompany(business.b_nm, business.p_nm || "")
+        .then(() => query("UPDATE businesses SET patents_last_sync_at = CURRENT_TIMESTAMP WHERE b_no = $1", [cleanBNo]))
         .catch(err => console.error("[Initial patents sync error]", err)),
       dartCode 
         ? syncDisclosuresByCompany(cleanBNo, dartCode)
+            .then(() => query("UPDATE businesses SET dart_last_sync_at = CURRENT_TIMESTAMP WHERE b_no = $1", [cleanBNo]))
             .catch(err => console.error("[Initial DART sync error]", err))
         : Promise.resolve()
-    ]).catch(err => console.error("[Initial Detail Sync] Promse.all failed:", err));
+    ]).catch(err => console.error("[Initial Detail Sync] Promise.all failed:", err));
   }
 
   // 5. DB 적재가 끝난 마스터 및 상세 캐시 데이터를 다시 최종 로드하여 반환
