@@ -205,6 +205,7 @@ export async function getUnifiedBusinessData(bNo: string): Promise<{
   apiStatus: NtsCompanyStatus | null;
   business: BusinessData | null;
   isInvalid: boolean;
+  isNew?: boolean;
 }> {
   const cleanBNo = bNo.replace(/[^0-9]/g, "");
   
@@ -231,26 +232,44 @@ export async function getUnifiedBusinessData(bNo: string): Promise<{
 
   // 1. 로컬 DB 선조회
   const localBiz = await getLocalBusiness(cleanBNo);
-  const localBizVal = localBiz;
   
-  // DB 캐시가 이미 존재하고 유효한 기업명이 있는 경우 ➔ 실시간 외부 API 동기화 없이 즉시 DB 캐시 서빙 (Zero External Network Requests)
+  // DB 캐시가 이미 존재하고 유효한 기업명이 있는 경우 ➔ 실시간 외부 API 동기화 없이 즉시 DB 캐시 서빙
   if (localBiz && localBiz.b_nm !== "상호 정보 없음") {
-    // [보완] 상세 페이지 로딩 속도는 0.1초 수준으로 유지하되, 누락된 부가 정보(입찰, 특허, DART 공시)가 있다면
-    // 사용자 응답 대기(await) 없이 백그라운드 비동기로 데이터를 수집하여 DB에 박제합니다.
-    const dartCode = (localBiz as any).dart_code || "";
-    const dartLastSync = (localBiz as any).dart_last_sync_at;
+    let dartCode = (localBiz as any).dart_code || "";
+    let dartLastSync = (localBiz as any).dart_last_sync_at;
     const patentsLastSync = (localBiz as any).patents_last_sync_at;
     const bidsLastSync = (localBiz as any).bids_last_sync_at;
 
-    if (dartCode && !dartLastSync) {
-      console.log(`[Background Detail Sync] Syncing DART disclosures for ${localBiz.b_nm} (${cleanBNo})`);
-      syncDisclosuresByCompany(cleanBNo, dartCode)
-        .then(() => {
-          query("UPDATE businesses SET dart_last_sync_at = CURRENT_TIMESTAMP WHERE b_no = $1", [cleanBNo])
-            .catch(err => console.error("Failed to update dart_last_sync_at:", err));
-        })
-        .catch(err => console.error("Background DART sync failed:", err));
+    let stockCode = "";
+    const listingStatus = localBiz.listing_status || "";
+    const stockMatch = listingStatus.match(/\((\d{6})\)/);
+    if (stockMatch) {
+      stockCode = stockMatch[1];
     }
+
+    findDartCode(localBiz.b_nm, stockCode)
+      .then(async (correctDartCode) => {
+        if (correctDartCode && correctDartCode !== dartCode) {
+          console.log(`[DART Self-Healing] Correcting DART code for ${localBiz.b_nm}: ${dartCode} -> ${correctDartCode}`);
+          await query(
+            "UPDATE businesses SET dart_code = $1, dart_last_sync_at = NULL WHERE b_no = $2", 
+            [correctDartCode, cleanBNo]
+          );
+          dartCode = correctDartCode;
+          dartLastSync = null;
+        }
+
+        if (dartCode && !dartLastSync) {
+          console.log(`[Background Detail Sync] Syncing DART disclosures for ${localBiz.b_nm} (${cleanBNo}) with code ${dartCode}`);
+          syncDisclosuresByCompany(cleanBNo, dartCode)
+            .then(() => {
+              query("UPDATE businesses SET dart_last_sync_at = CURRENT_TIMESTAMP WHERE b_no = $1", [cleanBNo])
+                .catch(err => console.error("Failed to update dart_last_sync_at:", err));
+            })
+            .catch(err => console.error("Background DART sync failed:", err));
+        }
+      })
+      .catch(err => console.error("[DART Self-Healing Check failed]", err));
 
     if (!bidsLastSync) {
       console.log(`[Background Detail Sync] Syncing recent bids for ${localBiz.b_nm} (${cleanBNo})`);
@@ -288,11 +307,11 @@ export async function getUnifiedBusinessData(bNo: string): Promise<{
       rbf_tax_type_cd: ""
     };
 
-    return { apiStatus: mockApiStatus, business: localBiz, isInvalid: false };
+    return { apiStatus: mockApiStatus, business: localBiz, isInvalid: false, isNew: false };
   }
 
-  // 2. DB 캐시가 없거나 "상호 정보 없음" 상태인 경우 ➔ [최초 등록 시점]으로 식별하고 실시간 외부 API 호출 개시
-  console.log(`[First-Time Registration] New business detected. Syncing with external APIs: ${cleanBNo}`);
+  // 2. DB 캐시가 없거나 "상호 정보 없음" 상태인 경우 ➔ [최초 등록 시점]으로 식별하되, 가상 데이터를 초고속 반환 (Non-blocking)
+  console.log(`[Non-blocking SSR Serving] Unregistered or partial business detected: ${cleanBNo}`);
 
   // 2.1. 미등록 블랙리스트 캐시 검사
   let invalidList: string[] = [];
@@ -322,11 +341,53 @@ export async function getUnifiedBusinessData(bNo: string): Promise<{
     };
   }
 
-  // 2.2. 국세청 실시간 조회를 동기적으로 대기
+  const virtualBiz = generateVirtualBusiness(cleanBNo);
+  virtualBiz.b_nm = "정보 조회 중...";
+  virtualBiz.description = "실시간 기업 정보를 연동하는 중입니다. 잠시만 대기해 주세요.";
+  
+  const tempApiStatus: NtsCompanyStatus = {
+    b_no: cleanBNo,
+    b_stt: "조회 중",
+    b_stt_cd: "01",
+    tax_type: "실시간 정보 연동 중...",
+    tax_type_cd: "01",
+    end_dt: "",
+    utcc_yn: "N",
+    tax_type_change_dt: "",
+    invoice_apply_dt: "",
+    rbf_tax_type: "",
+    rbf_tax_type_cd: ""
+  };
+
+  return {
+    apiStatus: tempApiStatus,
+    business: virtualBiz,
+    isInvalid: false,
+    isNew: true
+  };
+}
+
+/**
+ * 외부 API(국세청, 금융위, 공정위, 국민연금 등)로부터 실시간 기업 데이터를 수집하여 DB에 적재하는 비동기 서비스 엔진
+ */
+export async function syncAndCacheBusinessData(bNo: string): Promise<{
+  apiStatus: NtsCompanyStatus | null;
+  business: BusinessData | null;
+  isInvalid: boolean;
+}> {
+  const cleanBNo = bNo.replace(/[^0-9]/g, "");
+
+  // 1. 국세청 실시간 조회
   const apiStatus = await getNtsCompanyStatus(cleanBNo);
   const isInvalid = !apiStatus || apiStatus.tax_type === "국세청에 등록되지 않은 사업자등록번호입니다";
 
   if (isInvalid) {
+    let invalidList: string[] = [];
+    try {
+      invalidList = await getInvalidBusinesses();
+    } catch (e) {
+      console.error("Failed to read invalid list from Neon DB:", e);
+    }
     if (!invalidList.includes(cleanBNo)) {
       try {
         await addInvalidBusiness(cleanBNo);
@@ -338,21 +399,20 @@ export async function getUnifiedBusinessData(bNo: string): Promise<{
     return { apiStatus, business: null, isInvalid: true };
   }
 
-  // 2.3. 공공 API 동시(병렬) 호출로 수집 속도 극대화
+  // 2. 공공 API 동시(병렬) 호출로 수집 속도 극대화
   const basicInfoPromise = getCorpBasicOutline(cleanBNo, undefined);
   const ftcInfoPromise = getFtcMailOrderInfo(cleanBNo);
   
   const [basicInfo, ftcInfo] = await Promise.all([basicInfoPromise, ftcInfoPromise]);
   
   let business: BusinessData | null = null;
+  const localBizVal = await getBusinessByBNo(cleanBNo);
 
   if (basicInfo) {
-    // 2.3.1. 금융위 데이터가 있는 경우 (법인/대기업/외감)
     const financeDetailPromise = getCorpFinanceInfo(basicInfo.crno);
     const npsInfoPromise = getNpsBplcInfo(cleanBNo, basicInfo.corpNm);
     const [financeDetail, npsInfo] = await Promise.all([financeDetailPromise, npsInfoPromise]);
     
-    // DART 고유번호 매핑 조회
     let dartCode = localBizVal?.dart_code || "";
     if (!dartCode) {
       let stockCode = "";
@@ -398,9 +458,8 @@ export async function getUnifiedBusinessData(bNo: string): Promise<{
         totalEquity: fd.totalEquity
       }));
     } else if (npsInfo && npsInfo.npsSbscrbNmps > 0) {
-      // [폴백] 금융위 API에 재무 데이터가 누락된 경우, 국민연금 종업원 수 기반 합리적 추정 재무 히스토리 빌드
       const empCount = npsInfo.npsSbscrbNmps;
-      const baseRevenuePerEmp = 2.5; // 1인당 평균 매출액 2.5억 원
+      const baseRevenuePerEmp = 2.5;
       const estRev = Math.round(empCount * baseRevenuePerEmp);
       
       history = [2023, 2024, 2025].map((year) => {
@@ -484,7 +543,6 @@ export async function getUnifiedBusinessData(bNo: string): Promise<{
       if (latestHist) latestHist.employees = npsInfo.npsSbscrbNmps;
     }
   } else if (ftcInfo) {
-    // 2.3.2. 공정위 통신판매업 데이터가 있는 경우 (쇼핑몰/소상공인)
     const npsInfo = await getNpsBplcInfo(cleanBNo, ftcInfo.cmpNm);
     business = {
       b_no: cleanBNo,
@@ -528,14 +586,13 @@ export async function getUnifiedBusinessData(bNo: string): Promise<{
       business.npsChrgAmt = npsInfo.npsChrgAmt;
     }
   } else if (localBizVal) {
-    // 2.3.3. 기존 로컬 DB 캐시 데이터 복구 (상호 획득 실패 시)
     const npsInfo = await getNpsBplcInfo(cleanBNo, localBizVal.b_nm);
     if (npsInfo && npsInfo.npsSbscrbNmps > 0) {
       localBizVal.npsLinked = true;
       localBizVal.npsSbscrbNmps = npsInfo.npsSbscrbNmps;
-      localBizVal.newAcqsNmps = npsInfo.newAcqsNmps;
-      localBizVal.lossSbscrbNmps = npsInfo.lossSbscrbNmps;
-      localBizVal.npsChrgAmt = npsInfo.npsChrgAmt;
+      localBizVal.newAcqsNmps = npsInfo.newAcqsNmps ?? 0;
+      localBizVal.lossSbscrbNmps = npsInfo.lossSbscrbNmps ?? 0;
+      localBizVal.npsChrgAmt = npsInfo.npsChrgAmt ?? 0;
       
       if (npsInfo.npsSector && (!localBizVal.b_sector || localBizVal.b_sector === "기타 서비스업" || localBizVal.b_sector === "상장 법인")) {
         localBizVal.b_sector = npsInfo.npsSector;
@@ -546,7 +603,6 @@ export async function getUnifiedBusinessData(bNo: string): Promise<{
     }
     business = localBizVal;
   } else {
-    // 2.3.4. 최후 수단으로 가상 프로필 생성 (Fallbacks)
     const realBiz: BusinessData = {
       b_no: cleanBNo,
       b_nm: "상호 정보 없음",
@@ -593,16 +649,15 @@ export async function getUnifiedBusinessData(bNo: string): Promise<{
       npsLastSyncAt: new Date()
     };
     await upsertBusiness(cachedBiz);
-    console.log(`[Cache Write] Cached newly registered business: ${business.b_nm} (${cleanBNo})`);
+    console.log(`[Cache Write - Async] Cached newly registered business: ${business.b_nm} (${cleanBNo})`);
     business.dataSource = "local";
   }
 
-  // 4. [중요] 최초 등록 상황에 한해 조달청, 특허청, DART 공시 정보 1회성 실시간 수집 및 DB 적재 진행 (백그라운드 비동기 갱신으로 대기 시간 최소화)
+  // 4. 최초 등록 상황에 한해 조달청, 특허청, DART 공시 정보 1회성 실시간 수집 및 DB 적재 진행
   if (business && business.b_nm !== "상호 정보 없음") {
-    console.log(`[First-Time Detail Sync] Crawling bids, patents, disclosures for ${business.b_nm} (${cleanBNo})`);
+    console.log(`[First-Time Detail Sync - Async] Crawling bids, patents, disclosures for ${business.b_nm} (${cleanBNo})`);
     const dartCode = business.dart_code || "";
     
-    // await를 배제하여 입찰/특허/공시 수집이 이루어지는 동안 사용자 페이지가 즉시 서빙되도록 비동기 처리합니다.
     Promise.all([
       syncRecentBidsByCompany(business.b_nm, cleanBNo)
         .then(() => query("UPDATE businesses SET bids_last_sync_at = CURRENT_TIMESTAMP WHERE b_no = $1", [cleanBNo]))
@@ -618,7 +673,6 @@ export async function getUnifiedBusinessData(bNo: string): Promise<{
     ]).catch(err => console.error("[Initial Detail Sync] Promise.all failed:", err));
   }
 
-  // 5. DB 적재가 끝난 마스터 및 상세 캐시 데이터를 다시 최종 로드하여 반환
   const finalBiz = await getLocalBusiness(cleanBNo);
 
   return { 

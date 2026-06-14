@@ -39,6 +39,7 @@ import {
   InsightSection,
   FinancialTableSection
 } from "./components/AnalysisSections";
+import SyncTrigger from "./components/SyncTrigger";
 
 export const dynamic = "force-dynamic";
 
@@ -81,7 +82,7 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
     notFound();
   }
 
-  const { apiStatus, business, isInvalid } = await getUnifiedBusinessData(cleanBNo);
+  const { apiStatus, business, isInvalid, isNew } = await getUnifiedBusinessData(cleanBNo);
   const formattedBNo = cleanBNo.replace(/(\d{3})(\d{2})(\d{5})/, "$1-$2-$3");
 
   const renderSourceBadge = () => {
@@ -140,6 +141,9 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
       )}
 
       <div className="container" style={{ maxWidth: "800px" }}>
+        {/* 비동기 동기화 트리거 컴포넌트 장착 */}
+        <SyncTrigger bNo={cleanBNo} isNew={isNew} />
+
         {isInvalid ? (
           <div className="card" style={{
             textAlign: "center",
@@ -184,16 +188,30 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                     <span style={{ fontSize: "0.95rem", color: "var(--color-text-desc)", fontWeight: 700 }}>
                       사업자등록번호 {formattedBNo}
                     </span>
-                    <span style={{
-                      backgroundColor: "var(--color-primary-light)",
-                      color: "var(--color-primary)",
-                      padding: "4px 8px",
-                      borderRadius: "6px",
-                      fontSize: "0.75rem",
-                      fontWeight: 700
-                    }}>
-                      ✓ 실시간 검증 완료
-                    </span>
+                    {isNew ? (
+                      <span style={{
+                        backgroundColor: "rgba(245, 158, 11, 0.1)",
+                        color: "rgb(245, 158, 11)",
+                        padding: "4px 8px",
+                        borderRadius: "6px",
+                        fontSize: "0.75rem",
+                        fontWeight: 700,
+                        animation: "pulse 1.5s infinite"
+                      }}>
+                        ⚡ 실시간 검증 진행 중
+                      </span>
+                    ) : (
+                      <span style={{
+                        backgroundColor: "var(--color-primary-light)",
+                        color: "var(--color-primary)",
+                        padding: "4px 8px",
+                        borderRadius: "6px",
+                        fontSize: "0.75rem",
+                        fontWeight: 700
+                      }}>
+                        ✓ 실시간 검증 완료
+                      </span>
+                    )}
                     {renderSourceBadge()}
                   </div>
                   <h1 style={{ fontSize: "2.2rem", fontWeight: 800, color: "var(--color-text-main)", letterSpacing: "-0.02em" }}>
@@ -217,8 +235,12 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                   display: "inline-flex",
                   alignItems: "center",
                   gap: "8px",
-                  backgroundColor: apiStatus?.b_stt_cd === "01" ? "rgba(45, 202, 115, 0.1)" : "rgba(240, 68, 56, 0.1)",
-                  color: apiStatus?.b_stt_cd === "01" ? "var(--color-success)" : "var(--color-danger)",
+                  backgroundColor: isNew 
+                    ? "rgba(245, 158, 11, 0.1)" 
+                    : (apiStatus?.b_stt_cd === "01" ? "rgba(45, 202, 115, 0.1)" : "rgba(240, 68, 56, 0.1)"),
+                  color: isNew 
+                    ? "rgb(245, 158, 11)" 
+                    : (apiStatus?.b_stt_cd === "01" ? "var(--color-success)" : "var(--color-danger)"),
                   padding: "10px 18px",
                   borderRadius: "30px",
                   fontWeight: 700,
@@ -228,10 +250,12 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                     width: "8px",
                     height: "8px",
                     borderRadius: "50%",
-                    backgroundColor: apiStatus?.b_stt_cd === "01" ? "var(--color-success)" : "var(--color-danger)",
+                    backgroundColor: isNew 
+                      ? "rgb(245, 158, 11)" 
+                      : (apiStatus?.b_stt_cd === "01" ? "var(--color-success)" : "var(--color-danger)"),
                     display: "inline-block"
                   }}></span>
-                  <span>{apiStatus?.b_stt || "계속사업자"}</span>
+                  <span>{isNew ? "조회 중" : (apiStatus?.b_stt || "계속사업자")}</span>
                 </div>
               </div>
 

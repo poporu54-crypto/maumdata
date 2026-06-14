@@ -1,4 +1,5 @@
 import React from "react";
+import Link from "next/link";
 import { getIndustryAnalysis } from "@/lib/db";
 import { formatMoney } from "../utils/helpers";
 import { BusinessData } from "../utils/dataLoader";
@@ -224,16 +225,24 @@ export async function IndustrySection({ bSector, bNo }: { bSector: string; bNo: 
               </h5>
               <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                 {analysis.leaders.map((l, index) => (
-                  <div key={l.b_no} style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    padding: "10px 14px",
-                    backgroundColor: l.b_no === bNo ? "rgba(49, 130, 246, 0.08)" : "var(--bg-color-main)",
-                    border: l.b_no === bNo ? "1px solid rgba(49, 130, 246, 0.3)" : "1px solid var(--color-border)",
-                    borderRadius: "12px",
-                    fontSize: "0.85rem"
-                  }}>
+                  <Link
+                    key={l.b_no}
+                    href={`/biz/${l.b_no}`}
+                    className="related-card"
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      padding: "10px 14px",
+                      backgroundColor: l.b_no === bNo ? "rgba(49, 130, 246, 0.08)" : "var(--bg-color-main)",
+                      border: l.b_no === bNo ? "1px solid rgba(49, 130, 246, 0.3)" : "1px solid var(--color-border)",
+                      borderRadius: "12px",
+                      fontSize: "0.85rem",
+                      textDecoration: "none",
+                      color: "inherit",
+                      transition: "var(--transition-smooth)"
+                    }}
+                  >
                     <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                       <span style={{
                         fontWeight: 900,
@@ -244,11 +253,11 @@ export async function IndustrySection({ bSector, bNo }: { bSector: string; bNo: 
                       <strong style={{ color: "var(--color-text-main)", fontWeight: 700 }}>{l.b_nm}</strong>
                     </div>
                     <span style={{ color: "var(--color-text-desc)" }}>
-                      {l.revenue >= 10000 
-                        ? `${(l.revenue / 10000).toFixed(1)}조` 
+                      {l.revenue >= 10000
+                        ? `${(l.revenue / 10000).toFixed(1)}조`
                         : `${l.revenue}억 원`}
                     </span>
-                  </div>
+                  </Link>
                 ))}
               </div>
             </div>
