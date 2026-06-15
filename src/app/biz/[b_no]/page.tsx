@@ -40,6 +40,7 @@ import {
   FinancialTableSection
 } from "./components/AnalysisSections";
 import SyncTrigger from "./components/SyncTrigger";
+import EmploymentHealthSection from "./components/EmploymentHealthSection";
 
 export const dynamic = "force-dynamic";
 
@@ -640,6 +641,11 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
             {/* 예상 평균 연봉/HR 지표 및 동종 업종/업계 순위 분석 대시보드 */}
             {business && (
               <SalarySection business={business} />
+            )}
+
+            {/* 실시간 조직 건강도 대시보드 (국민연금 분석 및 퇴사율 차트) */}
+            {business && (
+              <EmploymentHealthSection business={business} />
             )}
 
             {business && business.b_sector && (

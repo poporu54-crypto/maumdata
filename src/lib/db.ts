@@ -64,6 +64,16 @@ export async function getBusinessByBNo(bNo: string) {
     [clean]
   );
 
+  // 1:N 월별 고용 이력 조회
+  const empHistResult = await query(
+    `SELECT record_month as "recordMonth", employees, new_acquisitions as "newAcquisitions", 
+            losses, nps_charge_amount as "npsChargeAmount"
+     FROM business_employment_history
+     WHERE b_no = $1
+     ORDER BY record_month ASC`,
+    [clean]
+  );
+
   return {
     b_no: business.b_no,
     b_nm: business.b_nm,
@@ -117,6 +127,13 @@ export async function getBusinessByBNo(bNo: string) {
       eventDate: r.eventDate,
       eventTitle: r.eventTitle,
       eventDescription: r.eventDescription
+    })),
+    employmentHistory: empHistResult.rows.map((r: any) => ({
+      recordMonth: r.recordMonth,
+      employees: parseInt(r.employees || "0", 10),
+      newAcquisitions: parseInt(r.newAcquisitions || "0", 10),
+      losses: parseInt(r.losses || "0", 10),
+      npsChargeAmount: parseInt(r.npsChargeAmount || "0", 10)
     })),
     history: histResult.rows.map((r: any) => ({
       year: r.year,
@@ -273,6 +290,42 @@ export async function upsertBusiness(biz: any) {
       VALUES ($1, $2, $3, $4)
       ON CONFLICT (b_no, event_date, event_title) DO NOTHING
     `, [clean, biz.start_dt, "법인 설립", `${biz.b_nm} 설립 및 개업`]);
+  }
+
+  // 1.2. 국민연금 월별 고용 이력 적재
+  if (biz.npsLinked && biz.npsSbscrbNmps > 0) {
+    let recordMonth = "";
+    const cleanBasDt = (biz.basDt || "").replace(/[^0-9]/g, "");
+    if (cleanBasDt.length >= 6) {
+      recordMonth = `${cleanBasDt.substring(0, 4)}-${cleanBasDt.substring(4, 6)}`;
+    } else {
+      const d = new Date();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      recordMonth = `${d.getFullYear()}-${mm}`;
+    }
+
+    try {
+      await query(`
+        INSERT INTO business_employment_history (
+          b_no, record_month, employees, new_acquisitions, losses, nps_charge_amount
+        ) VALUES ($1, $2, $3, $4, $5, $6)
+        ON CONFLICT (b_no, record_month) DO UPDATE SET
+          employees = EXCLUDED.employees,
+          new_acquisitions = EXCLUDED.new_acquisitions,
+          losses = EXCLUDED.losses,
+          nps_charge_amount = EXCLUDED.nps_charge_amount
+      `, [
+        clean,
+        recordMonth,
+        biz.npsSbscrbNmps || 0,
+        biz.newAcqsNmps || 0,
+        biz.lossSbscrbNmps || 0,
+        biz.npsChrgAmt || 0
+      ]);
+      console.log(`[Employment History Cache] Saved history for ${biz.b_nm} (${clean}) at ${recordMonth}`);
+    } catch (e) {
+      console.error("Failed to upsert employment history:", e);
+    }
   }
 
   // 2. 재무이력 갱신 (ON CONFLICT 방식으로 동시성 레이스 컨디션 해결 및 연도 중복 방어)

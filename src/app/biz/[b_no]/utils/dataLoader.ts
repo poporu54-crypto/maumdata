@@ -81,6 +81,13 @@ export interface BusinessData {
     eventTitle: string;
     eventDescription: string;
   }>;
+  employmentHistory?: Array<{
+    recordMonth: string;
+    employees: number;
+    newAcquisitions: number;
+    losses: number;
+    npsChargeAmount: number;
+  }>;
   ntsLastSyncAt?: any;
   npsLastSyncAt?: any;
   taxType?: string;
@@ -193,7 +200,8 @@ export function generateVirtualBusiness(bNo: string): BusinessData {
     is_audited: false,
     history,
     brand_name: "",
-    historyTimeline: []
+    historyTimeline: [],
+    employmentHistory: []
   };
 }
 
