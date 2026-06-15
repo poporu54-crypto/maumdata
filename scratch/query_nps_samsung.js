@@ -1,6 +1,5 @@
 const fs = require('fs');
 const path = require('path');
-const { Pool } = require('pg');
 
 // 1. .env.local 로드
 try {
@@ -20,24 +19,15 @@ try {
   console.error("Failed to load .env.local", e);
 }
 
-const DATABASE_URL = process.env.DATABASE_URL;
-
-const pool = new Pool({
-  connectionString: DATABASE_URL,
-  ssl: { rejectUnauthorized: false }
-});
+const { getNpsBplcInfo } = require('../src/lib/npsApi');
 
 async function run() {
-  const client = await pool.connect();
   try {
-    const res = await client.query("SELECT b_no, b_nm, b_sector, main_biz, corp_no, dart_code, data_source FROM businesses WHERE b_no = '1248100998'");
-    console.log("=== Samsung Electronics (1248100998) in DB ===");
-    console.log(JSON.stringify(res.rows, null, 2));
+    const res = await getNpsBplcInfo('1248100998', '삼성전자(주)');
+    console.log("=== Samsung Electronics NPS API Result ===");
+    console.log(JSON.stringify(res, null, 2));
   } catch (err) {
-    console.error("Query error:", err);
-  } finally {
-    client.release();
-    await pool.end();
+    console.error("NPS API error:", err);
   }
 }
 

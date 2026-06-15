@@ -1,4 +1,6 @@
 import { Pool } from "pg";
+import { getKsicName } from "./ksicMap";
+
 
 declare global {
   var pgPool: Pool | undefined;
@@ -204,6 +206,15 @@ function extractCoreBrand(name: string): string {
 // 4. 기업 정보 등록/수정 (DART 및 API 크롤링 캐시용)
 export async function upsertBusiness(biz: any) {
   const clean = biz.b_no.replace(/[^0-9]/g, "");
+  
+  // 업종 자가치유 (KSIC 코드 한글명 변환 및 삼성전자/SK하이닉스 수동 교정)
+  const healedSector = getKsicName(biz.b_sector || "", clean);
+  biz.b_sector = healedSector;
+  
+  const uselessSectors = ["상장 법인", "상장법인", "대기업", "중소기업", "일반기업", "중견기업", "기타 서비스업", "기타서비스업", "미등록 업종", "미등록업종", "-", ""];
+  if (!biz.main_biz || uselessSectors.includes((biz.main_biz || "").trim())) {
+    biz.main_biz = healedSector;
+  }
   
   const core = extractCoreBrand(biz.b_nm);
   const brandVal = biz.brandName || biz.brand_name || (core ? `${core}, ${biz.b_nm}` : biz.b_nm);
@@ -845,6 +856,48 @@ export async function getIndustryAnalysis(bSector: string, bNo: string) {
     };
   }
 }
+
+// 8. DB 기반 서식 단건 조회
+export async function getTemplateByIdFromDB(id: string) {
+  try {
+    const res = await query(
+      "SELECT id, title, category, description as desc, popular, tags, fields, initial_values as \"initialValues\" FROM document_templates WHERE id = $1 LIMIT 1",
+      [id]
+    );
+    if (res.rows.length === 0) return null;
+    return res.rows[0];
+  } catch (err) {
+    console.error(`Failed to fetch template by id [${id}] from DB:`, err);
+    return null;
+  }
+}
+
+// 9. DB 기반 서식 검색 및 필터링
+export async function searchTemplatesFromDB(q: string, tag: string | null) {
+  try {
+    let queryText = "SELECT id, title, category, description as desc, popular, tags FROM document_templates WHERE 1=1";
+    const params: any[] = [];
+    
+    if (tag) {
+      params.push(tag);
+      queryText += ` AND $${params.length} = ANY(tags)`;
+    }
+    
+    if (q && q.trim().length > 0) {
+      params.push(`%${q.trim()}%`);
+      queryText += ` AND (title ILIKE $${params.length} OR description ILIKE $${params.length})`;
+    }
+    
+    queryText += " ORDER BY title ASC";
+    
+    const res = await query(queryText, params);
+    return res.rows;
+  } catch (err) {
+    console.error("Failed to search templates from DB:", err);
+    return [];
+  }
+}
+
 
 
 

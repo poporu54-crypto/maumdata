@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import ThemeRegistry from "@/components/ThemeRegistry";
+import Header from "@/components/Header";
 import Link from "next/link";
 import Script from "next/script";
 
@@ -52,32 +53,13 @@ export default function RootLayout({
           strategy="lazyOnload"
         />
         <ThemeRegistry>
-          <header className="header">
-            <div className="container header-inner">
-              <Link href="/" className="logo">
-                마음데이터<span className="logo-accent">BIZ</span>
-              </Link>
-              <nav className="nav-links">
-                <Link href="/" className="nav-link">
-                  홈
-                </Link>
-                <Link href="/stats/market-area" className="nav-link">
-                  상권 분석
-                </Link>
-                <Link href="/insights" className="nav-link">
-                  데이터 인사이트
-                </Link>
-                {/* 테마 토글러가 들어가는 영역 */}
-                <div id="theme-toggle-container"></div>
-              </nav>
-            </div>
-          </header>
+          <Header />
           
           <main style={{ flex: 1, display: "flex", flexDirection: "column" }}>
             {children}
           </main>
           
-          <footer style={{
+          <footer className="footer" style={{
             backgroundColor: "var(--bg-color-card)",
             borderTop: "1px solid var(--color-border)",
             padding: "48px 0",
@@ -107,6 +89,7 @@ export default function RootLayout({
                       <li><Link href="/" className="footer-link">사업자 조회</Link></li>
                       <li><Link href="/insights" className="footer-link">데이터 인사이트</Link></li>
                       <li><Link href="/stats/market-area" className="footer-link">국가 통계 및 상권 분석</Link></li>
+                      <li><Link href="/form" className="footer-link">무료 서식 센터</Link></li>
                     </ul>
                   </div>
                   <div>

@@ -30,9 +30,26 @@ const pool = new Pool({
 async function run() {
   const client = await pool.connect();
   try {
-    const res = await client.query("SELECT b_no, b_nm, b_sector, main_biz, corp_no, dart_code, data_source FROM businesses WHERE b_no = '1248100998'");
-    console.log("=== Samsung Electronics (1248100998) in DB ===");
+    console.log("=== Querying Top 30 Sectors by Count ===");
+    const res = await client.query(`
+      SELECT b_sector, COUNT(*) as count 
+      FROM businesses 
+      WHERE b_nm != '상호 정보 없음'
+      GROUP BY b_sector 
+      ORDER BY count DESC 
+      LIMIT 30
+    `);
     console.log(JSON.stringify(res.rows, null, 2));
+
+    console.log("\n=== Checking sectors containing '반도체' or '전자' ===");
+    const res2 = await client.query(`
+      SELECT b_sector, COUNT(*) as count 
+      FROM businesses 
+      WHERE b_sector LIKE '%반도체%' OR b_sector LIKE '%전자%'
+      GROUP BY b_sector 
+      ORDER BY count DESC
+    `);
+    console.log(JSON.stringify(res2.rows, null, 2));
   } catch (err) {
     console.error("Query error:", err);
   } finally {
