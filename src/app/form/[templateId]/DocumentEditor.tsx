@@ -2941,6 +2941,48 @@ export default function DocumentEditor({ templateId, initialTemplate }: { templa
 
         {/* 2. 우측 A4 실시간 프리뷰 및 다운로드 판넬 */}
         <div className="editor-preview-panel">
+          {/* 전역/하드코딩 서식 레이아웃 폰트 및 패딩 오버라이드 스타일 */}
+          <style dangerouslySetInnerHTML={{__html: `
+            #a4-print-area, #a4-print-area * {
+              font-family: ${THEME_TOKENS[theme]?.fontFamily || THEME_TOKENS.classic.fontFamily} !important;
+            }
+            #a4-print-area h1 {
+              font-size: calc(22pt + ${currentSpacing.fontDelta}pt) !important;
+              line-height: 1.2 !important;
+            }
+            #a4-print-area h2 {
+              font-size: calc(15pt + ${currentSpacing.fontDelta}pt) !important;
+              line-height: 1.3 !important;
+            }
+            #a4-print-area h3 {
+              font-size: calc(11.5pt + ${currentSpacing.fontDelta}pt) !important;
+              line-height: 1.4 !important;
+            }
+            #a4-print-area p, 
+            #a4-print-area td,
+            #a4-print-area .editable-value-field,
+            #a4-print-area .generic-footer-block,
+            #a4-print-area .generic-footer-block div,
+            #a4-print-area .contract-footer-block,
+            #a4-print-area .contract-footer-block div,
+            #a4-print-area span[contenteditable="true"] {
+              font-size: calc(10pt + ${currentSpacing.fontDelta}pt) !important;
+              line-height: ${currentSpacing.lineHeight} !important;
+            }
+            #a4-print-area td {
+              padding: ${currentSpacing.padding} !important;
+            }
+            #a4-print-area .approval-table td {
+              font-size: 7.5pt !important;
+              padding: 2px !important;
+              line-height: 1.2 !important;
+            }
+            #a4-print-area .common-brand-header,
+            #a4-print-area .common-brand-header * {
+              font-size: 7.5pt !important;
+              line-height: 1.2 !important;
+            }
+          `}} />
           <div className="a4-container">
             
             {/* 디자인 테마 선택기 */}
