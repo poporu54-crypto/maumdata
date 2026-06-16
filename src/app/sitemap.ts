@@ -1,5 +1,6 @@
 import { MetadataRoute } from "next";
-import { getAllBusinesses } from "@/lib/db";
+import { getAllBusinesses, getAllTemplatesFromDB } from "@/lib/db";
+import { TEMPLATES } from "@/app/form/templatesData";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = "https://www.maumdata.com";
@@ -24,6 +25,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "weekly" as const,
       priority: 0.85,
     },
+    {
+      url: `${baseUrl}/form`,
+      lastModified: new Date(),
+      changeFrequency: "daily" as const,
+      priority: 0.95,
+    },
   ];
 
   // 상권 분석 롱테일 SEO 페이지들
@@ -34,6 +41,28 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     changeFrequency: "weekly" as const,
     priority: 0.75,
   }));
+
+  // 고정 탑재된 민관 서식 템플릿 SEO 경로
+  const staticTemplateRoutes = TEMPLATES.map((item) => ({
+    url: `${baseUrl}/form/${item.id}`,
+    lastModified: new Date(),
+    changeFrequency: "weekly" as const,
+    priority: 0.85,
+  }));
+
+  // DB 기반 수집 서식 템플릿 SEO 경로
+  let dbTemplateRoutes: any[] = [];
+  try {
+    const dbTpls = await getAllTemplatesFromDB();
+    dbTemplateRoutes = dbTpls.map((item) => ({
+      url: `${baseUrl}/form/${item.id}`,
+      lastModified: new Date(),
+      changeFrequency: "weekly" as const,
+      priority: 0.8,
+    }));
+  } catch (error) {
+    console.error("Failed to generate sitemap routes for DB templates:", error);
+  }
 
   // Neon DB 내 사업자 번호 동적 크롤링 경로 수집
   try {
@@ -46,9 +75,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.9,
     }));
 
-    return [...routes, ...marketRoutes, ...bizRoutes];
+    return [...routes, ...marketRoutes, ...staticTemplateRoutes, ...dbTemplateRoutes, ...bizRoutes];
   } catch (error) {
     console.error("Failed to generate dynamic sitemap routes:", error);
-    return [...routes, ...marketRoutes];
+    return [...routes, ...marketRoutes, ...staticTemplateRoutes, ...dbTemplateRoutes];
   }
 }

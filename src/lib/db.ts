@@ -898,6 +898,17 @@ export async function searchTemplatesFromDB(q: string, tag: string | null) {
   }
 }
 
+// 10. 모든 DB 기반 서식 ID 조회 (사이트맵 연동용)
+export async function getAllTemplatesFromDB() {
+  try {
+    const res = await query("SELECT id FROM document_templates ORDER BY id ASC", []);
+    return res.rows;
+  } catch (err) {
+    console.error("Failed to fetch all templates from DB:", err);
+    return [];
+  }
+}
+
 
 
 
