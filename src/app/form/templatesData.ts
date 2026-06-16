@@ -7269,6 +7269,183 @@ export const TEMPLATES: DocumentTemplate[] = [
       { type: "sign-block", value: "공동상속인 A : 홍큰아들 (인)          공동상속인 B : 홍작은아들 (인)" }
     ]
   }
+,
+// 58. 부동산 매매계약서 (서울중앙지법 표준 생활속계약서형)
+  {
+    id: "generic_gov_real_estate_sale",
+    title: "부동산 매매계약서",
+    category: "계약",
+    desc: "서울중앙지방법원 '생활 속의 계약서' 표준 예시를 준수하여, 매도인과 매수인 간 부동산 표시, 매매대금 지급조건(계약금/중도금/잔금) 및 권리 이전 의무를 명확히 기록하는 계약서입니다.",
+    popular: true,
+    tags: ["부동산매매", "매매계약서", "부동산직거래", "아파트매매", "토지매매", "법원서식"],
+    fields: [
+      { key: "seller", label: "매도인 성명", type: "text", placeholder: "김매도" },
+      { key: "buyer", label: "매수인 성명", type: "text", placeholder: "이매수" },
+      { key: "address", label: "부동산 소재지 주소", type: "text", placeholder: "서울특별시 마포구 마포대로 14" },
+      { key: "price", label: "매매 대금 총액", type: "text", placeholder: "500,000,000원" },
+      { key: "downPayment", label: "계약금 및 지급 약정", type: "text", placeholder: "50,000,000원 (계약 시 지급)" },
+      { key: "interimPayment", label: "중도금 및 지급일", type: "text", placeholder: "150,000,000원 (2026.07.16)" },
+      { key: "balance", label: "잔금 및 지급 예정일", type: "text", placeholder: "300,000,000원 (2026.08.16)" },
+      { key: "date", label: "계약 체결일", type: "text", placeholder: "2026년 06월 16일" }
+    ],
+    initialValues: {
+      seller: "김매도",
+      buyer: "이매수",
+      address: "서울특별시 마포구 마포대로 14, 101동 202호 (도화동, 마포아파트)",
+      price: "500,000,000원",
+      downPayment: "50,000,000원 (계약 시 지급 및 영수)",
+      interimPayment: "150,000,000원 (2026년 07월 16일 무통장 입금)",
+      balance: "300,000,000원 (2026년 08월 16일 인도와 동시에 지급)",
+      date: ""
+    },
+    layout: [
+      { type: "title", value: "부 동 산 매 매 계 약 서" },
+      { type: "paragraph", value: "매도인 {seller}(이하 '갑')와 매수인 {buyer}(이하 '을')는 당사자 간의 합의에 따라 아래 기재의 부동산을 매매계약 체결하고 성실히 이행할 것을 서약합니다.", style: { margin: "8px 0" } },
+      { type: "subtitle", value: "1. 부동산의 표시" },
+      {
+        type: "table",
+        rows: [
+          {
+            cells: [
+              { label: "소재지 주소", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{address}", colSpan: 10, key: "address" }
+            ]
+          },
+          {
+            cells: [
+              { label: "토지 면적", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "대지권 비율 84.9㎡", colSpan: 4, align: "center" },
+              { label: "건물 면적", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "전용면적 84.9㎡ (아파트)", colSpan: 4, align: "center" }
+            ]
+          }
+        ]
+      },
+      { type: "subtitle", value: "2. 매매 대금 및 변제 기일 조건" },
+      {
+        type: "table",
+        rows: [
+          {
+            cells: [
+              { label: "매매 대금", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{price}", colSpan: 10, key: "price", bold: true, align: "center" }
+            ]
+          },
+          {
+            cells: [
+              { label: "계 약 금", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{downPayment}", colSpan: 10, key: "downPayment" }
+            ]
+          },
+          {
+            cells: [
+              { label: "중 도 금", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{interimPayment}", colSpan: 10, key: "interimPayment" }
+            ]
+          },
+          {
+            cells: [
+              { label: "잔   금", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{balance}", colSpan: 10, key: "balance" }
+            ]
+          }
+        ]
+      },
+      { type: "subtitle", value: "3. 인도 및 권리 이전 특약 조항" },
+      { type: "paragraph", value: "1) '갑'은 잔금 지급과 동시에 '을'에게 소유권 이전등기 신청에 필요한 일체의 서류를 제공하고 대상 부동산을 사실상 인도합니다.\
+2) '갑'은 인도 전까지 국세/지방세 완납 및 부동산에 설정된 저당권, 가압류 등의 물권 제한사항을 완전히 소멸시켜 깨끗한 소유권을 양도합니다.\
+3) 계약 당사자의 일방이 채무불이행 시 상대방은 서면 독촉 후 계약을 해제하고 위약금으로 계약금 상당액을 청구할 수 있습니다.", style: { fontSize: "8.5pt", lineHeight: 1.5 } },
+      { type: "spacer" },
+      { type: "paragraph", value: "본 계약의 성립을 증명하기 위해 계약서 2부를 인쇄하여 각자 서명 날인 후 보관합니다." },
+      { type: "paragraph", value: "{date}", style: { fontSize: "9.5pt", fontWeight: "bold", textAlign: "center", margin: "4px 0" } },
+      { type: "spacer" },
+      { type: "sign-block", value: "매도인 (갑) : {seller} (인)          매수인 (을) : {buyer} (인)" }
+    ]
+  },
+  // 59. 부동산 임대차계약서 (서울중앙지법 표준 생활속계약서형)
+  {
+    id: "generic_gov_real_estate_rent",
+    title: "부동산 임대차계약서",
+    category: "계약",
+    desc: "서울중앙지방법원 및 법무부 임대차 표준 가이드를 반영하여 임대인과 임차인 간 보증금 및 차임(월세) 거래 조건, 계약 기간, 임대 조건 및 원상복구 의무를 기재하는 계약 서식입니다.",
+    popular: true,
+    tags: ["부동산임대차", "임대차계약서", "월세계약서", "전세계약서", "직거래", "원상복구", "법원서식"],
+    fields: [
+      { key: "landlord", label: "임대인 성명", type: "text", placeholder: "박임대" },
+      { key: "tenant", label: "임차인 성명", type: "text", placeholder: "최임차" },
+      { key: "address", label: "임대차 부동산 주소", type: "text", placeholder: "서울특별시 마포구 마포대로 14" },
+      { key: "deposit", label: "임대 보증금", type: "text", placeholder: "100,000,000원" },
+      { key: "monthlyRent", label: "월세 (차임)", type: "text", placeholder: "500,000원 (매월 25일 후불)" },
+      { key: "term", label: "임대차 계약 기간", type: "text", placeholder: "24개월 (2026.07.01 ~ 2028.06.30)" },
+      { key: "date", label: "계약 체결일", type: "text", placeholder: "2026년 06월 16일" }
+    ],
+    initialValues: {
+      landlord: "박임대",
+      tenant: "최임차",
+      address: "서울특별시 마포구 마포대로 14, 101동 202호 (도화동, 마포아파트)",
+      deposit: "100,000,000원",
+      monthlyRent: "500,000원 (매월 25일 을 명의로 송금)",
+      term: "2026년 07월 01일부터 2028년 06월 30일까지 (24개월)",
+      date: ""
+    },
+    layout: [
+      { type: "title", value: "부 동 산 임 대 차 계 약 서" },
+      { type: "paragraph", value: "임대인 {landlord}(이하 '갑')와 임차인 {tenant}(이하 '을')는 상호 신의 하에 아래의 부동산에 대하여 임대차 계약을 체결하고 준수할 것을 약정합니다.", style: { margin: "8px 0" } },
+      { type: "subtitle", value: "1. 부동산의 표시" },
+      {
+        type: "table",
+        rows: [
+          {
+            cells: [
+              { label: "임대차 목적지", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{address}", colSpan: 10, key: "address" }
+            ]
+          },
+          {
+            cells: [
+              { label: "임대 부문", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "건물 전체 (아파트)", colSpan: 4, align: "center" },
+              { label: "주요 용도", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "주거용 단독 주택", colSpan: 4, align: "center" }
+            ]
+          }
+        ]
+      },
+      { type: "subtitle", value: "2. 계약 및 지불 조건" },
+      {
+        type: "table",
+        rows: [
+          {
+            cells: [
+              { label: "임대 보증금", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{deposit}", colSpan: 10, key: "deposit", bold: true, align: "center" }
+            ]
+          },
+          {
+            cells: [
+              { label: "월세 (차임)", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{monthlyRent}", colSpan: 10, key: "monthlyRent" }
+            ]
+          },
+          {
+            cells: [
+              { label: "임대 기한", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{term}", colSpan: 10, key: "term" }
+            ]
+          }
+        ]
+      },
+      { type: "subtitle", value: "3. 선량한 관리의 의무 특약" },
+      { type: "paragraph", value: "1) '을'은 '갑'의 사전 동의 없이 해당 부동산의 용도를 변경하거나, 구조 개축 또는 전대할 수 없습니다.\
+2) 계약 기간 만료 시 '을'은 임대 목적물을 원상태로 온전히 회복하여 '갑'에게 명도 반환합니다.\
+3) '을'이 월세(차임) 연체액을 총 2회 분에 이르도록 밀리는 경우 '갑'은 본 임대차 계약을 최고 없이 해지할 수 있습니다.", style: { fontSize: "8.5pt", lineHeight: 1.5 } },
+      { type: "spacer" },
+      { type: "paragraph", value: "본 임대 계약 성립의 증명을 위해 계약서 2부를 인쇄하여 각자 서명 날인 후 보관합니다." },
+      { type: "paragraph", value: "{date}", style: { fontSize: "9.5pt", fontWeight: "bold", textAlign: "center", margin: "4px 0" } },
+      { type: "spacer" },
+      { type: "sign-block", value: "임대인 (갑) : {landlord} (인)          임차인 (을) : {tenant} (인)" }
+    ]
+  }
 ];
 
 export function getTemplateById(id: string): DocumentTemplate | undefined {
