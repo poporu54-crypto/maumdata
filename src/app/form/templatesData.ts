@@ -7446,6 +7446,349 @@ export const TEMPLATES: DocumentTemplate[] = [
       { type: "sign-block", value: "임대인 (갑) : {landlord} (인)          임차인 (을) : {tenant} (인)" }
     ]
   }
+,
+// 60. 금전소비대차계약서 (일반형 - 서울중앙지법 생활속계약서형)
+  {
+    id: "generic_gov_loan_general",
+    title: "금전소비대차계약서 (일반형)",
+    category: "계약",
+    desc: "서울중앙지방법원 '생활 속의 계약서' 표준 양식에 준거하여, 개인 간의 차용 대여 관계를 이자율 및 상환 시기를 조항으로 규정하는 표준 계약서입니다.",
+    popular: true,
+    tags: ["차용증", "금전대여", "차용계약서", "돈빌릴때", "채무증서", "법원서식"],
+    fields: [
+      { key: "lender", label: "채권자 (빌려준 사람) 성명", type: "text", placeholder: "김채권" },
+      { key: "borrower", label: "채무자 (빌린 사람) 성명", type: "text", placeholder: "이채무" },
+      { key: "amount", label: "차용 원금액", type: "text", placeholder: "10,000,000원" },
+      { key: "interest", label: "대여 연 이자율", type: "text", placeholder: "연 4.5%" },
+      { key: "dueDate", label: "원금 변제 기일", type: "text", placeholder: "2027년 06월 16일" },
+      { key: "payDay", label: "매월 이자 지급 기일", type: "text", placeholder: "매월 25일" },
+      { key: "date", label: "계약 체결일", type: "text", placeholder: "2026년 06월 16일" }
+    ],
+    initialValues: {
+      lender: "김채권",
+      borrower: "이채무",
+      amount: "10,000,000원",
+      interest: "연 4.5% (이자 제한법 한도 이내)",
+      dueDate: "2027년 06월 16일",
+      payDay: "매월 25일 지정 계좌로 송금",
+      date: ""
+    },
+    layout: [
+      { type: "title", value: "금 전 소 비 대 차 계 약 서" },
+      { type: "paragraph", value: "대여인(채권자) {lender}(이하 '갑')와 차용인(채무자) {borrower}(이하 '을')는 상호 합의 하에 다음과 같이 금전대차 계약을 체결하고 준수할 것을 약정합니다.", style: { margin: "8px 0" } },
+      { type: "subtitle", value: "1. 대여 금액 및 원금 상환" },
+      {
+        type: "table",
+        rows: [
+          {
+            cells: [
+              { label: "차용 원금", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{amount}", colSpan: 10, key: "amount", bold: true, align: "center", style: { fontSize: "11pt" } }
+            ]
+          },
+          {
+            cells: [
+              { label: "변제 기일", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{dueDate} (지정일 당일 은행 영업시간 종료 전 상환)", colSpan: 10, key: "dueDate" }
+            ]
+          }
+        ]
+      },
+      { type: "subtitle", value: "2. 이자율 및 매월 결제 조건" },
+      {
+        type: "table",
+        rows: [
+          {
+            cells: [
+              { label: "연 이자율", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{interest}", colSpan: 4, key: "interest", align: "center" },
+              { label: "이자 지급일", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{payDay}", colSpan: 4, key: "payDay", align: "center" }
+            ]
+          }
+        ]
+      },
+      { type: "subtitle", value: "3. 기한의 이익 상실 특약" },
+      { type: "paragraph", value: "1) '을'이 매월 부담하여야 할 이자의 지급을 2회 이상 지체하거나 채무불이행 시, '을'은 기한의 이익을 상실합니다.\n2) 기한의 이익 상실 시 '을'은 '갑'에게 차용 원금과 당시까지의 미지급 이자 및 잔액 원금에 대한 연 20%의 지연손해금을 즉시 완제하여야 합니다.\n3) 본 계약 분쟁에 관하여는 채권자의 주소지를 관할하는 법원을 제1심 법원으로 약정합니다.", style: { fontSize: "8.5pt", lineHeight: 1.5 } },
+      { type: "spacer" },
+      { type: "paragraph", value: "본 계약 사실을 명확히 증명하기 위해 계약서 2부를 인쇄 및 기명날인 후 보관합니다." },
+      { type: "paragraph", value: "{date}", style: { fontSize: "9.5pt", fontWeight: "bold", textAlign: "center", margin: "4px 0" } },
+      { type: "spacer" },
+      { type: "sign-block", value: "채권자 (갑) : {lender} (인)          채무자 (을) : {borrower} (인)" }
+    ]
+  },
+  // 61. 금전소비대차계약서 (연대보증인이 있는 경우 - 서울중앙지법 생활속계약서형)
+  {
+    id: "generic_gov_loan_guarantor",
+    title: "금전소비대차계약서 (연대보증형)",
+    category: "계약",
+    desc: "돈을 빌려줄 때 채무자의 변제 실패에 대비해 제3자인 연대보증인을 포함하여 계약을 체결하고 연대 채무 의무를 지게 하는 서울중앙지방법원 양식입니다.",
+    popular: true,
+    tags: ["연대보증", "보증인차용증", "금전대차", "채무보증", "보증계약서", "법원서식"],
+    fields: [
+      { key: "lender", label: "채권자 성명", type: "text", placeholder: "김채권" },
+      { key: "borrower", label: "채무자 성명", type: "text", placeholder: "이채무" },
+      { key: "guarantor", label: "연대보증인 성명", type: "text", placeholder: "박보증" },
+      { key: "amount", label: "차용 원금액", type: "text", placeholder: "20,000,000원" },
+      { key: "interest", label: "연 이자율", type: "text", placeholder: "연 5.0%" },
+      { key: "dueDate", label: "원금 상환일", type: "text", placeholder: "2027년 06월 16일" },
+      { key: "date", label: "계약 체결일", type: "text", placeholder: "2026년 06월 16일" }
+    ],
+    initialValues: {
+      lender: "김채권",
+      borrower: "이채무",
+      guarantor: "박보증",
+      amount: "20,000,000원",
+      interest: "연 5.0%",
+      dueDate: "2027년 06월 16일",
+      date: ""
+    },
+    layout: [
+      { type: "title", value: "금전소비대차계약서 (연대보증 포함)" },
+      { type: "paragraph", value: "채권자 {lender}(이하 '갑')와 채무자 {borrower}(이하 '을') 및 연대보증인 {guarantor}(이하 '병')는 당사자 합의에 의거하여 다음과 같이 채무 및 연대보증 계약을 체결합니다.", style: { margin: "8px 0" } },
+      { type: "subtitle", value: "1. 대차 거래 기본 내역" },
+      {
+        type: "table",
+        rows: [
+          {
+            cells: [
+              { label: "채권자 (갑)", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{lender}", colSpan: 4, key: "lender", align: "center" },
+              { label: "채무자 (을)", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{borrower}", colSpan: 4, key: "borrower", align: "center" }
+            ]
+          },
+          {
+            cells: [
+              { label: "차용 원금", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{amount}", colSpan: 4, key: "amount", bold: true, align: "center" },
+              { label: "변제 기일", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{dueDate}", colSpan: 4, key: "dueDate", align: "center" }
+            ]
+          },
+          {
+            cells: [
+              { label: "연 이자율", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{interest} (매월 지정일에 갑에게 지급)", colSpan: 10, key: "interest" }
+            ]
+          }
+        ]
+      },
+      { type: "subtitle", value: "2. 연대보증 합의 조항" },
+      {
+        type: "table",
+        rows: [
+          {
+            cells: [
+              { label: "연대보증인 (병)", colSpan: 3, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{guarantor}", colSpan: 9, key: "guarantor", bold: true, align: "center" }
+            ]
+          }
+        ]
+      },
+      { type: "paragraph", value: "※ 보증의 의무: 연대보증인 '병'은 채무자 '을'이 본 계약 조항을 불이행하여 '갑'에게 원리금 채무 상환을 지체하는 경우, 채무자와 연대하여 채권자에게 채무 전액을 변제할 책임을 부담함을 명확히 서약합니다.", style: { fontSize: "8.5pt", color: "#e11d48", fontWeight: "bold" } },
+      { type: "spacer" },
+      { type: "paragraph", value: "{date}", style: { fontSize: "9.5pt", fontWeight: "bold", textAlign: "center", margin: "4px 0" } },
+      { type: "spacer" },
+      { type: "sign-block", value: "채권자 : {lender} (인)      채무자 : {borrower} (인)      연대보증인 : {guarantor} (인)" }
+    ]
+  },
+  // 62. 금전소비대차계약서 (저당권 설정 - 차용인 부동산 - 서울중앙지법 생활속계약서형)
+  {
+    id: "generic_gov_loan_mortgage_borrower",
+    title: "금전소비대차계약서 (채무자부동산 담보설정)",
+    category: "계약",
+    desc: "돈을 빌려줄 때 채무자 소유의 부동산을 물적 담보로 제공받아 근저당권이나 저당권을 설정하고 채권의 안전을 담보하는 서울중앙지방법원 표준 계약 서식입니다.",
+    popular: false,
+    tags: ["담보차용증", "저당권설정", "근저당설정", "부동산담보", "금전소비대차", "법원서식"],
+    fields: [
+      { key: "lender", label: "채권자 성명", type: "text", placeholder: "김채권" },
+      { key: "borrower", label: "채무자 성명", type: "text", placeholder: "이채무" },
+      { key: "property", label: "담보설정 부동산 주소", type: "text", placeholder: "서울특별시 마포구 마포대로 14" },
+      { key: "amount", label: "차용 원금액", type: "text", placeholder: "50,000,000원" },
+      { key: "dueDate", label: "상환 변제 기일", type: "text", placeholder: "2027년 06월 16일" },
+      { key: "date", label: "계약 체결일", type: "text", placeholder: "2026년 06월 16일" }
+    ],
+    initialValues: {
+      lender: "김채권",
+      borrower: "이채무",
+      property: "서울특별시 마포구 마포대로 14, 101동 202호 (도화동, 마포아파트)",
+      amount: "50,000,000원",
+      dueDate: "2027년 06월 16일",
+      date: ""
+    },
+    layout: [
+      { type: "title", value: "금전소비대차계약서 (부동산 담보설정형)" },
+      { type: "paragraph", value: "채권자 {lender}(이하 '갑')와 채무자 {borrower}(이하 '을')는 '을' 소유 부동산의 저당권 설정을 조건으로 다음과 같이 금전대차 계약을 확정합니다.", style: { margin: "8px 0" } },
+      { type: "subtitle", value: "1. 대차 거래 정보" },
+      {
+        type: "table",
+        rows: [
+          {
+            cells: [
+              { label: "차용 원금액", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{amount}", colSpan: 4, key: "amount", bold: true, align: "center" },
+              { label: "원금 상환일", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{dueDate}", colSpan: 4, key: "dueDate", align: "center" }
+            ]
+          }
+        ]
+      },
+      { type: "subtitle", value: "2. 담보제공 부동산의 표시" },
+      {
+        type: "table",
+        rows: [
+          {
+            cells: [
+              { label: "담보부동산 주소", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{property}", colSpan: 10, key: "property" }
+            ]
+          }
+        ]
+      },
+      { type: "subtitle", value: "3. 담보 저당권 설정 특약" },
+      { type: "paragraph", value: "1) '을'은 본 차용 금전채무를 확실히 담보하기 위하여 위 소유 부동산에 채권자 '갑'을 저당권자로 하고 채권최고액(원금의 120%)으로 하는 저당권(또는 근저당권) 설정 등기 절차를 성실히 이행합니다.\n2) 저당권 설정 등기에 필요한 등록면허세 및 법무사 비용 등 수수료 비용 일체는 채무자 '을'의 전액 부담으로 약정합니다.", style: { fontSize: "8.5pt", lineHeight: 1.5 } },
+      { type: "spacer" },
+      { type: "paragraph", value: "{date}", style: { fontSize: "9.5pt", fontWeight: "bold", textAlign: "center", margin: "4px 0" } },
+      { type: "spacer" },
+      { type: "sign-block", value: "채권자 (갑) : {lender} (인)          채무자 (을) : {borrower} (인)" }
+    ]
+  },
+  // 63. 금전소비대차계약서 (저당권 설정 - 제3자 부동산 - 서울중앙지법 생활속계약서형)
+  {
+    id: "generic_gov_loan_mortgage_thirdparty",
+    title: "금전소비대차계약서 (제3자부동산 담보설정)",
+    category: "계약",
+    desc: "채무자 본인의 담보 능력이 부족하여 제3자인 물상보증인 소유의 부동산을 담보로 제공받아 저당권을 설정하고 작성하는 대법원/법원 표준 대차계약 서식입니다.",
+    popular: false,
+    tags: ["물상보증", "제3자담보", "저당권설정", "근저당설정", "금전대차", "법원서식"],
+    fields: [
+      { key: "lender", label: "채권자 성명", type: "text", placeholder: "김채권" },
+      { key: "borrower", label: "채무자 성명", type: "text", placeholder: "이채무" },
+      { key: "provider", label: "물상보증인 성명", type: "text", placeholder: "박보증" },
+      { key: "property", label: "제3자 담보 부동산 주소", type: "text", placeholder: "서울특별시 마포구 마포대로 14" },
+      { key: "amount", label: "차용 원금액", type: "text", placeholder: "50,000,000원" },
+      { key: "dueDate", label: "원금 상환일", type: "text", placeholder: "2027년 06월 16일" },
+      { key: "date", label: "계약 체결일", type: "text", placeholder: "2026년 06월 16일" }
+    ],
+    initialValues: {
+      lender: "김채권",
+      borrower: "이채무",
+      provider: "박보증 (물상보증인)",
+      property: "서울특별시 마포구 마포대로 14, 101동 202호 (도화동, 마포아파트)",
+      amount: "50,000,000원",
+      dueDate: "2027년 06월 16일",
+      date: ""
+    },
+    layout: [
+      { type: "title", value: "금전소비대차계약서 (제3자 담보설정형)" },
+      { type: "paragraph", value: "채권자 {lender}(이하 '갑'), 채무자 {borrower}(이하 '을'), 물상보증인 {provider}(이하 '병')는 '병' 소유 부동산의 담보 설정을 조건으로 계약을 확정합니다.", style: { margin: "8px 0" } },
+      { type: "subtitle", value: "1. 계약 기본 정보" },
+      {
+        type: "table",
+        rows: [
+          {
+            cells: [
+              { label: "채권자 (갑)", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{lender}", colSpan: 4, key: "lender", align: "center" },
+              { label: "채무자 (을)", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{borrower}", colSpan: 4, key: "borrower", align: "center" }
+            ]
+          },
+          {
+            cells: [
+              { label: "차용 원금액", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{amount}", colSpan: 4, key: "amount", bold: true, align: "center" },
+              { label: "원금 상환일", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{dueDate}", colSpan: 4, key: "dueDate", align: "center" }
+            ]
+          }
+        ]
+      },
+      { type: "subtitle", value: "2. 물상보증인 담보 부동산" },
+      {
+        type: "table",
+        rows: [
+          {
+            cells: [
+              { label: "물상보증인 (병)", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{provider}", colSpan: 4, key: "provider", bold: true, align: "center" },
+              { label: "채무자와의 관계", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "형제자매", colSpan: 4, align: "center" }
+            ]
+          },
+          {
+            cells: [
+              { label: "담보부동산 주소", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{property}", colSpan: 10, key: "property" }
+            ]
+          }
+        ]
+      },
+      { type: "subtitle", value: "3. 물상보증 및 저당권 설정 특약" },
+      { type: "paragraph", value: "1) '병'은 '을'이 '갑'에게 지는 원리금 채무를 담보하기 위하여 위 본인 소유 부동산에 채권자 '갑'을 저당권자로 하는 근저당권(원금의 120%)을 설정하는 데 무조건 동의하며 필요한 일체 서류를 교부합니다.\n2) 등기 수수료 등 제반 비용은 '을'과 '병'의 합의에 의해 해결합니다.", style: { fontSize: "8.5pt", lineHeight: 1.5 } },
+      { type: "spacer" },
+      { type: "paragraph", value: "{date}", style: { fontSize: "9.5pt", fontWeight: "bold", textAlign: "center", margin: "4px 0" } },
+      { type: "spacer" },
+      { type: "sign-block", value: "채권자 : {lender} (인)      채무자 : {borrower} (인)      물상보증인 : {provider} (인)" }
+    ]
+  },
+  // 64. 영수증 (일반형 - 서울중앙지법 생활속계약서형)
+  {
+    id: "generic_gov_receipt_general",
+    title: "영수증",
+    category: "행정",
+    desc: "개인 간 거래에서 계약금, 합의금, 변제 대금 등을 현금 또는 대체 지급하고 수취하였음을 공적으로 증명하는 서울중앙지방법원 양식입니다.",
+    popular: true,
+    tags: ["영수증", "수령증", "합의금영수증", "대금영수", "수금확인서", "법원서식"],
+    fields: [
+      { key: "recipient", label: "영수인 (돈을 받은 사람) 성명", type: "text", placeholder: "김수령" },
+      { key: "payer", label: "지급인 (돈을 준 사람) 성명", type: "text", placeholder: "이수취" },
+      { key: "amount", label: "영수 총 금액", type: "text", placeholder: "1,500,000원" },
+      { key: "purpose", label: "영수 사유 및 대상 거래", type: "textarea", placeholder: "수령 사유 및 거래 내역 기재" },
+      { key: "date", label: "영수 작성 일자", type: "text", placeholder: "2026년 06월 16일" }
+    ],
+    initialValues: {
+      recipient: "김수령",
+      payer: "이수취",
+      amount: "1,500,000원",
+      purpose: "2026년 6월 1일 공덕오거리 자동차 추돌 사고에 관한 민·형사상 손해배상 합의금 일체 정히 수령함.",
+      date: ""
+    },
+    layout: [
+      { type: "title", value: "영 수 증" },
+      { type: "subtitle", value: "1. 수령 내역 정보" },
+      {
+        type: "table",
+        rows: [
+          {
+            cells: [
+              { label: "영수 금액", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "금 {amount}", colSpan: 10, key: "amount", bold: true, align: "center", style: { fontSize: "12pt" } }
+            ]
+          },
+          {
+            cells: [
+              { label: "지급인 (준 사람)", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{payer}", colSpan: 10, key: "payer", align: "center", bold: true }
+            ]
+          },
+          {
+            cells: [
+              { label: "영수 사유", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{purpose}", colSpan: 10, key: "purpose", style: { height: "70px", verticalAlign: "top", whiteSpace: "pre-wrap" } }
+            ]
+          }
+        ]
+      },
+      { type: "spacer" },
+      { type: "paragraph", value: "상기 금액을 정히 영수하고 후일의 증빙을 위해 본 영수증에 서명 날인하여 지급인에게 교부합니다.", style: { fontSize: "9.5pt", textAlign: "center", margin: "15px 0" } },
+      { type: "spacer" },
+      { type: "paragraph", value: "{date}", style: { fontSize: "9.5pt", fontWeight: "bold", textAlign: "center", margin: "4px 0" } },
+      { type: "spacer" },
+      { type: "sign-block", value: "영수자 (받은 사람) : {recipient} (인)" }
+    ]
+  }
 ];
 
 export function getTemplateById(id: string): DocumentTemplate | undefined {
