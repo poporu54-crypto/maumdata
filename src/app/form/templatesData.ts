@@ -26,7 +26,7 @@ export interface LayoutRow {
 }
 
 export interface LayoutElement {
-  type: "title" | "subtitle" | "paragraph" | "table" | "sign-block" | "approval-block" | "spacer";
+  type: "title" | "subtitle" | "paragraph" | "table" | "sign-block" | "approval-block" | "spacer" | "page-break";
   value?: string; // 텍스트 또는 {name} 바인딩
   style?: any;
   rows?: LayoutRow[];
@@ -8391,6 +8391,133 @@ export const TEMPLATES: DocumentTemplate[] = [
       { type: "paragraph", value: "{date}", style: { fontSize: "9.5pt", fontWeight: "bold", textAlign: "center", margin: "4px 0" } },
       { type: "spacer" },
       { type: "sign-block", value: "위임인 : {principal} (인)          서울중앙지방법원 귀중" }
+    ]
+  }
+,
+// 90. 고용노동부 노무제공자 공통 표준계약서 (3페이지 다중 조판 표준형)
+  {
+    id: "generic_gov_labor_standard_contract",
+    title: "노무제공자 공통 표준계약서",
+    category: "계약",
+    desc: "고용노동부에서 제정한 표준 지침에 따라 노무제공자와 사업주 간 공정한 거래 관계를 확립하고 분쟁을 예방하기 위한 3페이지 분량의 공식 다중 페이지 표준계약서 서식입니다.",
+    popular: true,
+    tags: ["표준계약서", "노무제공자", "근로계약서", "프리랜서", "위탁계약서", "고용노동부", "다중페이지"],
+    fields: [
+      { key: "company", label: "사업주 상호/법인명", type: "text", placeholder: "주식회사 마음테크" },
+      { key: "ceo", label: "사업주 대표자", type: "text", placeholder: "이대표" },
+      { key: "worker", label: "노무제공자 성명", type: "text", placeholder: "홍길동" },
+      { key: "workerId", label: "노무제공자 생년월일", type: "text", placeholder: "1990년 01월 01일" },
+      { key: "workDesc", label: "제공할 노무의 내용", type: "textarea", placeholder: "웹 애플리케이션 프론트엔드 퍼블리싱 및 UI 조판 레이아웃 엔지니어링 수행" },
+      { key: "contractPeriod", label: "계약 기간", type: "text", placeholder: "2026년 06월 16일 ~ 2026년 12월 15일" },
+      { key: "salaryRate", label: "수수료 및 보수 요율", type: "text", placeholder: "월 고정 4,500,000원 (원천세 3.3% 공제전)" },
+      { key: "salaryDate", label: "보수 지급일", type: "text", placeholder: "매월 25일 (지정 계좌 송금)" },
+      { key: "date", label: "계약 체결일", type: "text", placeholder: "2026년 06월 16일" }
+    ],
+    initialValues: {
+      company: "주식회사 마음테크",
+      ceo: "이대표",
+      worker: "홍길동",
+      workerId: "1990년 05월 15일",
+      workDesc: "1. 마음데이터 무료 법률 문서 에디터 화면 UI 컴포넌트 고도화 및 CSS 정비\n2. 12열 반응형 그리드 렌더링 검증 및 다중 페이지 인쇄 모듈 구현 및 QA",
+      contractPeriod: "2026년 06월 16일부터 2026년 12월 15일까지 (총 6개월간)",
+      salaryRate: "월 총액 금 4,500,000원 정 (VAT 별도, 소득세 3.3% 공제대상)",
+      salaryDate: "매월 25일 (지급 기일이 공휴일인 경우 그 전일 지급)",
+      date: "2026년 06월 16일"
+    },
+    layout: [
+      // PAGE 1
+      { type: "paragraph", value: "■ 고용노동부 고시 제2023-75호 ('23. 12. 26. 제정)에 따른 표준 권고안 적용", style: { fontSize: "7.5pt", color: "#666666" } },
+      { type: "title", value: "노무제공자 공통 표준계약서" },
+      { type: "paragraph", value: "사업주(이하 '회사'라 한다)와 노무제공자(이하 '제공자'라 한다)는 대등한 입장에서 서로의 권리와 의무를 존중하며 성실하게 계약 의무를 이행하기로 합의하고 다음과 같이 계약을 체결합니다.", style: { textIndent: "10px", lineHeight: "1.5", fontSize: "9.5pt" } },
+      { type: "subtitle", value: "1. 계약 당사자의 인적사항" },
+      {
+        type: "table",
+        rows: [
+          {
+            cells: [
+              { label: "사 업 주\n(회사)", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "상호: {company}\n대표자: {ceo}", colSpan: 4, key: "company" },
+              { label: "노무제공자\n(제공자)", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "성명: {worker}\n생년월일: {workerId}", colSpan: 4, key: "worker" }
+            ]
+          }
+        ]
+      },
+      { type: "subtitle", value: "제 1 조 (목적 및 노무의 범위)" },
+      { type: "paragraph", value: "본 계약은 '제공자'가 '회사'에게 제공하는 구체적인 용역 및 노무의 범위를 정하고 이에 따른 합당한 보수 조건을 확정하는 것을 목적으로 합니다." },
+      {
+        type: "table",
+        rows: [
+          {
+            cells: [
+              { label: "제공할 노무\n상세 내역", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{workDesc}", colSpan: 10, key: "workDesc", style: { height: "100px", verticalAlign: "top", whiteSpace: "pre-wrap" } }
+            ]
+          }
+        ]
+      },
+      { type: "subtitle", value: "제 2 조 (계약의 기간)" },
+      { type: "paragraph", value: "양 당사자 간 합의한 본 노무 제공 계약의 효력 기간은 아래와 같으며, 계약 연장은 기간 만료 1개월 전까지 서면 합의로써 갱신합니다." },
+      {
+        type: "table",
+        rows: [
+          {
+            cells: [
+              { label: "노무 계약 기간", colSpan: 3, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{contractPeriod}", colSpan: 9, key: "contractPeriod", bold: true, align: "center" }
+            ]
+          }
+        ]
+      },
+      
+      // PAGE BREAK (2페이지로 분할)
+      { type: "page-break" },
+      
+      // PAGE 2
+      { type: "title", value: "노무제공자 공통 표준계약서 (제2면)", style: { fontSize: "14pt", letterSpacing: "2px", borderBottom: "1px solid #ddd", paddingBottom: "8px" } },
+      { type: "subtitle", value: "제 3 조 (보수 및 지급 방법)" },
+      { type: "paragraph", value: "① '회사'는 '제공자'가 완성한 노무 결과물 또는 용역 수행 성과에 대해 아래와 같이 합의된 수수료 또는 금액을 지급합니다." },
+      {
+        type: "table",
+        rows: [
+          {
+            cells: [
+              { label: "보수 요율 기준", colSpan: 3, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{salaryRate}", colSpan: 9, key: "salaryRate" }
+            ]
+          },
+          {
+            cells: [
+              { label: "매월 지급 기일", colSpan: 3, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{salaryDate}", colSpan: 9, key: "salaryDate", bold: true }
+            ]
+          }
+        ]
+      },
+      { type: "paragraph", value: "② '회사'는 보수 지급 시 원천세 공제 내역을 투명하게 공개하며, 지급 명세서를 이메일 또는 모바일 메신저를 통해 성실히 교부하여야 합니다.", style: { textIndent: "10px" } },
+      { type: "subtitle", value: "제 4 조 (의무 및 권리의 보호)" },
+      { type: "paragraph", value: "① '제공자'는 신의성실의 원칙에 입각하여 성실하게 담당 업무를 완수하며, 업무 수행 도중 알게 된 '회사'의 핵심 기밀 사항 및 고객 개인정보를 외부로 유출하여서는 아니 됩니다." },
+      { type: "paragraph", value: "② '회사'는 '제공자'에게 계약서에 명시되지 않은 부당한 업무 지시나 개인적 용무 수행을 강요할 수 없으며, 노무제공 과정에서 종사자의 인격권을 훼손하는 행위를 금지합니다." },
+      { type: "subtitle", value: "제 5 조 (불공정 거래 및 불이익 행위의 금지)" },
+      { type: "paragraph", value: "① '회사'는 계약기간 중 정당한 이유 없이 보수 단가를 일방적으로 삭감하거나 합의되지 않은 항목으로 임의 공제하여 지급할 수 없습니다." },
+      { type: "paragraph", value: "② '회사'는 우월적 지위를 이용하여 '제공자'의 거래처 다변화를 제약하거나 타사와의 계약 체결을 이유로 일방적인 불이익을 줄 수 없습니다.", style: { textIndent: "10px" } },
+      
+      // PAGE BREAK (3페이지로 분할)
+      { type: "page-break" },
+      
+      // PAGE 3
+      { type: "title", value: "노무제공자 공통 표준계약서 (제3면)", style: { fontSize: "14pt", letterSpacing: "2px", borderBottom: "1px solid #ddd", paddingBottom: "8px" } },
+      { type: "subtitle", value: "제 6 조 (계약의 해지 및 예고)" },
+      { type: "paragraph", value: "① 본 계약을 해지하고자 하는 경우, 귀책사유가 없는 당사자는 상대방에게 최소 30일 이전에 해지 사유를 명시하여 서면으로 통보하여야 합니다." },
+      { type: "paragraph", value: "② 전항의 통보를 하지 아니하고 일방적으로 해지함으로써 발생한 상대방의 실질적 영업상 손해에 대하여는 귀책사유 있는 당사자가 이를 배상할 책임을 집니다." },
+      { type: "subtitle", value: "제 7 조 (분쟁의 해결 및 관할)" },
+      { type: "paragraph", value: "본 계약과 관련하여 노사 당사자 간 분쟁이 발생하는 경우 우선 우호적 합의로 해결하기 위해 노력하며, 합의에 도달하지 못할 경우 계약서상의 관할법원은 '회사'의 본사 소재지 관할 법원으로 지정하기로 합의합니다." },
+      { type: "spacer" },
+      { type: "paragraph", value: "본 계약의 성립을 증명하고 성실히 이행하기 위해 계약서 2부를 작성하여 양 당사자가 기명날인한 후 각각 1부씩 보관합니다.", style: { textAlign: "center", fontSize: "9.5pt", fontWeight: "bold" } },
+      { type: "spacer" },
+      { type: "paragraph", value: "{date}", style: { fontSize: "10pt", fontWeight: "bold", textAlign: "center" } },
+      { type: "spacer", style: { height: "20px" } },
+      { type: "sign-block", value: "사업주 (갑) : {company} 대표 {ceo} (인)              노무제공자 (을) : {worker} (인)" }
     ]
   }
 ];

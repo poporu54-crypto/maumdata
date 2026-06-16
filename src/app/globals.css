@@ -826,6 +826,12 @@ input::placeholder {
     overflow: hidden !important; /* 내부 픽셀 오차로 인해 2페이지 생기는 버그 완전 차단 */
   }
 
+  /* 다중 페이지용 A4 용지 분할 속성 */
+  .a4-paper.multipage-page {
+    page-break-after: always !important;
+    break-after: page !important;
+  }
+
   /* 템플릿 루트 컨테이너도 블록화 */
   .a4-paper > div {
     display: block !important;

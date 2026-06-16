@@ -33,6 +33,9 @@ const DynamicDocumentRenderer: React.FC<DynamicDocumentRendererProps> = ({
   return (
     <div style={{ display: "flex", flexDirection: "column", flexGrow: 1, outline: "none" }}>
       {layout.map((element, elIdx) => {
+        if (element.type === "page-break") {
+          return null;
+        }
         if (element.type === "title") {
           return (
             <h1 key={elIdx} style={{ textAlign: "center", fontSize: "20pt", fontWeight: 800, margin: "10px 0 15px 0", letterSpacing: "6px", ...element.style }}>
@@ -2645,16 +2648,71 @@ export default function DocumentEditor({ templateId, initialTemplate }: { templa
               </button>
             </div>
 
-            {/* 인쇄 및 캡처 전용 A4 도화지 */}
-            <div className="a4-paper" id="a4-print-area">
-              {renderApprovalTable()}
-              {renderCommonHeader()}
-              {renderA4Content()}
-              
-              {/* 공통 페이지 번호 및 Designed with AI 표시 */}
-              <div className="common-page-footer" style={{ position: "absolute", bottom: "8px", left: "0", right: "0", textAlign: "center", fontSize: "7.5pt", color: "#8b95a1", fontFamily: "sans-serif", letterSpacing: "0.5px", pointerEvents: "none" }}>
-                [Designed with MaumData - Page 1/1]
-              </div>
+            {/* 인쇄 및 캡처 전용 A4 도화지 (다중 페이지 지원) */}
+            <div id="a4-print-area" style={{ display: "flex", flexDirection: "column", gap: "20px", width: "100%", alignItems: "center" }}>
+              {(() => {
+                const hasPageBreak = template.layout?.some((el: any) => el.type === "page-break");
+                
+                const splitLayoutIntoPages = (elements: any[]) => {
+                  const pages: any[][] = [];
+                  let currentPage: any[] = [];
+                  for (const el of elements) {
+                    if (el.type === "page-break") {
+                      if (currentPage.length > 0) {
+                        pages.push(currentPage);
+                        currentPage = [];
+                      }
+                    } else {
+                      currentPage.push(el);
+                    }
+                  }
+                  if (currentPage.length > 0) {
+                    pages.push(currentPage);
+                  }
+                  return pages.length > 0 ? pages : [[]];
+                };
+
+                if (hasPageBreak && template.layout) {
+                  const pages = splitLayoutIntoPages(template.layout);
+                  return pages.map((pageLayout, pageIdx) => (
+                    <div 
+                      className="a4-paper multipage-page" 
+                      key={pageIdx} 
+                      style={{ 
+                        position: "relative", 
+                        marginBottom: pageIdx === pages.length - 1 ? "0" : "20px" 
+                      }}
+                    >
+                      {pageIdx === 0 && renderApprovalTable()}
+                      {pageIdx === 0 && renderCommonHeader()}
+                      
+                      <DynamicDocumentRenderer
+                        layout={pageLayout}
+                        data={data}
+                        handleFieldInputDirect={handleFieldInputDirect}
+                        handleFieldChange={handleFieldChange}
+                        handleArrayFieldChange={handleArrayFieldChange}
+                      />
+                      
+                      <div className="common-page-footer" style={{ position: "absolute", bottom: "8px", left: "0", right: "0", textAlign: "center", fontSize: "7.5pt", color: "#8b95a1", fontFamily: "sans-serif", letterSpacing: "0.5px", pointerEvents: "none" }}>
+                        [Designed with MaumData - Page {pageIdx + 1}/{pages.length}]
+                      </div>
+                    </div>
+                  ));
+                } else {
+                  return (
+                    <div className="a4-paper singlepage-page" style={{ position: "relative" }}>
+                      {renderApprovalTable()}
+                      {renderCommonHeader()}
+                      {renderA4Content()}
+                      
+                      <div className="common-page-footer" style={{ position: "absolute", bottom: "8px", left: "0", right: "0", textAlign: "center", fontSize: "7.5pt", color: "#8b95a1", fontFamily: "sans-serif", letterSpacing: "0.5px", pointerEvents: "none" }}>
+                        [Designed with MaumData - Page 1/1]
+                      </div>
+                    </div>
+                  );
+                }
+              })()}
             </div>
 
             {/* 우측 미리보기 하단 광고 지면 */}
