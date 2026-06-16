@@ -79,7 +79,7 @@ export default async function TagPage(props: TagPageProps) {
         </Link>
         
         <h1 className="hero-title" style={{ marginTop: "8px", marginBottom: "12px" }}>
-          🏛️ &apos;{decodedTag}&apos; 관련 추천 서식
+          <span className="emoji">🏛️</span> &apos;{decodedTag}&apos; 관련 추천 서식
         </h1>
         <p className="hero-subtitle" style={{ maxWidth: "650px", margin: "0 auto", fontSize: "1.05rem" }}>
           {decodedTag} 키워드와 관련된 표준 행정, 민원, 법률 및 노무 서식들입니다. 필요한 서식을 클릭하여 실시간으로 내용을 기입해보세요.

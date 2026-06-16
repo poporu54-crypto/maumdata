@@ -388,6 +388,14 @@ input, button, select {
   overflow-wrap: break-word;
 }
 
+.emoji {
+  display: inline-block;
+  background: none !important;
+  -webkit-background-clip: initial !important;
+  background-clip: initial !important;
+  -webkit-text-fill-color: initial !important;
+}
+
 .hero-subtitle {
   color: var(--color-text-sub);
   font-size: 1.2rem;
