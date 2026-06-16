@@ -21,12 +21,18 @@ const THEME_TOKENS: Record<string, {
   borderWidth: string;
   borderStyle: string;
   headerBg: string;
+  headerTextColor: string;
   subtitleBorderLeft: string;
   titleLetterSpacing: string;
   padding: string;
   fontSizeMultiplier: number;
   textColor: string;
   titleColor: string;
+  showTableVerticalLines: boolean;
+  borderStyleDashed?: boolean;
+  commonHeaderBorderBottom: string;
+  signBlockBg?: string;
+  titleBorderBottom?: string;
 }> = {
   classic: {
     fontFamily: "'Noto Sans KR', sans-serif",
@@ -34,51 +40,66 @@ const THEME_TOKENS: Record<string, {
     borderWidth: "1.5px",
     borderStyle: "solid",
     headerBg: "#f9fafb",
+    headerTextColor: "#000000",
     subtitleBorderLeft: "4px solid #000000",
     titleLetterSpacing: "6px",
     padding: "6px 8px",
     fontSizeMultiplier: 1.0,
     textColor: "#000000",
     titleColor: "#000000",
+    showTableVerticalLines: true,
+    commonHeaderBorderBottom: "1.5px solid #000000",
   },
   modern: {
     fontFamily: "var(--font-pretendard), 'Pretendard', sans-serif",
-    borderColor: "#cbd5e1", // 세련된 연회색
+    borderColor: "#e2e8f0", // 아주 부드럽고 옅은 회색
     borderWidth: "1px",
     borderStyle: "solid",
-    headerBg: "#f8f9fa",
-    subtitleBorderLeft: "4px solid #475569",
-    titleLetterSpacing: "3px",
-    padding: "10px 12px",
+    headerBg: "#f8fafc",
+    headerTextColor: "#0f172a",
+    subtitleBorderLeft: "4px solid #3b82f6", // 트렌디한 파랑색
+    titleLetterSpacing: "4px",
+    padding: "13px 15px", // 넓은 여백 적용으로 시각적 호흡 부여
     fontSizeMultiplier: 0.98,
     textColor: "#334155",
-    titleColor: "#1e293b",
+    titleColor: "#0f172a",
+    showTableVerticalLines: false, // 테이블의 좌우 세로선을 제거하는 혁신 적용
+    commonHeaderBorderBottom: "none", // 브랜드 헤더 선 제거로 미니멀 연출
+    titleBorderBottom: "3px solid #3b82f6", // 제목 아래 짧고 시크한 포인트 라인
   },
   navy: {
     fontFamily: "var(--font-pretendard), 'Pretendard', sans-serif",
-    borderColor: "#94a3b8", // 미드톤 블루그레이
+    borderColor: "#cbd5e1",
     borderWidth: "1.2px",
     borderStyle: "solid",
-    headerBg: "#f0f4f8",
+    headerBg: "#1e3a8a", // 진한 네이비 배경
+    headerTextColor: "#ffffff", // 흰색 폰트로 가독성 확보
     subtitleBorderLeft: "4px solid #1e3a8a",
     titleLetterSpacing: "4px",
-    padding: "8px 10px",
+    padding: "9px 11px",
     fontSizeMultiplier: 1.0,
-    textColor: "#0f172a",
+    textColor: "#1e293b",
     titleColor: "#1e3a8a",
+    showTableVerticalLines: true,
+    commonHeaderBorderBottom: "2px solid #1e3a8a",
+    signBlockBg: "#f8fafc", // 서명란에 옅은 그레이블루 카드 스타일 씌우기
   },
   serif: {
     fontFamily: "'KoPub Batang', 'Batang', 'Georgia', serif",
     borderColor: "#475569",
     borderWidth: "1px",
-    borderStyle: "double",
+    borderStyle: "solid",
     headerBg: "#fafaf9",
-    subtitleBorderLeft: "3px double #1c1917",
-    titleLetterSpacing: "8px",
+    headerTextColor: "#1c1917",
+    subtitleBorderLeft: "1px solid #1c1917",
+    titleLetterSpacing: "10px", // 우아한 자간 배치
     padding: "7px 9px",
     fontSizeMultiplier: 1.02,
-    textColor: "#1c1917",
+    textColor: "#292524",
     titleColor: "#1c1917",
+    showTableVerticalLines: true,
+    borderStyleDashed: true, // 점선 표 연출
+    commonHeaderBorderBottom: "1px double #1c1917",
   }
 };
 
@@ -109,15 +130,20 @@ const DynamicDocumentRenderer: React.FC<DynamicDocumentRendererProps> = ({
 
         if (element.type === "title") {
           return (
-            <h1 key={elIdx} style={{ textAlign: "center", fontSize: "20pt", fontWeight: 800, margin: "10px 0 15px 0", letterSpacing: tokens.titleLetterSpacing, color: tokens.titleColor, ...element.style }}>
-              {bindData(element.value)}
-            </h1>
+            <div key={elIdx} style={{ display: "flex", flexDirection: "column", alignItems: "center", margin: "10px 0 15px 0" }}>
+              <h1 style={{ textAlign: "center", fontSize: "20pt", fontWeight: 800, margin: 0, letterSpacing: tokens.titleLetterSpacing, color: tokens.titleColor, ...element.style }}>
+                {bindData(element.value)}
+              </h1>
+              {tokens.titleBorderBottom && (
+                <div style={{ width: "45px", height: "3px", backgroundColor: "#3b82f6", marginTop: "12px", borderRadius: "1.5px" }} />
+              )}
+            </div>
           );
         }
 
         if (element.type === "subtitle") {
           return (
-            <h3 key={elIdx} style={{ borderLeft: tokens.subtitleBorderLeft, paddingLeft: "8px", fontWeight: "bold", fontSize: "10.5pt", margin: "10px 0 6px 0", textAlign: "left", color: tokens.titleColor, ...element.style }}>
+            <h3 key={elIdx} style={{ borderLeft: tokens.subtitleBorderLeft, paddingLeft: "8px", fontWeight: "bold", fontSize: "10.5pt", margin: "12px 0 6px 0", textAlign: "left", color: tokens.titleColor, ...element.style }}>
               {bindData(element.value)}
             </h3>
           );
@@ -125,7 +151,7 @@ const DynamicDocumentRenderer: React.FC<DynamicDocumentRendererProps> = ({
 
         if (element.type === "paragraph") {
           return (
-            <p key={elIdx} style={{ fontSize: "10pt", lineHeight: 1.5, margin: "5px 0", textAlign: "justify", wordBreak: "keep-all", ...element.style }}>
+            <p key={elIdx} style={{ fontSize: "10pt", lineHeight: 1.6, margin: "6px 0", textAlign: "justify", wordBreak: "keep-all", ...element.style }}>
               {bindData(element.value)}
             </p>
           );
@@ -136,6 +162,7 @@ const DynamicDocumentRenderer: React.FC<DynamicDocumentRendererProps> = ({
         }
 
         if (element.type === "table") {
+          const borderStyle = tokens.borderStyleDashed ? "dashed" : tokens.borderStyle;
           return (
             <table key={elIdx} style={{ width: "100%", borderCollapse: "collapse", border: `${tokens.borderWidth} ${tokens.borderStyle} ${tokens.borderColor}`, marginBottom: "8px", ...element.style }}>
               <tbody>
@@ -155,13 +182,18 @@ const DynamicDocumentRenderer: React.FC<DynamicDocumentRendererProps> = ({
                           };
 
                           const cellContent = bindItemData(cell.label);
+                          const isHeaderCell = cell.bg === "#f9fafb" || cell.bg === "var(--bg-color-app)";
                           
                           const cellStyle: React.CSSProperties = {
-                            border: `1px solid ${tokens.borderColor}`,
+                            borderTop: `1px ${borderStyle} ${tokens.borderColor}`,
+                            borderBottom: `1px ${borderStyle} ${tokens.borderColor}`,
+                            borderLeft: tokens.showTableVerticalLines ? `1px ${borderStyle} ${tokens.borderColor}` : "none",
+                            borderRight: tokens.showTableVerticalLines ? `1px ${borderStyle} ${tokens.borderColor}` : "none",
                             padding: tokens.padding,
                             textAlign: cell.align || "left",
-                            fontWeight: cell.bold ? "bold" : "normal",
-                            backgroundColor: cell.bg ? (cell.bg === "#f9fafb" ? tokens.headerBg : cell.bg) : "transparent",
+                            fontWeight: (cell.bold || isHeaderCell) ? "bold" : "normal",
+                            backgroundColor: isHeaderCell ? tokens.headerBg : (cell.bg || "transparent"),
+                            color: (isHeaderCell && tokens.headerBg === "#1e3a8a") ? "#ffffff" : "inherit",
                             whiteSpace: "pre-wrap",
                             outline: isEditable ? "none" : "inherit",
                             fontSize: "9.5pt",
@@ -206,13 +238,18 @@ const DynamicDocumentRenderer: React.FC<DynamicDocumentRendererProps> = ({
                       {row.cells.map((cell: any, cIdx: number) => {
                         const isEditable = !!cell.key;
                         const cellContent = bindData(cell.label);
+                        const isHeaderCell = cell.bg === "#f9fafb" || cell.bg === "var(--bg-color-app)";
                         
                         const cellStyle: React.CSSProperties = {
-                          border: `1px solid ${tokens.borderColor}`,
+                          borderTop: `1px ${borderStyle} ${tokens.borderColor}`,
+                          borderBottom: `1px ${borderStyle} ${tokens.borderColor}`,
+                          borderLeft: tokens.showTableVerticalLines ? `1px ${borderStyle} ${tokens.borderColor}` : "none",
+                          borderRight: tokens.showTableVerticalLines ? `1px ${borderStyle} ${tokens.borderColor}` : "none",
                           padding: tokens.padding,
                           textAlign: cell.align || "left",
-                          fontWeight: cell.bold ? "bold" : "normal",
-                          backgroundColor: cell.bg ? (cell.bg === "#f9fafb" ? tokens.headerBg : cell.bg) : "transparent",
+                          fontWeight: (cell.bold || isHeaderCell) ? "bold" : "normal",
+                          backgroundColor: isHeaderCell ? tokens.headerBg : (cell.bg || "transparent"),
+                          color: (isHeaderCell && tokens.headerBg === "#1e3a8a") ? "#ffffff" : "inherit",
                           whiteSpace: "pre-wrap",
                           outline: isEditable ? "none" : "inherit",
                           fontSize: "9.5pt",
@@ -256,8 +293,27 @@ const DynamicDocumentRenderer: React.FC<DynamicDocumentRendererProps> = ({
         }
 
         if (element.type === "sign-block") {
+          const isCard = !!tokens.signBlockBg;
           return (
-            <div key={elIdx} className="generic-footer-block" style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "100%", gap: "8px", marginTop: "15px", borderTop: `1.5px solid ${tokens.borderColor}`, paddingTop: "10px", ...element.style }}>
+            <div 
+              key={elIdx} 
+              className="generic-footer-block" 
+              style={{ 
+                display: "flex", 
+                flexDirection: "column", 
+                alignItems: "center", 
+                width: "100%", 
+                gap: "8px", 
+                marginTop: "20px", 
+                borderTop: isCard ? "none" : `1.5px solid ${tokens.borderColor}`, 
+                paddingTop: isCard ? "14px" : "10px", 
+                backgroundColor: tokens.signBlockBg || "transparent",
+                borderRadius: isCard ? "8px" : "0",
+                border: isCard ? `1px solid ${tokens.borderColor}` : "none",
+                padding: isCard ? "14px 10px" : "inherit",
+                ...element.style 
+              }}
+            >
               <div style={{ fontSize: "11pt", fontWeight: "bold" }}>
                 {bindData(element.value)}
               </div>
@@ -595,15 +651,16 @@ export default function DocumentEditor({ templateId, initialTemplate }: { templa
   const renderApprovalTable = () => {
     if (!data || !data.useApproval) return null;
     const tokens = THEME_TOKENS[theme] || THEME_TOKENS.classic;
+    const isNavyHeader = tokens.headerBg === "#1e3a8a";
     return (
       <div style={{ display: "flex", justifyContent: "flex-end", width: "100%", marginBottom: "10px" }} className="approval-section">
         <table className="approval-table" style={{ width: "150px", borderCollapse: "collapse", fontSize: "7.5pt", border: `1px solid ${tokens.borderColor}` }}>
           <tbody>
             <tr>
-              <td className="approval-label" rowSpan={2} style={{ width: "20px", border: `1px solid ${tokens.borderColor}`, textAlign: "center", backgroundColor: tokens.headerBg, verticalAlign: "middle", lineHeight: 1.2, padding: "2px" }}>결<br/>재</td>
-              <td className="approval-header" style={{ border: `1px solid ${tokens.borderColor}`, textAlign: "center", backgroundColor: tokens.headerBg, padding: "2px 0", width: "43px" }}>담당</td>
-              <td className="approval-header" style={{ border: `1px solid ${tokens.borderColor}`, textAlign: "center", backgroundColor: tokens.headerBg, padding: "2px 0", width: "43px" }}>검토</td>
-              <td className="approval-header" style={{ border: `1px solid ${tokens.borderColor}`, textAlign: "center", backgroundColor: tokens.headerBg, padding: "2px 0", width: "43px" }}>승인</td>
+              <td className="approval-label" rowSpan={2} style={{ width: "20px", border: `1px solid ${tokens.borderColor}`, textAlign: "center", backgroundColor: tokens.headerBg, color: isNavyHeader ? "#ffffff" : "inherit", fontWeight: "bold", verticalAlign: "middle", lineHeight: 1.2, padding: "2px" }}>결<br/>재</td>
+              <td className="approval-header" style={{ border: `1px solid ${tokens.borderColor}`, textAlign: "center", backgroundColor: tokens.headerBg, color: isNavyHeader ? "#ffffff" : "inherit", fontWeight: "bold", padding: "2px 0", width: "43px" }}>담당</td>
+              <td className="approval-header" style={{ border: `1px solid ${tokens.borderColor}`, textAlign: "center", backgroundColor: tokens.headerBg, color: isNavyHeader ? "#ffffff" : "inherit", fontWeight: "bold", padding: "2px 0", width: "43px" }}>검토</td>
+              <td className="approval-header" style={{ border: `1px solid ${tokens.borderColor}`, textAlign: "center", backgroundColor: tokens.headerBg, color: isNavyHeader ? "#ffffff" : "inherit", fontWeight: "bold", padding: "2px 0", width: "43px" }}>승인</td>
             </tr>
             <tr>
               <td className="approval-cell" style={{ border: `1px solid ${tokens.borderColor}`, height: "35px" }}></td>
@@ -619,8 +676,9 @@ export default function DocumentEditor({ templateId, initialTemplate }: { templa
   // 공통 브랜드 헤더 렌더러 (실시간 로고 업로드 및 텍스트 편집 지원)
   const renderCommonHeader = () => {
     const tokens = THEME_TOKENS[theme] || THEME_TOKENS.classic;
+    const hasHeaderBorder = tokens.commonHeaderBorderBottom !== "none";
     return (
-      <div className="common-brand-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", width: "100%", paddingBottom: "6px", borderBottom: `1.5px solid ${tokens.borderColor}`, marginBottom: "14px", fontFamily: tokens.fontFamily }}>
+      <div className="common-brand-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", width: "100%", paddingBottom: "8px", borderBottom: hasHeaderBorder ? tokens.commonHeaderBorderBottom : "none", marginBottom: "14px", fontFamily: tokens.fontFamily }}>
         <div style={{ position: "relative", display: "inline-block", cursor: "pointer" }}>
           {logoImage ? (
             <div style={{ position: "relative", display: "inline-block" }}>
