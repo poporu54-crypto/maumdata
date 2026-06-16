@@ -12,16 +12,86 @@ interface DynamicDocumentRendererProps {
   handleFieldInputDirect: (key: string, value: string) => void;
   handleFieldChange: (key: string, value: string) => void;
   handleArrayFieldChange?: (arrayKey: string, index: number, fieldKey: string, value: string) => void;
+  theme: string;
 }
+
+const THEME_TOKENS: Record<string, {
+  fontFamily: string;
+  borderColor: string;
+  borderWidth: string;
+  borderStyle: string;
+  headerBg: string;
+  subtitleBorderLeft: string;
+  titleLetterSpacing: string;
+  padding: string;
+  fontSizeMultiplier: number;
+  textColor: string;
+  titleColor: string;
+}> = {
+  classic: {
+    fontFamily: "'Noto Sans KR', sans-serif",
+    borderColor: "#000000",
+    borderWidth: "1.5px",
+    borderStyle: "solid",
+    headerBg: "#f9fafb",
+    subtitleBorderLeft: "4px solid #000000",
+    titleLetterSpacing: "6px",
+    padding: "6px 8px",
+    fontSizeMultiplier: 1.0,
+    textColor: "#000000",
+    titleColor: "#000000",
+  },
+  modern: {
+    fontFamily: "var(--font-pretendard), 'Pretendard', sans-serif",
+    borderColor: "#cbd5e1", // 세련된 연회색
+    borderWidth: "1px",
+    borderStyle: "solid",
+    headerBg: "#f8f9fa",
+    subtitleBorderLeft: "4px solid #475569",
+    titleLetterSpacing: "3px",
+    padding: "10px 12px",
+    fontSizeMultiplier: 0.98,
+    textColor: "#334155",
+    titleColor: "#1e293b",
+  },
+  navy: {
+    fontFamily: "var(--font-pretendard), 'Pretendard', sans-serif",
+    borderColor: "#94a3b8", // 미드톤 블루그레이
+    borderWidth: "1.2px",
+    borderStyle: "solid",
+    headerBg: "#f0f4f8",
+    subtitleBorderLeft: "4px solid #1e3a8a",
+    titleLetterSpacing: "4px",
+    padding: "8px 10px",
+    fontSizeMultiplier: 1.0,
+    textColor: "#0f172a",
+    titleColor: "#1e3a8a",
+  },
+  serif: {
+    fontFamily: "'KoPub Batang', 'Batang', 'Georgia', serif",
+    borderColor: "#475569",
+    borderWidth: "1px",
+    borderStyle: "double",
+    headerBg: "#fafaf9",
+    subtitleBorderLeft: "3px double #1c1917",
+    titleLetterSpacing: "8px",
+    padding: "7px 9px",
+    fontSizeMultiplier: 1.02,
+    textColor: "#1c1917",
+    titleColor: "#1c1917",
+  }
+};
 
 const DynamicDocumentRenderer: React.FC<DynamicDocumentRendererProps> = ({
   layout,
   data,
   handleFieldInputDirect,
   handleFieldChange,
-  handleArrayFieldChange
+  handleArrayFieldChange,
+  theme
 }) => {
   if (!layout) return null;
+  const tokens = THEME_TOKENS[theme] || THEME_TOKENS.classic;
 
   const bindData = (text?: string) => {
     if (!text) return "";
@@ -31,14 +101,15 @@ const DynamicDocumentRenderer: React.FC<DynamicDocumentRendererProps> = ({
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", flexGrow: 1, outline: "none" }}>
+    <div style={{ display: "flex", flexDirection: "column", flexGrow: 1, outline: "none", fontFamily: tokens.fontFamily, color: tokens.textColor }}>
       {layout.map((element, elIdx) => {
         if (element.type === "page-break") {
           return null;
         }
+
         if (element.type === "title") {
           return (
-            <h1 key={elIdx} style={{ textAlign: "center", fontSize: "20pt", fontWeight: 800, margin: "10px 0 15px 0", letterSpacing: "6px", ...element.style }}>
+            <h1 key={elIdx} style={{ textAlign: "center", fontSize: "20pt", fontWeight: 800, margin: "10px 0 15px 0", letterSpacing: tokens.titleLetterSpacing, color: tokens.titleColor, ...element.style }}>
               {bindData(element.value)}
             </h1>
           );
@@ -46,7 +117,7 @@ const DynamicDocumentRenderer: React.FC<DynamicDocumentRendererProps> = ({
 
         if (element.type === "subtitle") {
           return (
-            <h3 key={elIdx} style={{ borderLeft: "4px solid #000000", paddingLeft: "8px", fontWeight: "bold", fontSize: "10.5pt", margin: "10px 0 6px 0", textAlign: "left", ...element.style }}>
+            <h3 key={elIdx} style={{ borderLeft: tokens.subtitleBorderLeft, paddingLeft: "8px", fontWeight: "bold", fontSize: "10.5pt", margin: "10px 0 6px 0", textAlign: "left", color: tokens.titleColor, ...element.style }}>
               {bindData(element.value)}
             </h3>
           );
@@ -66,7 +137,7 @@ const DynamicDocumentRenderer: React.FC<DynamicDocumentRendererProps> = ({
 
         if (element.type === "table") {
           return (
-            <table key={elIdx} style={{ width: "100%", borderCollapse: "collapse", border: "2px solid #000000", marginBottom: "8px", ...element.style }}>
+            <table key={elIdx} style={{ width: "100%", borderCollapse: "collapse", border: `${tokens.borderWidth} ${tokens.borderStyle} ${tokens.borderColor}`, marginBottom: "8px", ...element.style }}>
               <tbody>
                 {element.rows?.flatMap((row: any, rIdx: number) => {
                   if (row.repeatKey) {
@@ -86,11 +157,11 @@ const DynamicDocumentRenderer: React.FC<DynamicDocumentRendererProps> = ({
                           const cellContent = bindItemData(cell.label);
                           
                           const cellStyle: React.CSSProperties = {
-                            border: "1px solid #000000",
-                            padding: "6px 8px",
+                            border: `1px solid ${tokens.borderColor}`,
+                            padding: tokens.padding,
                             textAlign: cell.align || "left",
                             fontWeight: cell.bold ? "bold" : "normal",
-                            backgroundColor: cell.bg || "transparent",
+                            backgroundColor: cell.bg ? (cell.bg === "#f9fafb" ? tokens.headerBg : cell.bg) : "transparent",
                             whiteSpace: "pre-wrap",
                             outline: isEditable ? "none" : "inherit",
                             fontSize: "9.5pt",
@@ -137,11 +208,11 @@ const DynamicDocumentRenderer: React.FC<DynamicDocumentRendererProps> = ({
                         const cellContent = bindData(cell.label);
                         
                         const cellStyle: React.CSSProperties = {
-                          border: "1px solid #000000",
-                          padding: "6px 8px",
+                          border: `1px solid ${tokens.borderColor}`,
+                          padding: tokens.padding,
                           textAlign: cell.align || "left",
                           fontWeight: cell.bold ? "bold" : "normal",
-                          backgroundColor: cell.bg || "transparent",
+                          backgroundColor: cell.bg ? (cell.bg === "#f9fafb" ? tokens.headerBg : cell.bg) : "transparent",
                           whiteSpace: "pre-wrap",
                           outline: isEditable ? "none" : "inherit",
                           fontSize: "9.5pt",
@@ -186,7 +257,7 @@ const DynamicDocumentRenderer: React.FC<DynamicDocumentRendererProps> = ({
 
         if (element.type === "sign-block") {
           return (
-            <div key={elIdx} className="generic-footer-block" style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "100%", gap: "8px", marginTop: "15px", borderTop: "1.5px solid #000000", paddingTop: "10px", ...element.style }}>
+            <div key={elIdx} className="generic-footer-block" style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "100%", gap: "8px", marginTop: "15px", borderTop: `1.5px solid ${tokens.borderColor}`, paddingTop: "10px", ...element.style }}>
               <div style={{ fontSize: "11pt", fontWeight: "bold" }}>
                 {bindData(element.value)}
               </div>
@@ -207,6 +278,9 @@ export default function DocumentEditor({ templateId, initialTemplate }: { templa
   const [template, setTemplate] = useState<any>(initialTemplate);
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(!initialTemplate);
+
+  // 프리미엄 디자인 테마 상태 추가
+  const [theme, setTheme] = useState<"classic" | "modern" | "navy" | "serif">("classic");
 
   // 로고 및 회사 정보 상태 관리 (실시간 편집 및 업로드 지원)
   const [logoImage, setLogoImage] = useState<string | null>(null);
@@ -520,20 +594,21 @@ export default function DocumentEditor({ templateId, initialTemplate }: { templa
   // 결재란 실시간 Preview 렌더러
   const renderApprovalTable = () => {
     if (!data || !data.useApproval) return null;
+    const tokens = THEME_TOKENS[theme] || THEME_TOKENS.classic;
     return (
       <div style={{ display: "flex", justifyContent: "flex-end", width: "100%", marginBottom: "10px" }} className="approval-section">
-        <table className="approval-table" style={{ width: "150px", borderCollapse: "collapse", fontSize: "7.5pt", border: "1px solid #000000" }}>
+        <table className="approval-table" style={{ width: "150px", borderCollapse: "collapse", fontSize: "7.5pt", border: `1px solid ${tokens.borderColor}` }}>
           <tbody>
             <tr>
-              <td className="approval-label" rowSpan={2} style={{ width: "20px", border: "1px solid #000000", textAlign: "center", backgroundColor: "#f9fafb", verticalAlign: "middle", lineHeight: 1.2, padding: "2px" }}>결<br/>재</td>
-              <td className="approval-header" style={{ border: "1px solid #000000", textAlign: "center", backgroundColor: "#f9fafb", padding: "2px 0", width: "43px" }}>담당</td>
-              <td className="approval-header" style={{ border: "1px solid #000000", textAlign: "center", backgroundColor: "#f9fafb", padding: "2px 0", width: "43px" }}>검토</td>
-              <td className="approval-header" style={{ border: "1px solid #000000", textAlign: "center", backgroundColor: "#f9fafb", padding: "2px 0", width: "43px" }}>승인</td>
+              <td className="approval-label" rowSpan={2} style={{ width: "20px", border: `1px solid ${tokens.borderColor}`, textAlign: "center", backgroundColor: tokens.headerBg, verticalAlign: "middle", lineHeight: 1.2, padding: "2px" }}>결<br/>재</td>
+              <td className="approval-header" style={{ border: `1px solid ${tokens.borderColor}`, textAlign: "center", backgroundColor: tokens.headerBg, padding: "2px 0", width: "43px" }}>담당</td>
+              <td className="approval-header" style={{ border: `1px solid ${tokens.borderColor}`, textAlign: "center", backgroundColor: tokens.headerBg, padding: "2px 0", width: "43px" }}>검토</td>
+              <td className="approval-header" style={{ border: `1px solid ${tokens.borderColor}`, textAlign: "center", backgroundColor: tokens.headerBg, padding: "2px 0", width: "43px" }}>승인</td>
             </tr>
             <tr>
-              <td className="approval-cell" style={{ border: "1px solid #000000", height: "35px" }}></td>
-              <td className="approval-cell" style={{ border: "1px solid #000000", height: "35px" }}></td>
-              <td className="approval-cell" style={{ border: "1px solid #000000", height: "35px" }}></td>
+              <td className="approval-cell" style={{ border: `1px solid ${tokens.borderColor}`, height: "35px" }}></td>
+              <td className="approval-cell" style={{ border: `1px solid ${tokens.borderColor}`, height: "35px" }}></td>
+              <td className="approval-cell" style={{ border: `1px solid ${tokens.borderColor}`, height: "35px" }}></td>
             </tr>
           </tbody>
         </table>
@@ -543,8 +618,9 @@ export default function DocumentEditor({ templateId, initialTemplate }: { templa
 
   // 공통 브랜드 헤더 렌더러 (실시간 로고 업로드 및 텍스트 편집 지원)
   const renderCommonHeader = () => {
+    const tokens = THEME_TOKENS[theme] || THEME_TOKENS.classic;
     return (
-      <div className="common-brand-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", width: "100%", paddingBottom: "6px", borderBottom: "1.5px solid #000000", marginBottom: "14px", fontFamily: "sans-serif" }}>
+      <div className="common-brand-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", width: "100%", paddingBottom: "6px", borderBottom: `1.5px solid ${tokens.borderColor}`, marginBottom: "14px", fontFamily: tokens.fontFamily }}>
         <div style={{ position: "relative", display: "inline-block", cursor: "pointer" }}>
           {logoImage ? (
             <div style={{ position: "relative", display: "inline-block" }}>
@@ -564,7 +640,7 @@ export default function DocumentEditor({ templateId, initialTemplate }: { templa
                 contentEditable 
                 suppressContentEditableWarning
                 onBlur={(e) => setLogoText(e.currentTarget.innerText)}
-                style={{ border: "1px dashed #000000", padding: "4px 8px", fontSize: "7.5pt", fontWeight: "bold", letterSpacing: "1px", textTransform: "uppercase", outline: "none", cursor: "text" }}
+                style={{ border: `1px dashed ${tokens.borderColor}`, padding: "4px 8px", fontSize: "7.5pt", fontWeight: "bold", letterSpacing: "1px", textTransform: "uppercase", outline: "none", cursor: "text" }}
                 title="클릭하여 로고 텍스트 변경"
               >
                 {logoText}
@@ -606,6 +682,7 @@ export default function DocumentEditor({ templateId, initialTemplate }: { templa
           handleFieldInputDirect={handleFieldInputDirect}
           handleFieldChange={handleFieldChange}
           handleArrayFieldChange={handleArrayFieldChange}
+          theme={theme}
         />
       );
     }
@@ -2635,6 +2712,55 @@ export default function DocumentEditor({ templateId, initialTemplate }: { templa
         <div className="editor-preview-panel">
           <div className="a4-container">
             
+            {/* 디자인 테마 선택기 */}
+            <div className="theme-selector-card no-print" style={{ 
+              width: "100%", 
+              maxWidth: "700px", 
+              backgroundColor: "var(--bg-color-card)", 
+              border: "1px solid var(--color-border)", 
+              borderRadius: "8px", 
+              padding: "12px", 
+              marginBottom: "16px",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.05)"
+            }}>
+              <div style={{ fontSize: "0.85rem", fontWeight: "bold", color: "var(--color-text-main)", marginBottom: "8px", display: "flex", alignItems: "center", gap: "4px" }}>
+                🎨 문서 디자인 테마 선택
+              </div>
+              <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                {[
+                  { id: "classic", label: "🏛️ Classic", desc: "정통 흑백" },
+                  { id: "modern", label: "⚡ Modern", desc: "현대적 미니멀" },
+                  { id: "navy", label: "💼 Business Navy", desc: "신뢰감있는 네이비" },
+                  { id: "serif", label: "✒️ Premium Serif", desc: "격식있는 명조" }
+                ].map((t) => {
+                  const isActive = theme === t.id;
+                  return (
+                    <button
+                      key={t.id}
+                      onClick={() => setTheme(t.id as any)}
+                      style={{
+                        flex: 1,
+                        minWidth: "120px",
+                        padding: "8px 10px",
+                        borderRadius: "6px",
+                        border: isActive ? "2px solid #1e3a8a" : "1px solid var(--color-border)",
+                        backgroundColor: isActive ? "var(--bg-color-card)" : "var(--bg-color-app)",
+                        color: isActive ? "#1e3a8a" : "var(--color-text-sub)",
+                        fontWeight: isActive ? "bold" : "normal",
+                        cursor: "pointer",
+                        transition: "all 0.2s ease",
+                        textAlign: "center",
+                        fontSize: "0.8rem"
+                      }}
+                    >
+                      <div style={{ fontWeight: "bold" }}>{t.label}</div>
+                      <div style={{ fontSize: "0.7rem", opacity: 0.8, marginTop: "2px" }}>{t.desc}</div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* 상단 액션 컨트롤러 */}
             <div className="a4-actions-bar" style={{ display: "flex", gap: "8px", width: "100%", maxWidth: "700px", marginBottom: "16px" }}>
               <button onClick={handlePrint} className="btn-primary" style={{ flex: 1.5, padding: "10px" }}>
@@ -2692,6 +2818,7 @@ export default function DocumentEditor({ templateId, initialTemplate }: { templa
                         handleFieldInputDirect={handleFieldInputDirect}
                         handleFieldChange={handleFieldChange}
                         handleArrayFieldChange={handleArrayFieldChange}
+                        theme={theme}
                       />
                       
                       <div className="common-page-footer" style={{ position: "absolute", bottom: "8px", left: "0", right: "0", textAlign: "center", fontSize: "7.5pt", color: "#8b95a1", fontFamily: "sans-serif", letterSpacing: "0.5px", pointerEvents: "none" }}>
