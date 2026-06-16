@@ -63,18 +63,13 @@ async function run() {
   console.log(`[DART Map] 캐시에서 총 ${allCorpCodes.size}개의 기업 고유번호를 확보했습니다.`);
 
   // 2. 이미 DB에 등록된 dart_code 목록 조회 (중복 수집 방지)
-  const client = await pool.connect();
-  client.on('error', (err) => {
-    console.error('[DB Client Error] Unexpected error:', err);
-  });
   let existingCodes = new Set();
   try {
-    const res = await client.query("SELECT dart_code FROM businesses WHERE dart_code IS NOT NULL AND dart_code != ''");
+    const res = await pool.query("SELECT dart_code FROM businesses WHERE dart_code IS NOT NULL AND dart_code != ''");
     res.rows.forEach(r => existingCodes.add(r.dart_code));
     console.log(`[DB Scan] 이미 수집된 기업 수: ${existingCodes.size}개`);
   } catch (err) {
     console.error("DB 조회 중 오류 발생:", err);
-    client.release();
     return;
   }
 
@@ -89,7 +84,6 @@ async function run() {
 
   if (targets.length === 0) {
     console.log("수집할 신규 대상이 없습니다. 배치를 종료합니다.");
-    client.release();
     return;
   }
 
@@ -140,7 +134,7 @@ async function run() {
       }
 
       // businesses 테이블에 수집된 정보를 upsert
-      await client.query(`
+      await pool.query(`
         INSERT INTO businesses (
           b_no, b_nm, p_nm, start_dt, b_adr, b_sector, b_type, 
           corp_no, dart_code, description, credit_rating, industry_rank, 
@@ -188,7 +182,7 @@ async function run() {
     }
   }
 
-  client.release();
+
   console.log(`\n=== [Crawling Summary] 금일 배치 완료 ===`);
   console.log(`신규 등록 성공: ${successCount}건`);
   console.log(`사업자번호 없음(건너뜀): ${invalidCount}건`);
