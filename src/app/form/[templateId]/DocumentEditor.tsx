@@ -13,6 +13,12 @@ interface DynamicDocumentRendererProps {
   handleFieldChange: (key: string, value: string) => void;
   handleArrayFieldChange?: (arrayKey: string, index: number, fieldKey: string, value: string) => void;
   theme: string;
+  spacing: {
+    padding: string;
+    lineHeight: number;
+    spacerHeight: number;
+    fontDelta: number;
+  };
 }
 
 const THEME_TOKENS: Record<string, {
@@ -197,19 +203,22 @@ const calculateSpacing = (data: any, theme: string) => {
   return { padding, lineHeight, spacerHeight, fontDelta };
 };
 
+const parsePaddingToPx = (paddingStr: string): number => {
+  const match = paddingStr.match(/(\d+)px/);
+  return match ? parseInt(match[1], 10) : 8;
+};
+
 const DynamicDocumentRenderer: React.FC<DynamicDocumentRendererProps> = ({
   layout,
   data,
   handleFieldInputDirect,
   handleFieldChange,
   handleArrayFieldChange,
-  theme
+  theme,
+  spacing
 }) => {
   if (!layout) return null;
   const tokens = THEME_TOKENS[theme] || THEME_TOKENS.classic;
-  
-  // 콘텐츠 길이에 따른 동적 스페이싱 실시간 연동
-  const spacing = calculateSpacing(data, theme);
 
   const bindData = (text?: string) => {
     if (!text) return "";
@@ -472,6 +481,34 @@ export default function DocumentEditor({ templateId, initialTemplate }: { templa
 
   // 프리미엄 디자인 테마 상태 추가
   const [theme, setTheme] = useState<"classic" | "modern" | "navy" | "serif">("classic");
+
+  // 사용자 조판 미세 조정 상태 추가
+  const [isManualSpacing, setIsManualSpacing] = useState<boolean>(false);
+  const [userFontDelta, setUserFontDelta] = useState<number>(0);
+  const [userLineHeight, setUserLineHeight] = useState<number>(1.5);
+  const [userPadding, setUserPadding] = useState<number>(8);
+  const [userSpacerHeight, setUserSpacerHeight] = useState<number>(12);
+
+  // AI 추천 값을 수동 조판 상태에 동기화 (isManualSpacing이 false일 때만)
+  useEffect(() => {
+    if (!isManualSpacing && data) {
+      const autoSpacing = calculateSpacing(data, theme);
+      setUserFontDelta(autoSpacing.fontDelta);
+      setUserLineHeight(autoSpacing.lineHeight);
+      setUserSpacerHeight(autoSpacing.spacerHeight);
+      
+      const px = parsePaddingToPx(autoSpacing.padding);
+      setUserPadding(px);
+    }
+  }, [data, theme, isManualSpacing]);
+
+  // 최종 사용될 스페이싱 계산값
+  const currentSpacing = isManualSpacing ? {
+    padding: `${userPadding}px ${Math.round(userPadding * 1.3)}px`,
+    lineHeight: userLineHeight,
+    spacerHeight: userSpacerHeight,
+    fontDelta: userFontDelta
+  } : calculateSpacing(data, theme);
 
   // 로고 및 회사 정보 상태 관리 (실시간 편집 및 업로드 지원)
   const [logoImage, setLogoImage] = useState<string | null>(null);
@@ -876,6 +913,7 @@ export default function DocumentEditor({ templateId, initialTemplate }: { templa
           handleFieldChange={handleFieldChange}
           handleArrayFieldChange={handleArrayFieldChange}
           theme={theme}
+          spacing={currentSpacing}
         />
       );
     }
@@ -2954,6 +2992,119 @@ export default function DocumentEditor({ templateId, initialTemplate }: { templa
               </div>
             </div>
 
+            {/* 레이아웃 미세 조정기 (Micro-Adjuster) */}
+            <div className="layout-adjuster-card no-print" style={{ 
+              width: "100%", 
+              maxWidth: "700px", 
+              backgroundColor: "var(--bg-color-card)", 
+              border: "1px solid var(--color-border)", 
+              borderRadius: "8px", 
+              padding: "16px", 
+              marginBottom: "16px",
+              boxShadow: "0 1px 3px rgba(0,0,0,0.05)"
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                <div style={{ fontSize: "0.85rem", fontWeight: "bold", color: "var(--color-text-main)", display: "flex", alignItems: "center", gap: "6px" }}>
+                  🎛️ 레이아웃 미세 조정 (1페이지 조판 튜닝)
+                  {isManualSpacing ? (
+                    <span style={{ fontSize: "0.7rem", backgroundColor: "#f3f4f6", color: "#374151", padding: "2px 6px", borderRadius: "4px", fontWeight: "normal" }}>
+                      수동 조정 모드
+                    </span>
+                  ) : (
+                    <span style={{ fontSize: "0.7rem", backgroundColor: "rgba(59, 130, 246, 0.1)", color: "#2563eb", padding: "2px 6px", borderRadius: "4px", fontWeight: "normal" }}>
+                      🤖 AI 자동 조판 중
+                    </span>
+                  )}
+                </div>
+                <button
+                  onClick={() => setIsManualSpacing(false)}
+                  disabled={!isManualSpacing}
+                  style={{
+                    fontSize: "0.75rem",
+                    padding: "4px 8px",
+                    borderRadius: "4px",
+                    border: "1px solid var(--color-border)",
+                    backgroundColor: isManualSpacing ? "#f8fafc" : "#f1f5f9",
+                    color: isManualSpacing ? "#0f172a" : "#94a3b8",
+                    cursor: isManualSpacing ? "pointer" : "not-allowed",
+                    fontWeight: "bold",
+                    transition: "all 0.2s ease"
+                  }}
+                  title="문서 내용 길이에 알맞게 AI가 최적 간격을 다시 계산합니다."
+                >
+                  🔄 AI 자동 조판 리셋
+                </button>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                {/* 1. 글꼴 크기 */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
+                  <span style={{ fontSize: "0.8rem", color: "var(--color-text-sub)", width: "110px", display: "flex", alignItems: "center", gap: "4px" }}>
+                    🔤 글꼴 크기
+                  </span>
+                  <input
+                    type="range"
+                    min="-3"
+                    max="3"
+                    step="0.5"
+                    value={userFontDelta}
+                    onChange={(e) => {
+                      setUserFontDelta(parseFloat(e.target.value));
+                      setIsManualSpacing(true);
+                    }}
+                    style={{ flex: 1, cursor: "pointer", height: "4px", borderRadius: "2px" }}
+                  />
+                  <span style={{ fontSize: "0.8rem", fontWeight: "bold", width: "90px", textAlign: "right", color: "var(--color-text-main)" }}>
+                    {10 + currentSpacing.fontDelta}pt ({userFontDelta > 0 ? `+${userFontDelta}` : userFontDelta}pt)
+                  </span>
+                </div>
+
+                {/* 2. 줄간격 */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
+                  <span style={{ fontSize: "0.8rem", color: "var(--color-text-sub)", width: "110px", display: "flex", alignItems: "center", gap: "4px" }}>
+                    ↔️ 줄간격
+                  </span>
+                  <input
+                    type="range"
+                    min="1.1"
+                    max="2.2"
+                    step="0.05"
+                    value={userLineHeight}
+                    onChange={(e) => {
+                      setUserLineHeight(parseFloat(e.target.value));
+                      setIsManualSpacing(true);
+                    }}
+                    style={{ flex: 1, cursor: "pointer", height: "4px", borderRadius: "2px" }}
+                  />
+                  <span style={{ fontSize: "0.8rem", fontWeight: "bold", width: "90px", textAlign: "right", color: "var(--color-text-main)" }}>
+                    {currentSpacing.lineHeight.toFixed(2)}배
+                  </span>
+                </div>
+
+                {/* 3. 표 셀 여백 (패딩) */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
+                  <span style={{ fontSize: "0.8rem", color: "var(--color-text-sub)", width: "110px", display: "flex", alignItems: "center", gap: "4px" }}>
+                    ↕️ 표 셀 여백
+                  </span>
+                  <input
+                    type="range"
+                    min="2"
+                    max="30"
+                    step="1"
+                    value={userPadding}
+                    onChange={(e) => {
+                      setUserPadding(parseInt(e.target.value, 10));
+                      setIsManualSpacing(true);
+                    }}
+                    style={{ flex: 1, cursor: "pointer", height: "4px", borderRadius: "2px" }}
+                  />
+                  <span style={{ fontSize: "0.8rem", fontWeight: "bold", width: "90px", textAlign: "right", color: "var(--color-text-main)" }}>
+                    {userPadding}px
+                  </span>
+                </div>
+              </div>
+            </div>
+
             {/* 상단 액션 컨트롤러 */}
             <div className="a4-actions-bar" style={{ display: "flex", gap: "8px", width: "100%", maxWidth: "700px", marginBottom: "16px" }}>
               <button onClick={handlePrint} className="btn-primary" style={{ flex: 1.5, padding: "10px" }}>
@@ -3012,6 +3163,7 @@ export default function DocumentEditor({ templateId, initialTemplate }: { templa
                         handleFieldChange={handleFieldChange}
                         handleArrayFieldChange={handleArrayFieldChange}
                         theme={theme}
+                        spacing={currentSpacing}
                       />
                       
                       <div className="common-page-footer" style={{ position: "absolute", bottom: "8px", left: "0", right: "0", textAlign: "center", fontSize: "7.5pt", color: "#8b95a1", fontFamily: "sans-serif", letterSpacing: "0.5px", pointerEvents: "none" }}>
