@@ -12,7 +12,7 @@ export const metadata: Metadata = {
     default: "마음데이터(MaumData)",
   },
   icons: {
-    icon: "/icon.png?v=2",
+    icon: "/favicon-v3.png",
   },
   description: "국세청 실시간 사업자 상태 조회 및 트랜드, 기업분석, 업종분석, 통계, 무료제공 사업자 정보조회 사이트.",
   keywords: ["사업자등록번호 조회", "실시간 사업자 상태", "계속사업자", "휴업", "폐업", "기업 정보 검색", "민간 데이터 포털"],
