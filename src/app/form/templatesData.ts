@@ -7789,6 +7789,610 @@ export const TEMPLATES: DocumentTemplate[] = [
       { type: "sign-block", value: "영수자 (받은 사람) : {recipient} (인)" }
     ]
   }
+,
+// 60. 거래명세서 (표준 비즈니스 거래형)
+  {
+    id: "generic_gov_transaction_statement",
+    title: "거래명세서",
+    category: "재무",
+    desc: "공급자와 공급받는 자 간의 물품 거래 내역(품목, 규격, 수량, 단가, 공급가액, 세액)을 대칭 그리드로 정밀하게 기록하는 표준 거래명세서 서식입니다.",
+    popular: true,
+    tags: ["거래명세서", "거래내역서", "납품서", "영수증", "세무", "재무"],
+    fields: [
+      { key: "supplier", label: "공급자 상호/성명", type: "text", placeholder: "주식회사 마음테크" },
+      { key: "receiver", label: "공급받는자 상호", type: "text", placeholder: "대박상사 귀하" },
+      { key: "date", label: "거래 일자", type: "text", placeholder: "2026년 06월 16일" },
+      { key: "totalPrice", label: "합계 금액 (VAT 포함)", type: "text", placeholder: "1,100,000원" },
+      { key: "item1", label: "품목 및 규격 1", type: "text", placeholder: "AI 조판 라이선스 API" },
+      { key: "qty1", label: "수량 1", type: "text", placeholder: "1" },
+      { key: "price1", label: "단가 1", type: "text", placeholder: "1,000,000원" }
+    ],
+    initialValues: {
+      supplier: "주식회사 마음테크 (대표이사 이대표)",
+      receiver: "대박상사 귀하",
+      date: "2026년 06월 16일",
+      totalPrice: "1,100,000원 (부가가치세 포함)",
+      item1: "AI 디지털 문서 조판 라이선스 연동 API 모듈",
+      qty1: "1",
+      price1: "1,000,000원"
+    },
+    layout: [
+      { type: "title", value: "거 래 명 세 서" },
+      {
+        type: "table",
+        rows: [
+          {
+            cells: [
+              { label: "거래 일자", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{date}", colSpan: 4, key: "date", align: "center" },
+              { label: "합계 금액", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{totalPrice}", colSpan: 4, key: "totalPrice", bold: true, align: "center" }
+            ]
+          }
+        ]
+      },
+      { type: "subtitle", value: "1. 거래 당사자 정보" },
+      {
+        type: "table",
+        rows: [
+          {
+            cells: [
+              { label: "공 급 자 (매도인)", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{supplier}", colSpan: 4, key: "supplier" },
+              { label: "공급받는자 (매수인)", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{receiver}", colSpan: 4, key: "receiver" }
+            ]
+          }
+        ]
+      },
+      { type: "subtitle", value: "2. 거래 상세 품목 내역" },
+      {
+        type: "table",
+        rows: [
+          {
+            cells: [
+              { label: "No", colSpan: 1, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "품 목 / 규 격", colSpan: 5, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "수 량", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "단 가", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "금 액 (VAT 별도)", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" }
+            ]
+          },
+          {
+            cells: [
+              { label: "1", colSpan: 1, align: "center" },
+              { label: "{item1}", colSpan: 5, key: "item1" },
+              { label: "{qty1}", colSpan: 2, key: "qty1", align: "center" },
+              { label: "{price1}", colSpan: 2, key: "price1", align: "right" },
+              { label: "1,000,000원", colSpan: 2, align: "right" }
+            ]
+          },
+          {
+            cells: [
+              { label: "2", colSpan: 1, align: "center" },
+              { label: "-", colSpan: 5 },
+              { label: "-", colSpan: 2, align: "center" },
+              { label: "-", colSpan: 2, align: "right" },
+              { label: "0원", colSpan: 2, align: "right" }
+            ]
+          },
+          {
+            cells: [
+              { label: "합 계", colSpan: 6, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "총 1건", colSpan: 2, align: "center" },
+              { label: "소계", colSpan: 2, align: "right", bg: "#f9fafb" },
+              { label: "1,000,000원", colSpan: 2, align: "right", bold: true }
+            ]
+          }
+        ]
+      },
+      { type: "spacer" },
+      { type: "paragraph", value: "위 물품을 정히 공급(또는 인수)하였음을 입증하기 위해 본 명세서를 교부합니다.", style: { textAlign: "center", fontSize: "9pt" } },
+      { type: "spacer" },
+      { type: "sign-block", value: "인수인 (공급받는자) : 대박상사 귀하                    (서명 또는 인)" }
+    ]
+  },
+  // 61. 이행각서 (표준 법률 보장형)
+  {
+    id: "generic_gov_memorandum_of_commitment",
+    title: "이행각서",
+    category: "계약",
+    desc: "금전 채무 변제, 특정 기한 내 약정 의무 등 서약한 사안을 불이행할 시 민형사상 조치를 감수할 것을 채권자에게 확약하는 각서 서식입니다.",
+    popular: true,
+    tags: ["이행각서", "각서", "서약서", "합의이행", "채무각서", "법률서식"],
+    fields: [
+      { key: "debtor", label: "각서인 (채무자) 성명", type: "text", placeholder: "김을무" },
+      { key: "creditor", label: "수신인 (채권자) 성명", type: "text", placeholder: "이갑식" },
+      { key: "content", label: "이행할 약정 내용", type: "textarea", placeholder: "변제 일정 및 약정사항 상세 기재" },
+      { key: "penalty", label: "위약 시 책임 조항", type: "textarea", placeholder: "기한 미준수 시 불이익 및 동의 내용" },
+      { key: "date", label: "각서 작성일", type: "text", placeholder: "2026년 06월 16일" }
+    ],
+    initialValues: {
+      debtor: "김을무 (채무자, 800101-1234567)",
+      creditor: "이갑식 (채권자 귀하)",
+      content: "각서인은 2026년 3월 1일 발생한 차용 원금 10,000,000원에 대하여 미지급 이자액을 합산하여 오는 2026년 8월 16일까지 채권자 명의의 국민은행 계좌로 전액 이체 상환할 것을 약속합니다.",
+      penalty: "만약 상기 약정 기일까지 위 채무 금액을 완전히 변제하지 못할 경우, 채무자는 즉시 채권자가 취하는 재산 압류, 가압류, 소송 등의 법적 강제집행 절차에 대해 일체 이의를 제기하지 않고, 법정 최고 연 20%의 연체지연이자를 전액 가산하여 배상할 것을 확약합니다.",
+      date: ""
+    },
+    layout: [
+      { type: "title", value: "이 행 각 서" },
+      { type: "subtitle", value: "1. 당사자 인적사항" },
+      {
+        type: "table",
+        rows: [
+          {
+            cells: [
+              { label: "각 서 인 (을)", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{debtor}", colSpan: 4, key: "debtor", align: "center" },
+              { label: "수 신 인 (갑)", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{creditor}", colSpan: 4, key: "creditor", align: "center" }
+            ]
+          }
+        ]
+      },
+      { type: "subtitle", value: "2. 약정 사항 (이행 의무 범위)" },
+      {
+        type: "table",
+        rows: [
+          {
+            cells: [
+              { label: "이행 상세\n약정 내용", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{content}", colSpan: 10, key: "content", style: { height: "90px", verticalAlign: "top", whiteSpace: "pre-wrap" } }
+            ]
+          }
+        ]
+      },
+      { type: "subtitle", value: "3. 불이행 시 조치 및 위약벌 규정" },
+      {
+        type: "table",
+        rows: [
+          {
+            cells: [
+              { label: "불이행 시\n감수 조항", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{penalty}", colSpan: 10, key: "penalty", style: { height: "80px", verticalAlign: "top", whiteSpace: "pre-wrap" } }
+            ]
+          }
+        ]
+      },
+      { type: "paragraph", value: "본인은 위 각서 사항을 자발적 의사에 기해 명확히 이행할 것을 선언하며, 이를 증빙하기 위하여 서명 날인 후 1부를 수신인에게 제출합니다.", style: { textIndent: "10px", fontSize: "9pt" } },
+      { type: "spacer" },
+      { type: "paragraph", value: "{date}", style: { fontSize: "9.5pt", fontWeight: "bold", textAlign: "center", margin: "4px 0" } },
+      { type: "spacer" },
+      { type: "sign-block", value: "각서 제출인 : {debtor} (인)          수신인 : {creditor} 귀하" }
+    ]
+  },
+  // 62. 최고장 / 독촉장 (채무 독촉 및 통지용)
+  {
+    id: "generic_gov_demand_letter",
+    title: "최고장 (독촉장)",
+    category: "계약",
+    desc: "채무자나 계약 의무 불이행자에게 정해진 기한 내에 채무 이행을 최종 통지하며, 기한 초과 시 소송 등 사법 절차 착수를 예고하는 독촉장 서식입니다.",
+    popular: false,
+    tags: ["최고장", "독촉장", "보증금독촉", "채무독촉", "내용증명", "법률"],
+    fields: [
+      { key: "sender", label: "발신인 (채권자) 성명", type: "text", placeholder: "이채권" },
+      { key: "receiver", label: "수신인 (채무자) 성명", type: "text", placeholder: "김채무" },
+      { key: "dueDate", label: "최종 이행 기한", type: "text", placeholder: "2026년 06월 30일" },
+      { key: "content", label: "최고 독촉 내용", type: "textarea", placeholder: "미지급 내역 및 불이행 시 사법 처리 예고" },
+      { key: "date", label: "작성 통지일", type: "text", placeholder: "2026년 06월 16일" }
+    ],
+    initialValues: {
+      sender: "이채권",
+      receiver: "김채무 (을)",
+      dueDate: "2026년 06월 30일 (기한 도과 시 법적 소송 집행)",
+      content: "귀하는 발신인으로부터 2025년 6월 16일에 차용한 금 10,000,000원에 대하여 정해진 약정 변제기일이 경과하였음에도 차일피일 기한을 미루며 현재까지 반환 책임을 회피하고 있습니다. 이에 본 서류 송달 즉시 지정된 기일까지 전액 상환할 것을 엄중히 통지합니다.",
+      date: ""
+    },
+    layout: [
+      { type: "title", value: "최 고 장 (독 촉 통 지)" },
+      { type: "paragraph", value: "민법 제174조에 따른 채무 이행의 법적 청구 및 최고로서, 채무자의 약정 불이행에 대하여 최종 기한 내 변제를 엄숙히 요구합니다.", style: { margin: "8px 0" } },
+      { type: "subtitle", value: "1. 당사자 관계 인적사항" },
+      {
+        type: "table",
+        rows: [
+          {
+            cells: [
+              { label: "발 신 인 (채권자)", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{sender}", colSpan: 4, key: "sender", align: "center" },
+              { label: "수 신 인 (채무자)", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{receiver}", colSpan: 4, key: "receiver", align: "center" }
+            ]
+          }
+        ]
+      },
+      { type: "subtitle", value: "2. 최고 상세 내용 및 이행 기한" },
+      {
+        type: "table",
+        rows: [
+          {
+            cells: [
+              { label: "독촉 청구 사유", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{content}", colSpan: 10, key: "content", style: { height: "100px", verticalAlign: "top", whiteSpace: "pre-wrap" } }
+            ]
+          },
+          {
+            cells: [
+              { label: "최종 이행 기한", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{dueDate}", colSpan: 10, key: "dueDate", bold: true, align: "center", style: { color: "#e11d48" } }
+            ]
+          }
+        ]
+      },
+      { type: "paragraph", value: "※ 법적 불이익 고지: 귀하가 위 최종 기한 내에 대여금을 변제하지 않는 경우, 본 통지 기한 다음 날부터 즉시 법원에 대여금 반환 소송을 청구하고, 급여 및 통장 압류 등 일체의 채권 보전 절차를 밟을 것이며 이로 발생하는 일체의 소송비용 또한 채무자 귀하가 전적으로 면하지 못함을 선언합니다.", style: { fontSize: "8.5pt", color: "#e11d48", fontWeight: "bold" } },
+      { type: "spacer" },
+      { type: "paragraph", value: "{date}", style: { fontSize: "9.5pt", fontWeight: "bold", textAlign: "center", margin: "4px 0" } },
+      { type: "spacer" },
+      { type: "sign-block", value: "발신 통지인 : {sender} (인)          수신인 : {receiver} 귀하" }
+    ]
+  },
+  // 63. 업무제휴 협약서 (MOU - 스타트업 기업 표준)
+  {
+    id: "generic_gov_mou",
+    title: "업무제휴 협약서 (MOU)",
+    category: "계약",
+    desc: "기업 대 기업, 혹은 공공기관 간 특정 공동 프로젝트나 핵심 기술 협력을 개시하기에 앞서 상호 신뢰와 협약 범위를 정하는 표준 업무협약(MOU) 양식입니다.",
+    popular: true,
+    tags: ["MOU", "업무협약서", "제휴협약서", "스타트업", "상호협력", "계약서"],
+    fields: [
+      { key: "companyA", label: "제휴 기업 A 명칭", type: "text", placeholder: "주식회사 마음테크" },
+      { key: "companyB", label: "제휴 기업 B 명칭", type: "text", placeholder: "주식회사 대박소프트" },
+      { key: "purpose", label: "상호 협력 제휴 목적", type: "text", placeholder: "통합 스마트워크 소프트웨어 개발 및 영업" },
+      { key: "field", label: "구체적 제휴 분담 분야", type: "textarea", placeholder: "상호 협력 범위 조항 기재" },
+      { key: "date", label: "협약 체결일", type: "text", placeholder: "2026년 06월 16일" }
+    ],
+    initialValues: {
+      companyA: "주식회사 마음테크 (대표이사 이대표)",
+      companyB: "주식회사 대박소프트 (대표이사 박대박)",
+      purpose: "양 사의 핵심 인프라(AI 조판 엔진 및 대용량 DB 서비스)를 결합한 통합 업무용 SaaS 프로그램의 신규 개발 및 공동 영업망 활성화",
+      field: "- '갑'은 AI 문서 조판 변환 모듈 API의 커스텀 포팅 및 솔루션 기술 지원을 보장합니다.\n- '을'은 대규모 기업 데이터베이스 연동망 및 영업 마케팅 인프라를 공급하여 사업화를 추진합니다.\n- 양 사는 공동 제휴 프로젝트의 기밀 사항을 제3자에게 누설하지 않습니다.",
+      date: ""
+    },
+    layout: [
+      { type: "title", value: "업 무 제 휴 협 약 서 (MOU)" },
+      { type: "paragraph", value: "협약 기관 {companyA}(이하 '갑')와 {companyB}(이하 '을')는 상호 신뢰와 호혜의 원칙을 바탕으로 양 기관의 핵심 사업 강점을 조율하기 위하여 다음과 같이 업무협약을 체결합니다.", style: { margin: "8px 0" } },
+      { type: "subtitle", value: "제 1 조 (제휴 및 목적)" },
+      { type: "paragraph", value: "본 협약은 '갑'과 '을'이 상호 우호적인 동반자적 관계를 맺고 아래 명시한 공동 사업 목적을 수행함에 있어 협약 당사자 간의 기본 이해관계를 조정함을 목적으로 합니다." },
+      { type: "subtitle", value: "제 2 조 (협약 기본 사항)" },
+      {
+        type: "table",
+        rows: [
+          {
+            cells: [
+              { label: "당사자 A (갑)", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{companyA}", colSpan: 4, key: "companyA", align: "center" },
+              { label: "당사자 B (을)", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{companyB}", colSpan: 4, key: "companyB", align: "center" }
+            ]
+          },
+          {
+            cells: [
+              { label: "협약 공동 목적", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{purpose}", colSpan: 10, key: "purpose" }
+            ]
+          }
+        ]
+      },
+      { type: "subtitle", value: "제 3 조 (협력 범위 및 분담 내용)" },
+      {
+        type: "table",
+        rows: [
+          {
+            cells: [
+              { label: "주요 협업 분야", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{field}", colSpan: 10, key: "field", style: { height: "90px", verticalAlign: "top", whiteSpace: "pre-wrap" } }
+            ]
+          }
+        ]
+      },
+      { type: "paragraph", value: "※ 법적 효력 유의: 본 업무 제휴 협약서는 상호 제휴를 위한 양해각서(MOU)로서, 비밀유지 및 관할법원에 관한 합의 조항을 제외하고는 당사자에게 실질적인 민형사상 법적 구속력을 부과하지 않습니다.", style: { fontSize: "8pt", color: "#666" } },
+      { type: "spacer" },
+      { type: "paragraph", value: "{date}", style: { fontSize: "9.5pt", fontWeight: "bold", textAlign: "center", margin: "4px 0" } },
+      { type: "spacer" },
+      { type: "sign-block", value: "갑 : 주식회사 마음테크 대표이사 이대표 (인)      을 : 주식회사 대박소프트 대표이사 박대박 (인)" }
+    ]
+  },
+  // 64. 사직서 (권고사직 전용 양식)
+  {
+    id: "generic_gov_resignation_recommend",
+    title: "사직서 (권고사직용)",
+    category: "노무",
+    desc: "회사와 상호 합의에 의해 고용 관계를 합의 해지할 때 사직 이유('경영상 어려움으로 인한 권고사직 수용')를 기재하고 퇴직을 확정하여 실업급여 신청 자료로 사용하는 노무 서식입니다.",
+    popular: true,
+    tags: ["권고사직", "사직서", "실업급여", "고용보험", "퇴직합의서", "노무"],
+    fields: [
+      { key: "employee", label: "사직 근로자 성명", type: "text", placeholder: "김퇴직" },
+      { key: "dept", label: "소속 부서명", type: "text", placeholder: "생산본부" },
+      { key: "rank", label: "직 위", type: "text", placeholder: "대리" },
+      { key: "resignDate", label: "사직 예정 일자", type: "text", placeholder: "2026년 07월 16일" },
+      { key: "reason", label: "구체적 권고 수용 사유", type: "textarea", placeholder: "권고 사유 및 부서 축소 내역 기재" },
+      { key: "date", label: "작성 제출일", type: "text", placeholder: "2026년 06월 16일" }
+    ],
+    initialValues: {
+      employee: "김퇴직",
+      dept: "생산본부 제조팀",
+      rank: "대리",
+      resignDate: "2026년 07월 16일",
+      reason: "최근 부진한 대외 영업 및 긴박한 사내 부서 통폐합에 따른 회사의 정식 구조조정 권고 사항을 상호 합의 하에 정당하게 수용하여 본 사직서를 제출합니다. (실업급여 신청 구직급여 자격 수급 사유 해당)",
+      date: ""
+    },
+    layout: [
+      { type: "title", value: "사 직 서 (권고사직용)" },
+      { type: "paragraph", value: "상기 근로자는 최근 회사의 경영상 여건으로 인한 고용 축소 및 권고사직 조치 제안을 수용하여, 노사 당사자 합의 하에 고용 관계를 종료하고자 사직서를 서면으로 제출합니다.", style: { margin: "8px 0" } },
+      { type: "subtitle", value: "1. 근로자 기본 인적사항" },
+      {
+        type: "table",
+        rows: [
+          {
+            cells: [
+              { label: "부 서", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{dept}", colSpan: 4, key: "dept", align: "center" },
+              { label: "직 위", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{rank}", colSpan: 4, key: "rank", align: "center" }
+            ]
+          },
+          {
+            cells: [
+              { label: "성 명", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{employee}", colSpan: 4, key: "employee", align: "center" },
+              { label: "생년월일", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "1990년 01월 01일", colSpan: 4, align: "center" }
+            ]
+          }
+        ]
+      },
+      { type: "subtitle", value: "2. 사직 일정 및 실질 사직 사유" },
+      {
+        type: "table",
+        rows: [
+          {
+            cells: [
+              { label: "사직 예정일", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{resignDate}", colSpan: 10, key: "resignDate", bold: true, align: "center" }
+            ]
+          },
+          {
+            cells: [
+              { label: "사직 사유", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{reason}", colSpan: 10, key: "reason", style: { height: "70px", verticalAlign: "top", whiteSpace: "pre-wrap" } }
+            ]
+          }
+        ]
+      },
+      { type: "paragraph", value: "※ 안내 사항: 본 사직은 일방적 해고 조치가 아니며, 근로자와 회사가 경영상 퇴사 조건(위로금 등)을 원만히 합의하여 고용 계약을 합의해지하는 것입니다. 회사는 퇴직 시 고용보험 자격상실 코드로 정당한 권고사직 사유를 전산 입력할 의무가 있습니다.", style: { fontSize: "8.5pt", color: "#e11d48", fontWeight: "bold" } },
+      { type: "spacer" },
+      { type: "paragraph", value: "{date}", style: { fontSize: "9.5pt", fontWeight: "bold", textAlign: "center", margin: "4px 0" } },
+      { type: "spacer" },
+      { type: "sign-block", value: "사직서 제출 근로자 : {employee} (인)          주식회사 마음테크 대표이사 귀하" }
+    ]
+  },
+  // 65. 주간 업무보고서 (표준 실무형)
+  {
+    id: "generic_gov_weekly_report",
+    title: "주간 업무보고서",
+    category: "행정",
+    desc: "사내 업무 진척도 파악 및 책임 보고를 위해, 한 주 동안 수행한 핵심 실적과 다음 주 추진할 예정 사항 및 이슈를 요약해서 팀장/부서장에게 결재 보고하는 업무 서식입니다.",
+    popular: false,
+    tags: ["업무보고", "주간업무", "일일업무", "보고서", "직장양식", "행정"],
+    fields: [
+      { key: "reporter", label: "보고 근로자 성명", type: "text", placeholder: "이대리" },
+      { key: "dept", label: "소속 부서", type: "text", placeholder: "개발본부 1팀" },
+      { key: "dateRange", label: "업무 수행 기간 주차", type: "text", placeholder: "2026.06.15 ~ 2026.06.19" },
+      { key: "achieved", label: "금주 완료 실적 내역", type: "textarea", placeholder: "금주 수행 실적 입력" },
+      { key: "planned", label: "차주 예정 업무 계획", type: "textarea", placeholder: "차주 진행 계획 입력" },
+      { key: "issue", label: "사내 이슈 및 애로사항", type: "textarea", placeholder: "특이 및 건의 사항 입력" }
+    ],
+    initialValues: {
+      reporter: "이대리",
+      dept: "개발본부 1팀",
+      dateRange: "2026년 06월 15일 ~ 2026년 06월 19일 (6월 3주차)",
+      achieved: "- 마음데이터 무료 법률 서식 7종 전체 컴파일러 12열 그리드 연동 완료\n- 구글 서치콘솔 크롤러 유입 증가를 위한 sitemap.xml 쿼리 인덱싱 보완\n- PDF 인쇄 조판 한글 폰트(Noto Sans) 깨짐 예방 모듈 완성",
+      planned: "- Neon DB 커넥션 풀 누수 복구 테스트 및 상시 스케줄러 보강\n- DART Open API 일일 제한 도달 시 IP Proxy 분할 스크립트 설계\n- 수기식 표준 세금계산서 디자인 템플릿 마이그레이션 적용 테스트",
+      issue: "- 기안 결재 라인 간소화를 위해 그룹웨어 API의 실시간 연동 지원 필요\n- DART Crawler 대용량 배치로 인한 로컬 IP 접속 차단 방지 방안 수립 요망",
+      date: "2026년 06월 16일"
+    },
+    layout: [
+      { type: "title", value: "주 간 업 무 보 고 서" },
+      { type: "subtitle", value: "1. 보고 및 주차 정보" },
+      {
+        type: "table",
+        rows: [
+          {
+            cells: [
+              { label: "부 서 명", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{dept}", colSpan: 4, key: "dept", align: "center" },
+              { label: "보 고 자", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{reporter}", colSpan: 4, key: "reporter", align: "center" }
+            ]
+          },
+          {
+            cells: [
+              { label: "업무 주차", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{dateRange}", colSpan: 10, key: "dateRange", bold: true, align: "center" }
+            ]
+          }
+        ]
+      },
+      { type: "subtitle", value: "2. 금주 업무 수행 실적 (Achieved)" },
+      {
+        type: "table",
+        rows: [
+          {
+            cells: [
+              { label: "실적 상세", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{achieved}", colSpan: 10, key: "achieved", style: { height: "80px", verticalAlign: "top", whiteSpace: "pre-wrap" } }
+            ]
+          }
+        ]
+      },
+      { type: "subtitle", value: "3. 차주 업무 추진 계획 (Planned)" },
+      {
+        type: "table",
+        rows: [
+          {
+            cells: [
+              { label: "계획 상세", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{planned}", colSpan: 10, key: "planned", style: { height: "80px", verticalAlign: "top", whiteSpace: "pre-wrap" } }
+            ]
+          }
+        ]
+      },
+      { type: "subtitle", value: "4. 사내 건의 및 애로사항 (Issues)" },
+      {
+        type: "table",
+        rows: [
+          {
+            cells: [
+              { label: "건의/이슈", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{issue}", colSpan: 10, key: "issue", style: { height: "55px", verticalAlign: "top", whiteSpace: "pre-wrap" } }
+            ]
+          }
+        ]
+      },
+      { type: "spacer" },
+      { type: "sign-block", value: "보고자 : {reporter} (서명)                    부서장 결재 :             (인)" }
+    ]
+  },
+  // 66. 세금계산서 (수기식 - 표준 세무서식 준수)
+  {
+    id: "generic_gov_tax_invoice_manual",
+    title: "세금계산서 (수기용)",
+    category: "재무",
+    desc: "부가가치세법 시행규칙 규정에 따라 재화 또는 용역의 인도 사실을 기록하고, 세금을 포함한 거래 대금을 발행 증명하기 위해 수기로 적는 세무 서식입니다.",
+    popular: true,
+    tags: ["세금계산서", "수기계산서", "부가세", "부가가치세", "재무", "세무"],
+    fields: [
+      { key: "supplier", label: "공급자 상호(법인명)", type: "text", placeholder: "주식회사 마음테크" },
+      { key: "supplierNo", label: "공급자 등록번호", type: "text", placeholder: "124-81-00998" },
+      { key: "buyer", label: "공급받는자 상호(법인명)", type: "text", placeholder: "대박소프트" },
+      { key: "buyerNo", label: "공급받는자 등록번호", type: "text", placeholder: "220-81-12345" },
+      { key: "total", label: "합계 금액 (VAT 포함)", type: "text", placeholder: "1,100,000원" },
+      { key: "vat", label: "세액 (10%)", type: "text", placeholder: "100,000원" },
+      { key: "date", label: "작성일자", type: "text", placeholder: "2026년 06월 16일" }
+    ],
+    initialValues: {
+      supplier: "주식회사 마음테크 (대표이사 이대표)",
+      supplierNo: "124-81-00998",
+      buyer: "대박소프트 귀하",
+      buyerNo: "220-81-12345",
+      total: "1,100,000원",
+      vat: "100,000원",
+      date: "2026년 06월 16일"
+    },
+    layout: [
+      { type: "paragraph", value: "■ 부가가치세법 시행규칙 [별지 제11호서식] <개정 2017. 3. 2.>", style: { fontSize: "7.5pt", color: "#333333" } },
+      { type: "title", value: "세 금 계 산 서" },
+      {
+        type: "table",
+        rows: [
+          {
+            cells: [
+              { label: "공급자 등록번호", colSpan: 3, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{supplierNo}", colSpan: 3, key: "supplierNo", bold: true, align: "center" },
+              { label: "공급받는자 등록번호", colSpan: 3, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{buyerNo}", colSpan: 3, key: "buyerNo", bold: true, align: "center" }
+            ]
+          },
+          {
+            cells: [
+              { label: "공급자 상호", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{supplier}", colSpan: 4, key: "supplier" },
+              { label: "공급받는자 상호", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{buyer}", colSpan: 4, key: "buyer" }
+            ]
+          }
+        ]
+      },
+      { type: "subtitle", value: "금액 산출 정보" },
+      {
+        type: "table",
+        rows: [
+          {
+            cells: [
+              { label: "작성 연월일", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{date}", colSpan: 4, key: "date", align: "center" },
+              { label: "공급가액 총액", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "1,000,000원", colSpan: 4, align: "right" }
+            ]
+          },
+          {
+            cells: [
+              { label: "부가가치세액", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{vat}", colSpan: 4, key: "vat", align: "center" },
+              { label: "합계 금액 (청구액)", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{total}", colSpan: 4, key: "total", bold: true, align: "right" }
+            ]
+          }
+        ]
+      },
+      { type: "paragraph", value: "※ 위와 같이 세금계산서를 발행하며 본 증빙은 부가가치세법 제32조에 따라 수기 거래의 매입세액 공제 신고 보관용으로 사용됩니다.", style: { fontSize: "8.5pt", color: "#555" } },
+      { type: "spacer" },
+      { type: "sign-block", value: "공급인 (대표이사) : 이대표 (인)          영수/청구: [ ☑ ] 영수함   [  ] 청구함" }
+    ]
+  },
+  // 67. 소송 위임장 (법원 제출용 대법원 표준안)
+  {
+    id: "generic_gov_lawsuit_proxy",
+    title: "소송 위임장",
+    category: "계약",
+    desc: "소송 대리인(변호사 등)을 선정하고 법원에 소송 수행과 관련된 변론 및 소취하, 화해 등 일체의 소송 행위를 위임하기 위해 제출하는 대법원 표준 양식입니다.",
+    popular: false,
+    tags: ["소송위임장", "법원대리", "소송대리인", "변호사위임장", "법률", "법원", "법정서식"],
+    fields: [
+      { key: "principal", label: "위임인 (본인) 성명", type: "text", placeholder: "홍길동" },
+      { key: "agent", label: "수임 대리인 성명", type: "text", placeholder: "김변호" },
+      { key: "caseNo", label: "소송 사건번호", type: "text", placeholder: "2026가단123456" },
+      { key: "caseName", label: "사건명", type: "text", placeholder: "대여금 반환 청구" },
+      { key: "date", label: "위임서 작성일", type: "text", placeholder: "2026년 06월 16일" }
+    ],
+    initialValues: {
+      principal: "홍길동 (원고)",
+      agent: "김변호 변호사",
+      caseNo: "2026가단123456",
+      caseName: "대여금 반환 청구 소송 사건",
+      date: ""
+    },
+    layout: [
+      { type: "title", value: "소 송 위 임 장" },
+      { type: "subtitle", value: "1. 소송 대리 당사자 정보" },
+      {
+        type: "table",
+        rows: [
+          {
+            cells: [
+              { label: "위임인 (본인)", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{principal}", colSpan: 4, key: "principal", align: "center" },
+              { label: "수임 대리인", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{agent}", colSpan: 4, key: "agent", align: "center" }
+            ]
+          }
+        ]
+      },
+      { type: "subtitle", value: "2. 위임 소송 사건의 표시" },
+      {
+        type: "table",
+        rows: [
+          {
+            cells: [
+              { label: "사건 번호", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{caseNo}", colSpan: 10, key: "caseNo", bold: true, align: "center" }
+            ]
+          },
+          {
+            cells: [
+              { label: "사 건 명", colSpan: 2, bold: true, align: "center", bg: "#f9fafb" },
+              { label: "{caseName}", colSpan: 10, key: "caseName" }
+            ]
+          }
+        ]
+      },
+      { type: "subtitle", value: "3. 대리권 특별 수권 합의" },
+      { type: "paragraph", value: "위 위임인은 수임 대리인 {agent}에게 위 소송사건에 관한 소송행위 일체를 대리할 권한을 위임합니다. 아울러 반소의 제기 및 수령, 소의 취하, 합의 및 조정, 대리인 선임 등 특별 수권 조항에 명시된 모든 행위의 대리권을 위임인 명의로 함께 수여합니다.", style: { textIndent: "10px", lineHeight: 1.6, fontSize: "9.5pt" } },
+      { type: "spacer" },
+      { type: "paragraph", value: "{date}", style: { fontSize: "9.5pt", fontWeight: "bold", textAlign: "center", margin: "4px 0" } },
+      { type: "spacer" },
+      { type: "sign-block", value: "위임인 : {principal} (인)          서울중앙지방법원 귀중" }
+    ]
+  }
 ];
 
 export function getTemplateById(id: string): DocumentTemplate | undefined {
