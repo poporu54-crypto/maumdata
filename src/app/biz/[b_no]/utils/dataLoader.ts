@@ -214,6 +214,7 @@ export async function getUnifiedBusinessData(bNo: string): Promise<{
   business: BusinessData | null;
   isInvalid: boolean;
   isNew?: boolean;
+  relatedBusinesses?: any[];
 }> {
   const cleanBNo = bNo.replace(/[^0-9]/g, "");
   
@@ -313,6 +314,26 @@ export async function getUnifiedBusinessData(bNo: string): Promise<{
 
     console.log(`[Database Hit] Serving from DB cache (Zero External Network Requests): ${localBiz.b_nm} (${cleanBNo})`);
     
+    // 관련 사업자 조회 (동일 대표자 및 상호명 유사 매칭)
+    let relatedBusinesses: any[] = [];
+    if (localBiz && localBiz.p_nm && localBiz.p_nm !== "-" && localBiz.b_nm) {
+      try {
+        const cleanName = localBiz.b_nm.replace(/\(.*?\)/g, "").replace(/주식회사/g, "").replace(/\(주\)/g, "").trim();
+        if (cleanName.length >= 2) {
+          const relatedRes = await query(
+            `SELECT b_no, b_nm, p_nm, b_adr, b_sector, listing_status, data_source, dart_code
+             FROM businesses
+             WHERE p_nm = $1 AND b_no != $2 AND (b_nm LIKE $3 OR $4 LIKE '%' || b_nm || '%')
+             LIMIT 5`,
+            [localBiz.p_nm, cleanBNo, `%${cleanName}%`, cleanName]
+          );
+          relatedBusinesses = relatedRes.rows;
+        }
+      } catch (err) {
+        console.error("Failed to query related businesses in dataLoader:", err);
+      }
+    }
+
     const mockApiStatus: NtsCompanyStatus = {
       b_no: cleanBNo,
       b_stt: localBiz.bStt || (localBiz as any).b_stt || (localBiz.b_type?.includes("폐업") ? "폐업자" : "계속사업자"),
@@ -327,7 +348,7 @@ export async function getUnifiedBusinessData(bNo: string): Promise<{
       rbf_tax_type_cd: ""
     };
 
-    return { apiStatus: mockApiStatus, business: localBiz, isInvalid: false, isNew: false };
+    return { apiStatus: mockApiStatus, business: localBiz, isInvalid: false, isNew: false, relatedBusinesses };
   }
 
   // 2. DB 캐시가 없거나 "상호 정보 없음" 상태인 경우 ➔ [최초 등록 시점]으로 식별하되, 가상 데이터를 초고속 반환 (Non-blocking)
@@ -383,7 +404,8 @@ export async function getUnifiedBusinessData(bNo: string): Promise<{
     apiStatus: tempApiStatus,
     business: virtualBiz,
     isInvalid: false,
-    isNew: true
+    isNew: true,
+    relatedBusinesses: []
   };
 }
 

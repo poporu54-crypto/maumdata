@@ -83,7 +83,7 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
     notFound();
   }
 
-  const { apiStatus, business, isInvalid, isNew } = await getUnifiedBusinessData(cleanBNo);
+  const { apiStatus, business, isInvalid, isNew, relatedBusinesses = [] } = await getUnifiedBusinessData(cleanBNo);
   const formattedBNo = cleanBNo.replace(/(\d{3})(\d{2})(\d{5})/, "$1-$2-$3");
 
   const renderSourceBadge = () => {
@@ -108,6 +108,11 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
       </span>
     );
   };
+
+  const dartCodeToUse = business?.dart_code || relatedBusinesses?.find((r: any) => r.dart_code)?.dart_code;
+  const relatedDartBizName = !business?.dart_code && dartCodeToUse
+    ? relatedBusinesses?.find((r: any) => r.dart_code)?.b_nm
+    : null;
 
   const latestFinance = business?.history && business.history.length > 0
     ? business.history[business.history.length - 1]
@@ -685,14 +690,19 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
             </div>
 
             {/* 5. 금융감독원 DART 실시간 공시 목록 */}
-            {business?.is_audited && (
+            {(business?.is_audited || dartCodeToUse) && (
               <div id="dart-disclosures-section" style={{ marginTop: "32px", marginBottom: "16px", scrollMarginTop: "24px" }}>
                 <h4 style={{ fontSize: "1.2rem", fontWeight: 800, color: "var(--color-text-main)", marginBottom: "12px" }}>
                   🏛️ 금융감독원 DART 실시간 공시 내역
+                  {relatedDartBizName && (
+                    <span style={{ fontSize: "0.85rem", fontWeight: 500, color: "var(--color-text-desc)", marginLeft: "8px" }}>
+                      - 관련사업자 ({relatedDartBizName}) 기준
+                    </span>
+                  )}
                 </h4>
-                {business.dart_code ? (
+                {dartCodeToUse ? (
                   <Suspense fallback={<TableSkeleton />}>
-                    <DartDisclosuresSection dartCode={business.dart_code} />
+                    <DartDisclosuresSection dartCode={dartCodeToUse} />
                   </Suspense>
                 ) : (
                   <div style={{
@@ -711,14 +721,19 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
             )}
 
             {/* 6. 금융감독원 DART 주요 실적/정기 보고서 */}
-            {business?.is_audited && (
+            {(business?.is_audited || dartCodeToUse) && (
               <div style={{ marginTop: "32px", marginBottom: "16px" }}>
                 <h4 style={{ fontSize: "1.2rem", fontWeight: 800, color: "var(--color-text-main)", marginBottom: "12px" }}>
                   📊 금융감독원 DART 분기별 실적/정기 보고서
+                  {relatedDartBizName && (
+                    <span style={{ fontSize: "0.85rem", fontWeight: 500, color: "var(--color-text-desc)", marginLeft: "8px" }}>
+                      - 관련사업자 ({relatedDartBizName}) 기준
+                    </span>
+                  )}
                 </h4>
-                {business.dart_code ? (
+                {dartCodeToUse ? (
                   <Suspense fallback={<TableSkeleton />}>
-                    <DartKeyDisclosuresSection dartCode={business.dart_code} />
+                    <DartKeyDisclosuresSection dartCode={dartCodeToUse} />
                   </Suspense>
                 ) : (
                   <div style={{
@@ -753,6 +768,68 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                 />
               );
             })()}
+
+            {/* 동일 대표자 관련 사업자 */}
+            {relatedBusinesses && relatedBusinesses.length > 0 && (
+              <div style={{ marginTop: "32px" }}>
+                <h4 style={{ fontSize: "1.2rem", fontWeight: 800, color: "var(--color-text-main)", marginBottom: "12px" }}>
+                  🔗 동일 대표자 관련 사업자
+                </h4>
+                <div style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+                  gap: "16px"
+                }}>
+                  {relatedBusinesses.map((rb: any) => (
+                    <Link href={`/biz/${rb.b_no}`} key={rb.b_no} className="related-card" style={{ textDecoration: "none" }}>
+                      <div style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "8px"
+                      }}>
+                        <div style={{ fontWeight: 700, fontSize: "1.05rem", color: "var(--color-text-main)" }}>
+                          {rb.b_nm}
+                        </div>
+                        <div style={{ fontSize: "0.85rem", color: "var(--color-text-desc)" }}>
+                          대표자: {rb.p_nm}
+                        </div>
+                        <div style={{ fontSize: "0.85rem", color: "var(--color-text-desc)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          소재지: {rb.b_adr}
+                        </div>
+                        <div style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          marginTop: "8px",
+                          fontSize: "0.8rem"
+                        }}>
+                          <span style={{
+                            backgroundColor: "var(--color-primary-light)",
+                            color: "var(--color-primary)",
+                            padding: "2px 6px",
+                            borderRadius: "4px",
+                            fontWeight: 600
+                          }}>
+                            {rb.b_sector || "업종 미등록"}
+                          </span>
+                          {rb.dart_code && (
+                            <span style={{
+                              backgroundColor: "rgba(49, 130, 246, 0.1)",
+                              color: "#3182f6",
+                              padding: "2px 6px",
+                              borderRadius: "4px",
+                              fontWeight: 600
+                            }}>
+                              DART 연동
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* 연관 사업자 추천 */}
             <div style={{ marginTop: "16px" }}>
