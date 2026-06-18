@@ -255,29 +255,41 @@ export async function getUnifiedBusinessData(bNo: string): Promise<{
       stockCode = stockMatch[1];
     }
 
-    findDartCode(localBiz.b_nm, stockCode)
-      .then(async (correctDartCode) => {
-        if (correctDartCode && correctDartCode !== dartCode) {
-          console.log(`[DART Self-Healing] Correcting DART code for ${localBiz.b_nm}: ${dartCode} -> ${correctDartCode}`);
-          await query(
-            "UPDATE businesses SET dart_code = $1, dart_last_sync_at = NULL WHERE b_no = $2", 
-            [correctDartCode, cleanBNo]
-          );
-          dartCode = correctDartCode;
-          dartLastSync = null;
-        }
+    // 개인사업자(법인번호 corp_no가 없거나 유효하지 않음)는 DART 매핑 대상에서 완전히 제외
+    const hasCorpNo = localBiz.corp_no && localBiz.corp_no.replace(/[^0-9]/g, "").length === 13;
 
-        if (dartCode && !dartLastSync) {
-          console.log(`[Background Detail Sync] Syncing DART disclosures for ${localBiz.b_nm} (${cleanBNo}) with code ${dartCode}`);
-          syncDisclosuresByCompany(cleanBNo, dartCode)
-            .then(() => {
-              query("UPDATE businesses SET dart_last_sync_at = CURRENT_TIMESTAMP WHERE b_no = $1", [cleanBNo])
-                .catch(err => console.error("Failed to update dart_last_sync_at:", err));
-            })
-            .catch(err => console.error("Background DART sync failed:", err));
-        }
-      })
-      .catch(err => console.error("[DART Self-Healing Check failed]", err));
+    if (hasCorpNo || stockCode) {
+      findDartCode(localBiz.b_nm, stockCode)
+        .then(async (correctDartCode) => {
+          if (correctDartCode && correctDartCode !== dartCode) {
+            console.log(`[DART Self-Healing] Correcting DART code for ${localBiz.b_nm}: ${dartCode} -> ${correctDartCode}`);
+            await query(
+              "UPDATE businesses SET dart_code = $1, dart_last_sync_at = NULL WHERE b_no = $2", 
+              [correctDartCode, cleanBNo]
+            );
+            dartCode = correctDartCode;
+            dartLastSync = null;
+          }
+
+          if (dartCode && !dartLastSync) {
+            console.log(`[Background Detail Sync] Syncing DART disclosures for ${localBiz.b_nm} (${cleanBNo}) with code ${dartCode}`);
+            syncDisclosuresByCompany(cleanBNo, dartCode)
+              .then(() => {
+                query("UPDATE businesses SET dart_last_sync_at = CURRENT_TIMESTAMP WHERE b_no = $1", [cleanBNo])
+                  .catch(err => console.error("Failed to update dart_last_sync_at:", err));
+              })
+              .catch(err => console.error("Background DART sync failed:", err));
+          }
+        })
+        .catch(err => console.error("[DART Self-Healing Check failed]", err));
+    } else {
+      // 법인번호가 없는 개인사업자의 경우, 혹시 DART 코드가 잘못 들어가 있다면 NULL로 제거 (자가 치유 보완)
+      if (dartCode) {
+        console.log(`[DART Self-Healing] Removing invalid DART code for individual business ${localBiz.b_nm}: ${dartCode}`);
+        query("UPDATE businesses SET dart_code = NULL, dart_last_sync_at = NULL WHERE b_no = $1", [cleanBNo])
+          .catch(err => console.error("Failed to clean up invalid DART code:", err));
+      }
+    }
 
     if (!bidsLastSync) {
       console.log(`[Background Detail Sync] Syncing recent bids for ${localBiz.b_nm} (${cleanBNo})`);
