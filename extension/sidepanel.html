@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>마음데이터 기업조회 비서</title>
+  <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+  <div class="panel-container">
+    <!-- 헤더 영역 -->
+    <header class="header">
+      <div class="logo-bar">
+        <div class="logo" id="btn-logo-home">
+          <img src="icons/icon48.png" class="logo-img" alt="마음데이터 로고">
+          <span class="logo-text">마음데이터 비서</span>
+        </div>
+        <button id="btn-theme-toggle" class="theme-toggle-btn" title="테마 전환">☀️</button>
+      </div>
+      
+      <!-- 상단 수동 검색창 -->
+      <div class="search-box">
+        <input type="text" id="panel-search-input" placeholder="사업자번호 또는 기업명 검색">
+        <button id="btn-panel-search">🔍</button>
+      </div>
+    </header>
+
+    <main class="content">
+      <!-- 1. 안내 메시지 (기본 뷰) -->
+      <div id="view-intro" class="view-section">
+        <div class="intro-box">
+          <div class="intro-emoji">⚡</div>
+          <h3>실시간 기업 분석 비서</h3>
+          <p>드래그하거나 검색한 기업의 데이터를 기반으로 마음데이터의 독자적인 AI 분석 지표를 실시간 계산하여 대시보드로 제공합니다.</p>
+          <ul class="intro-list">
+            <li><strong>B2G 정부 입찰 역량 등급</strong> (누적 공공 수주액 기준)</li>
+            <li><strong>조직 성장세 및 건강도 등급</strong> (국민연금 가입 데이터 기준)</li>
+            <li><strong>3개년 종합 재무 추이</strong> (매출액 및 영업이익 상태)</li>
+            <li><strong>지식재산권(특허) 포트폴리오</strong> 현황</li>
+          </ul>
+        </div>
+
+        <!-- 마음데이터 주요 서비스 홍보 배너 (2x2 그리드) -->
+        <div class="promo-grid">
+          <a href="https://www.maumdata.com/search" target="_blank" class="promo-card">
+            <span class="promo-icon">🔍</span>
+            <span class="promo-title">사업자조회</span>
+          </a>
+          <a href="https://www.maumdata.com/stats/market-area" target="_blank" class="promo-card">
+            <span class="promo-icon">🗺️</span>
+            <span class="promo-title">상권 분석</span>
+          </a>
+          <a href="https://www.maumdata.com/insights" target="_blank" class="promo-card">
+            <span class="promo-icon">💡</span>
+            <span class="promo-title">데이터 인사이트</span>
+          </a>
+          <a href="https://www.maumdata.com/form" target="_blank" class="promo-card">
+            <span class="promo-icon">📄</span>
+            <span class="promo-title">무료서식</span>
+          </a>
+        </div>
+
+        <!-- 최하단 바로가기 버튼 -->
+        <div class="footer-promo">
+          <a href="https://www.maumdata.com" target="_blank" class="btn-footer-link">
+            🏢 마음데이터 바로가기 ➔
+          </a>
+        </div>
+      </div>
+
+      <!-- 2. 스켈레톤 로더 (로딩 중 뷰) -->
+      <div id="view-loading" class="view-section hidden">
+        <div class="skeleton-card">
+          <div class="skeleton skeleton-title"></div>
+          <div class="skeleton skeleton-badge"></div>
+          <div class="skeleton skeleton-text"></div>
+          <div class="skeleton skeleton-text" style="width: 80%;"></div>
+          <div class="skeleton-grid">
+            <div class="skeleton skeleton-block"></div>
+            <div class="skeleton skeleton-block"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. 검색 결과 목록 (선택 뷰) -->
+      <div id="view-search-results" class="view-section hidden">
+        <h4 class="section-title">🔍 검색 결과 기업 목록</h4>
+        <div id="search-list" class="search-list">
+          <!-- 동적 주입 -->
+        </div>
+      </div>
+
+      <!-- 4. 기업 상세 요약 뷰 (실제 데이터 뷰) -->
+      <div id="view-detail" class="view-section hidden">
+        
+        <!-- 기업 기본 카드 -->
+        <div class="detail-card">
+          <div class="biz-header">
+            <h2 id="detail-b-nm">기업명</h2>
+            <span id="detail-badge" class="badge-source">마음데이터 종합분석</span>
+          </div>
+          <p class="biz-no" id="detail-b-no">사업자번호: -</p>
+          <div class="tax-status-box">
+            <div class="status-indicator" id="detail-tax-indicator">●</div>
+            <div class="tax-desc">
+              <strong id="detail-tax-stt">계속사업자</strong>
+              <span id="detail-tax-type">부가가치세 일반과세자</span>
+            </div>
+          </div>
+          <p class="biz-desc" id="detail-desc">기업 설명</p>
+        </div>
+
+        <!-- 기본 정보 상세 목록 -->
+        <div class="info-section">
+          <h4 class="section-title">📋 기본 개요</h4>
+          <table class="info-table">
+            <tr>
+              <th>대표자</th>
+              <td id="info-p-nm">-</td>
+            </tr>
+            <tr>
+              <th>설립일</th>
+              <td id="info-start-dt">-</td>
+            </tr>
+            <tr>
+              <th>주요업종</th>
+              <td id="info-sector">-</td>
+            </tr>
+            <tr>
+              <th>기업규모</th>
+              <td id="info-sme">-</td>
+            </tr>
+            <tr>
+              <th>상장여부</th>
+              <td id="info-listing">-</td>
+            </tr>
+            <tr>
+              <th>주소</th>
+              <td id="info-adr">-</td>
+            </tr>
+          </table>
+        </div>
+
+        <!-- 주요 재무 지표 -->
+        <div class="info-section" id="section-finance">
+          <h4 class="section-title">💰 최근 재무 실적 (억 원)</h4>
+          <div class="finance-trend" id="finance-trend-list">
+            <!-- 동적 주입 -->
+          </div>
+        </div>
+
+        <!-- 마음데이터 분석 지표 2: 고용 성장세 및 조직 건강도 -->
+        <div class="info-section">
+          <h4 class="section-title">👥 고용 건강도 대시보드</h4>
+          <div class="metric-card">
+            <div class="metric-header">
+              <div class="metric-grade" id="health-grade" style="font-size: 20px;">✓</div>
+              <div class="metric-info">
+                <strong id="health-grade-title">고용 안정세 (유지 중)</strong>
+                <span>국민연금 가입 추이 실시간 연산</span>
+              </div>
+            </div>
+            <div class="stat-grid">
+              <div class="stat-item">
+                <div class="stat-label">당월 입사율</div>
+                <div class="stat-value text-success" id="emp-join-rate">0%</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-label">당월 퇴사율</div>
+                <div class="stat-value text-danger" id="emp-quit-rate">0%</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-label">조직 팽창률</div>
+                <div class="stat-value" id="emp-growth-rate">0%</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 마음데이터 분석 지표 1: B2G 입찰 역량 등급 -->
+        <div class="info-section">
+          <h4 class="section-title">🏛️ B2G 정부 입찰 역량</h4>
+          <div class="metric-card">
+            <div class="metric-header">
+              <div class="metric-grade" id="b2g-grade">E</div>
+              <div class="metric-info">
+                <strong id="b2g-grade-title">B2G 실적 없음</strong>
+                <span>최근 나라장터 수주 실적 분석</span>
+              </div>
+            </div>
+            <div class="stat-grid">
+              <div class="stat-item">
+                <div class="stat-label">공공 수주 규모</div>
+                <div class="stat-value text-primary" id="b2g-total-amount">0원</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-label">현금 흐름 지수</div>
+                <div class="stat-value" id="b2g-cash-score">0점</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 특허 지식재산권 목록 -->
+        <div class="info-section" id="section-patents">
+          <div class="section-header">
+            <h4 class="section-title">💡 특허 포트폴리오</h4>
+            <span class="count-badge" id="patent-count">0건</span>
+          </div>
+          <div class="list-holder" id="patent-list">
+            <!-- 동적 주입 -->
+          </div>
+        </div>
+
+        <!-- 조달청 입찰 정보 목록 -->
+        <div class="info-section" id="section-bids">
+          <div class="section-header">
+            <h4 class="section-title">🏛️ 공공 입찰 참여 실적</h4>
+            <span class="count-badge" id="bid-count">0건</span>
+          </div>
+          <div class="list-holder" id="bid-list">
+            <!-- 동적 주입 -->
+          </div>
+        </div>
+
+        <!-- 상세 링크 버튼 -->
+        <div class="action-box">
+          <button id="btn-go-detail" class="btn-primary">마음데이터에서 자세히 보기 🚀</button>
+        </div>
+
+      </div>
+    </main>
+  </div>
+  <script src="sidepanel.js"></script>
+</body>
+</html>

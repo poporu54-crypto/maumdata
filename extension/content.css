@@ -1,0 +1,61 @@
+#maumdata-floating-btn {
+  position: absolute;
+  z-index: 2147483647 !important;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, #7c3aed 0%, #3182f6 100%) !important;
+  color: #ffffff !important;
+  padding: 8px 14px !important;
+  border-radius: 30px !important;
+  box-shadow: 0 4px 18px rgba(124, 58, 237, 0.35), 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  user-select: none !important;
+  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.15s ease-out !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: scale(0.8) translateY(10px) !important;
+}
+
+#maumdata-floating-btn.visible {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  transform: scale(1) translateY(0) !important;
+}
+
+#maumdata-floating-btn:hover {
+  transform: scale(1.05) translateY(-2px) !important;
+  box-shadow: 0 6px 22px rgba(124, 58, 237, 0.45), 0 4px 8px rgba(0, 0, 0, 0.1) !important;
+}
+
+#maumdata-floating-btn:active {
+  transform: scale(0.95) !important;
+}
+
+#maumdata-floating-btn .maumdata-btn-icon {
+  font-size: 14px !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: pulse-icon 1.5s infinite ease-in-out;
+}
+
+#maumdata-floating-btn .maumdata-btn-label {
+  letter-spacing: -0.02em !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+}
+
+@keyframes pulse-icon {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.8;
+  }
+}
