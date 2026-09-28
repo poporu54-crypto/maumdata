@@ -99,23 +99,27 @@ export default function PrivacyPage() {
 
             <section>
               <h2 style={{ fontSize: "1.2rem", fontWeight: 800, color: "var(--color-text-main)", marginBottom: "12px" }}>
-                제7조 (개인정보 보호책임자)
+                제7조 (🛡️ 개인정보 보호 담당조직)
               </h2>
               <p>
                 회사는 개인정보 처리에 관한 업무를 총괄해서 책임지고, 개인정보 처리와 관련한 정보주체의 불만처리 및 피해구제 등을 위하여 아래와 같이 개인정보 보호책임자를 지정하고 있습니다.
               </p>
               <div style={{
                 backgroundColor: "var(--bg-color-main)",
-                padding: "16px 20px",
-                borderRadius: "8px",
+                padding: "20px 24px",
+                borderRadius: "12px",
                 marginTop: "12px",
                 display: "flex",
                 flexDirection: "column",
-                gap: "6px"
+                gap: "10px",
+                border: "1px solid var(--color-border)"
               }}>
-                <div><strong>• 개인정보 보호책임자 및 담당 부서</strong></div>
-                <div>- 성명 / 직책: 박상욱 대표</div>
-                <div>- 연락처/이메일: poporu54@gmail.com</div>
+                <div style={{ fontSize: "1.05rem", fontWeight: 700, color: "var(--color-text-main)" }}>🛡️ 개인정보 보호 담당조직</div>
+                <div><strong>개인정보 보호책임자:</strong> 박상욱</div>
+                <div><strong>문의 이메일:</strong> poporu54@gmail.com</div>
+                <div style={{ fontSize: "0.85rem", color: "var(--color-text-desc)", marginTop: "4px" }}>
+                  * 마음데이터 서비스와 관련된 개인정보보호 문의 및 불만을 신속하게 처리해 드립니다.
+                </div>
               </div>
             </section>
 

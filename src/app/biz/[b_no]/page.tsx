@@ -389,9 +389,9 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                     </span>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--color-border)", paddingBottom: "10px" }}>
-                    <span style={{ color: "var(--color-text-sub)", fontWeight: 500 }}>상장 여부</span>
+                    <span style={{ color: "var(--color-text-sub)", fontWeight: 500 }}>국내 증시 상장 여부</span>
                     <span style={{ fontWeight: 700, color: "var(--color-text-main)" }}>
-                      {business?.listing_status || (business?.enpPbncYn === "Y" ? "상장" : "비상장")}
+                      {business?.listing_status || (business?.enpPbncYn === "Y" ? "상장" : "국내 비상장")}
                     </span>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--color-border)", paddingBottom: "10px" }}>
@@ -596,9 +596,9 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                       </span>
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--color-border)", paddingBottom: "10px" }}>
-                      <span style={{ color: "var(--color-text-sub)", fontWeight: 500 }}>상장 구분</span>
+                      <span style={{ color: "var(--color-text-sub)", fontWeight: 500 }}>국내 증시 상장 구분</span>
                       <span style={{ fontWeight: 700, color: "var(--color-text-main)" }}>
-                        {business?.listing_status || (business?.enpPbncYn === "Y" ? "상장" : "비상장")}
+                        {business?.listing_status || (business?.enpPbncYn === "Y" ? "상장" : "국내 비상장")}
                       </span>
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between", paddingBottom: "2px" }}>

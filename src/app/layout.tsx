@@ -7,6 +7,9 @@ import Script from "next/script";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.maumdata.com"),
+  alternates: {
+    canonical: "./",
+  },
   title: {
     template: "%s | 마음데이터",
     default: "마음데이터(MaumData)",
