@@ -86,8 +86,8 @@ export default function InteractiveMap({
         scrollWheelZoom: true,
       }).setView([defaultLat, defaultLng], zoom);
 
-      // 다크 테마 느낌의 CartoDB.DarkMatter 타일 적용 (마음데이터 UI와 일치)
-      const tileUrl = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
+      // 다크 테마 느낌의 CartoDB Fastly CDN 타일 적용 (API Key 워터마크 없이 무료 제공)
+      const tileUrl = "https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png";
       
       L.tileLayer(tileUrl, {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
