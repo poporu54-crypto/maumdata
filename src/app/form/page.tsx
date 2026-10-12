@@ -174,13 +174,13 @@ export default function DocsPage() {
             fontWeight: 700 
           }}
         >
-          마음데이터 FORM - 회원가입 없는 무료 서식 발전기
+          마음데이터 FORM - 320+종 무료 서식 빅데이터 라이브러리
         </span>
         <h1 className="hero-title" style={{ marginTop: "16px", marginBottom: "12px" }}>
           스마트 무료 서식 센터
         </h1>
         <p className="hero-subtitle" style={{ maxWidth: "650px", margin: "0 auto", fontSize: "1.05rem" }}>
-          필요한 직장 업무 및 법률 서식을 웹에서 실시간 입력하고 최적화된 A4 비율의 PDF로 저장 및 즉시 인쇄하세요.
+          계약·노무·법률·AI·스타트업 등 320여 종의 실무 서식을 회원가입 없이 실시간 입력하고 최적화된 A4 비율의 PDF로 저장 및 즉시 인쇄하세요.
         </p>
       </div>
 
