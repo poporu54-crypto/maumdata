@@ -236,7 +236,7 @@ export default function AdminDashboard({ initialRequests, stats, noNameBusinesse
             🛡️ 어드민 컨트롤 타워
           </h1>
           <p style={{ color: "rgba(156, 163, 175, 0.7)", fontSize: "0.95rem", margin: "6px 0 0 0" }}>
-            마음데이터 실시간 통계 관제 및 유저 정보 제안 심사 시스템
+            마음데이타 실시간 통계 관제 및 유저 정보 제안 심사 시스템
           </p>
         </div>
         <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>

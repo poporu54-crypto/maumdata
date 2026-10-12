@@ -16,18 +16,18 @@ export async function generateMetadata(props: PageProps): Promise<Metadata> {
   
   if (!tpl) {
     return {
-      title: "서식을 찾을 수 없습니다 - 마음데이터",
+      title: "서식을 찾을 수 없습니다 - 마음데이타",
       description: "요청하신 무료 문서 서식 양식을 찾을 수 없거나 삭제되었습니다."
     };
   }
 
   // 템플릿의 카테고리 태그 및 상세 설명을 활용한 맞춤형 SEO 최적화
   return {
-    title: `무료 ${tpl.title} 양식 (즉시 작성/인쇄) | 마음데이터 FORM`,
+    title: `무료 ${tpl.title} 양식 (즉시 작성/인쇄) | 마음데이타 FORM`,
     description: tpl.desc || `${tpl.title} 서식의 필수 항목들을 회원가입 없이 실시간으로 작성하고, 최적화된 A4 비율의 PDF로 저장 및 즉시 인쇄해보세요.`,
-    keywords: [...(tpl.tags || []), tpl.title, "무료서식", "A4인쇄", "마음데이터"],
+    keywords: [...(tpl.tags || []), tpl.title, "무료서식", "A4인쇄", "마음데이타"],
     openGraph: {
-      title: `무료 ${tpl.title} 양식 (즉시 작성/인쇄) | 마음데이터 FORM`,
+      title: `무료 ${tpl.title} 양식 (즉시 작성/인쇄) | 마음데이타 FORM`,
       description: tpl.desc || `${tpl.title} 서식을 웹에서 타이핑하여 즉시 PDF로 저장하고 A4 인쇄하세요.`,
       type: "website"
     }

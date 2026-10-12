@@ -174,7 +174,7 @@ export default function DocsPage() {
             fontWeight: 700 
           }}
         >
-          마음데이터 FORM - 320+종 무료 서식 빅데이터 라이브러리
+          마음데이타 FORM - 320+종 무료 서식 빅데이터 라이브러리
         </span>
         <h1 className="hero-title" style={{ marginTop: "16px", marginBottom: "12px" }}>
           스마트 무료 서식 센터
@@ -441,7 +441,7 @@ export default function DocsPage() {
               {selectedTag ? `"${selectedTag}" 관련 서식을 즉시 제작해 드립니다` : "검색 결과에 맞는 무료 서식이 없습니다"}
             </h3>
             <p style={{ color: "var(--color-text-sub)", fontSize: "0.95rem", maxWidth: "550px", margin: "0 auto 24px auto", lineHeight: 1.6 }}>
-              마음데이터 FORM은 회원가입 없는 순수 무료 서식 센터입니다. 요청하시는 양식을 전문 법적 검토를 거쳐 영업일 기준 1일 이내에 제작 및 시스템에 무료 배포해 드립니다.
+              마음데이타 FORM은 회원가입 없는 순수 무료 서식 센터입니다. 요청하시는 양식을 전문 법적 검토를 거쳐 영업일 기준 1일 이내에 제작 및 시스템에 무료 배포해 드립니다.
             </p>
             <Link 
               href={`/admin?requestForm=${encodeURIComponent(selectedTag || searchQuery || "신규서식")}`} 

@@ -154,7 +154,7 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
                 소중한 의견 감사합니다!
               </h4>
               <p style={{ color: "var(--color-text-sub)", fontSize: "0.95rem", lineHeight: 1.6, margin: "0 0 24px 0" }}>
-                보내주신 피드백은 마음데이터 운영팀이 꼼꼼히 검토하여 서비스 개선에 적극 반영하겠습니다.
+                보내주신 피드백은 마음데이타 운영팀이 꼼꼼히 검토하여 서비스 개선에 적극 반영하겠습니다.
               </p>
               <button
                 onClick={onClose}

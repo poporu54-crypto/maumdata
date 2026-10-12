@@ -63,7 +63,7 @@ export const TEMPLATES: DocumentTemplate[] = [
       { key: "leaveDate", label: "사직 예정일", type: "text", placeholder: "예: 2026년 07월 15일" },
       { key: "reason", label: "상세 사직 사유", type: "textarea", placeholder: "예: 개인 사정 및 일신상의 사유로 인하여 퇴사하고자 합니다." },
       { key: "date", label: "신청/작성 일자", type: "text", placeholder: "예: 2026년 06월 15일" },
-      { key: "company", label: "소속 회사명 (수신처)", type: "text", placeholder: "예: 마음데이터 주식회사" }
+      { key: "company", label: "소속 회사명 (수신처)", type: "text", placeholder: "예: 마음데이타 주식회사" }
     ],
     initialValues: {
       dept: "경영기획실",
@@ -75,7 +75,7 @@ export const TEMPLATES: DocumentTemplate[] = [
       leaveDate: "2026년 07월 15일",
       reason: "개인 사정 및 일신상의 사유로 인하여 퇴사하고자 합니다.",
       date: "", // 폼 로드 시 오늘 날짜 매핑
-      company: "마음데이터 주식회사",
+      company: "마음데이타 주식회사",
       useApproval: true
     },
     layout: [
@@ -163,7 +163,7 @@ export const TEMPLATES: DocumentTemplate[] = [
         type: "list",
         listFields: [
           { key: "period", label: "근무 기간", placeholder: "2023.05 - 2026.06", width: "35%" },
-          { key: "company", label: "회사명", placeholder: "마음데이터(주)", width: "25%" },
+          { key: "company", label: "회사명", placeholder: "마음데이타(주)", width: "25%" },
           { key: "rank", label: "직급", placeholder: "대리", width: "15%" },
           { key: "task", label: "담당 업무", placeholder: "개발 및 설계", width: "25%" }
         ]
@@ -192,7 +192,7 @@ export const TEMPLATES: DocumentTemplate[] = [
         { period: "2009.03 - 2013.02", school: "한국대학교", major: "컴퓨터공학과", status: "졸업" }
       ],
       experience: [
-        { period: "2023.05 - 2026.06", company: "마음데이터(주)", rank: "대리", task: "프론트엔드 개발 및 API 연동" }
+        { period: "2023.05 - 2026.06", company: "마음데이타(주)", rank: "대리", task: "프론트엔드 개발 및 API 연동" }
       ],
       skills: [
         { date: "2020.08.15", name: "정보처리기사", org: "한국산업인력공단", score: "합격" }
@@ -326,7 +326,7 @@ export const TEMPLATES: DocumentTemplate[] = [
     popular: true,
     tags: ["근로계약서", "계약", "노무", "표준계약서", "회사", "법정", "인사"],
     fields: [
-      { key: "employerName", label: "사업주 상호 (회사명)", type: "text", placeholder: "예: 마음데이터 주식회사" },
+      { key: "employerName", label: "사업주 상호 (회사명)", type: "text", placeholder: "예: 마음데이타 주식회사" },
       { key: "employerCEO", label: "대표자 성명", type: "text", placeholder: "예: 김철수" },
       { key: "employerAddr", label: "사업장 주소", type: "text", placeholder: "예: 서울시 마포구 마포대로 14" },
       { key: "employeeName", label: "근로자 성명", type: "text", placeholder: "예: 홍길동" },
@@ -353,7 +353,7 @@ export const TEMPLATES: DocumentTemplate[] = [
       { key: "date", label: "계약 체결 일자", type: "text", placeholder: "예: 2026년 06월 15일" }
     ],
     initialValues: {
-      employerName: "마음데이터 주식회사",
+      employerName: "마음데이타 주식회사",
       employerCEO: "김철수",
       employerAddr: "서울특별시 마포구 마포대로 14",
       employeeName: "홍길동",
@@ -462,7 +462,7 @@ export const TEMPLATES: DocumentTemplate[] = [
     popular: false,
     tags: ["근로계약서", "연소근로자", "친권자동의서", "동의서", "노무", "청소년", "계약"],
     fields: [
-      { key: "employerName", label: "사업주 상호 (회사명)", type: "text", placeholder: "예: 마음데이터 주식회사" },
+      { key: "employerName", label: "사업주 상호 (회사명)", type: "text", placeholder: "예: 마음데이타 주식회사" },
       { key: "employerCEO", label: "대표자 성명", type: "text", placeholder: "예: 김철수" },
       { key: "employerAddr", label: "사업장 주소", type: "text", placeholder: "예: 서울시 마포구 마포대로 14" },
       { key: "employeeName", label: "연소근로자 성명", type: "text", placeholder: "예: 이몽룡" },
@@ -471,7 +471,7 @@ export const TEMPLATES: DocumentTemplate[] = [
       { key: "employeePhone", label: "근로자 연락처", type: "text", placeholder: "예: 010-5555-6666" },
       { key: "contractStart", label: "근로계약 시작일", type: "text", placeholder: "예: 2026년 07월 01일" },
       { key: "contractEnd", label: "근로계약 종료일", type: "text", placeholder: "예: 2026년 08월 31일" },
-      { key: "workPlace", label: "근무 장소", type: "text", placeholder: "예: 마음데이터 카페 망원점" },
+      { key: "workPlace", label: "근무 장소", type: "text", placeholder: "예: 마음데이타 카페 망원점" },
       { key: "workTask", label: "담당 업무 내용", type: "text", placeholder: "예: 매장 정리 및 음료 제조 보조" },
       { key: "workTimeStart", label: "근로 시작 시간", type: "text", placeholder: "예: 13:00" },
       { key: "workTimeEnd", label: "근로 종료 시간", type: "text", placeholder: "예: 18:00 (연소자 하루 최대 7시간 제한)" },
@@ -494,7 +494,7 @@ export const TEMPLATES: DocumentTemplate[] = [
       { key: "date", label: "계약 및 동의 일자", type: "text", placeholder: "예: 2026년 06월 15일" }
     ],
     initialValues: {
-      employerName: "마음데이터 주식회사",
+      employerName: "마음데이타 주식회사",
       employerCEO: "김철수",
       employerAddr: "서울특별시 마포구 마포대로 14",
       employeeName: "이몽룡",
@@ -503,7 +503,7 @@ export const TEMPLATES: DocumentTemplate[] = [
       employeePhone: "010-5555-6666",
       contractStart: "2026년 07월 01일",
       contractEnd: "2026년 08월 31일",
-      workPlace: "마음데이터 카페 망원점",
+      workPlace: "마음데이타 카페 망원점",
       workTask: "매장 정리 및 음료 제조 보조",
       workTimeStart: "13:00",
       workTimeEnd: "18:00",
@@ -633,7 +633,7 @@ export const TEMPLATES: DocumentTemplate[] = [
       { key: "employeePhone", label: "근로자 연락처", type: "text", placeholder: "예: 010-7777-8888" },
       { key: "contractStart", label: "근로 개시일 (계약시작)", type: "text", placeholder: "예: 2026년 07월 01일" },
       { key: "contractEnd", label: "공사 종료일 (또는 일 단위)", type: "text", placeholder: "예: 공사 종료일까지 (또는 2026년 09월 30일)" },
-      { key: "workPlace", label: "근무 장소 (공사 현장명)", type: "text", placeholder: "예: 마포 마음데이터 빌딩 신축 현장" },
+      { key: "workPlace", label: "근무 장소 (공사 현장명)", type: "text", placeholder: "예: 마포 마음데이타 빌딩 신축 현장" },
       { key: "workTask", label: "담당 업무 (직종)", type: "text", placeholder: "예: 형틀목공" },
       { key: "workTimeStart", label: "근로 시작 시간", type: "text", placeholder: "예: 07:00" },
       { key: "workTimeEnd", label: "근로 종료 시간", type: "text", placeholder: "예: 17:00" },
@@ -657,8 +657,8 @@ export const TEMPLATES: DocumentTemplate[] = [
       employeeAddr: "경기도 김포시 김포대로 10",
       employeePhone: "010-7777-8888",
       contractStart: "2026년 07월 01일",
-      contractEnd: "마포 마음데이터 빌딩 신축 공사 종료일까지",
-      workPlace: "마포 마음데이터 빌딩 신축 현장",
+      contractEnd: "마포 마음데이타 빌딩 신축 공사 종료일까지",
+      workPlace: "마포 마음데이타 빌딩 신축 현장",
       workTask: "형틀목공",
       workTimeStart: "07:00",
       workTimeEnd: "17:00",
@@ -748,7 +748,7 @@ export const TEMPLATES: DocumentTemplate[] = [
     popular: false,
     tags: ["근로계약서", "단시간근로자", "파트타임", "아르바이트", "노무", "요일별시간표", "계약"],
     fields: [
-      { key: "employerName", label: "사업주 상호 (회사명)", type: "text", placeholder: "예: 마음데이터 푸드" },
+      { key: "employerName", label: "사업주 상호 (회사명)", type: "text", placeholder: "예: 마음데이타 푸드" },
       { key: "employerCEO", label: "대표자 성명", type: "text", placeholder: "예: 김철수" },
       { key: "employerAddr", label: "사업장 주소", type: "text", placeholder: "예: 서울시 마포구 마포대로 14" },
       { key: "employeeName", label: "근로자 성명", type: "text", placeholder: "예: 성춘향" },
@@ -757,7 +757,7 @@ export const TEMPLATES: DocumentTemplate[] = [
       { key: "employeePhone", label: "근로자 연락처", type: "text", placeholder: "예: 010-9999-8888" },
       { key: "contractStart", label: "근로계약 시작일", type: "text", placeholder: "예: 2026년 07월 01일" },
       { key: "contractEnd", label: "근로계약 종료일", type: "text", placeholder: "예: 기한의 정함이 없음" },
-      { key: "workPlace", label: "근무 장소", type: "text", placeholder: "예: 마음데이터 푸드 공덕점" },
+      { key: "workPlace", label: "근무 장소", type: "text", placeholder: "예: 마음데이타 푸드 공덕점" },
       { key: "workTask", label: "담당 업무 내용", type: "text", placeholder: "예: 카운터 응대 및 매장 청결 관리" },
       { key: "monTime", label: "월요일 근로시간 (공란 시 휴무)", type: "text", placeholder: "예: 09:00 ~ 15:00 (휴게 12:00 ~ 12:30)" },
       { key: "tueTime", label: "화요일 근로시간 (공란 시 휴무)", type: "text", placeholder: "예: 09:00 ~ 15:00 (휴게 12:00 ~ 12:30)" },
@@ -778,7 +778,7 @@ export const TEMPLATES: DocumentTemplate[] = [
       { key: "date", label: "계약 체결 일자", type: "text", placeholder: "예: 2026년 06월 15일" }
     ],
     initialValues: {
-      employerName: "마음데이터 푸드",
+      employerName: "마음데이타 푸드",
       employerCEO: "김철수",
       employerAddr: "서울특별시 마포구 마포대로 14",
       employeeName: "성춘향",
@@ -787,7 +787,7 @@ export const TEMPLATES: DocumentTemplate[] = [
       employeePhone: "010-9999-8888",
       contractStart: "2026년 07월 01일",
       contractEnd: "기한의 정함이 없음",
-      workPlace: "마음데이터 푸드 공덕점",
+      workPlace: "마음데이타 푸드 공덕점",
       workTask: "카운터 응대 및 매장 청결 관리",
       monTime: "09:00 ~ 15:00 (휴게 12:00 ~ 12:30)",
       tueTime: "09:00 ~ 15:00 (휴게 12:00 ~ 12:30)",
@@ -903,7 +903,7 @@ export const TEMPLATES: DocumentTemplate[] = [
     popular: false,
     tags: ["근로계약서", "외국인근로자", "Standard Labor Contract", "영한대역", "노무", "숙식제공", "계약"],
     fields: [
-      { key: "employerName", label: "사업주 상호 (Company Name)", type: "text", placeholder: "예: 마음데이터 텍스타일 (Maumdata Textile)" },
+      { key: "employerName", label: "사업주 상호 (Company Name)", type: "text", placeholder: "예: 마음데이타 텍스타일 (Maumdata Textile)" },
       { key: "employerCEO", label: "대표자 성명 (CEO Name)", type: "text", placeholder: "예: 김철수 (Kim Cheol-su)" },
       { key: "employerAddr", label: "사업장 주소 (Company Address)", type: "text", placeholder: "예: 경기도 양주시 평화로 20" },
       { key: "employerRegNo", label: "사업자등록번호 (Business Registration No.)", type: "text", placeholder: "예: 120-81-00000" },
@@ -931,7 +931,7 @@ export const TEMPLATES: DocumentTemplate[] = [
       { key: "date", label: "계약 체결 일자 (Date of Agreement)", type: "text", placeholder: "예: 2026년 06월 15일" }
     ],
     initialValues: {
-      employerName: "마음데이터 텍스타일",
+      employerName: "마음데이타 텍스타일",
       employerCEO: "김철수",
       employerAddr: "경기도 양주시 평화로 20",
       employerRegNo: "120-81-00000",
@@ -1074,7 +1074,7 @@ export const TEMPLATES: DocumentTemplate[] = [
       { key: "emergencyContact", label: "비상 연락망", type: "text", placeholder: "010-1234-5678" },
       { key: "reason", label: "휴가 사유", type: "text", placeholder: "개인 사유 및 리프레시" },
       { key: "date", label: "신청 일자", type: "text", placeholder: "2026년 06월 15일" },
-      { key: "company", label: "소속 회사명", type: "text", placeholder: "마음데이터 주식회사" }
+      { key: "company", label: "소속 회사명", type: "text", placeholder: "마음데이타 주식회사" }
     ],
     initialValues: {
       dept: "경영기획실",
@@ -1085,7 +1085,7 @@ export const TEMPLATES: DocumentTemplate[] = [
       emergencyContact: "010-1234-5678",
       reason: "가족 행사 참석 및 리프레시를 위한 유급 휴가 사용",
       date: "",
-      company: "마음데이터 주식회사",
+      company: "마음데이타 주식회사",
       useApproval: true
     },
     layout: [
@@ -1411,7 +1411,7 @@ export const TEMPLATES: DocumentTemplate[] = [
       { key: "date", label: "기록 일자", type: "text", placeholder: "2026년 06월 15일" }
     ],
     initialValues: {
-      title: "마음데이터 스마트 서식 센터 출시 회의록",
+      title: "마음데이타 스마트 서식 센터 출시 회의록",
       meetingTime: "2026년 06월 15일 10:00 ~ 11:30",
       meetingPlace: "본사 2층 소회의실",
       attendees: "김철수 대표, 이영희 실장, 홍길동 대리",
@@ -1565,7 +1565,7 @@ export const TEMPLATES: DocumentTemplate[] = [
     popular: true,
     tags: ["견적서", "견적", "계약", "영업", "판매/영업", "구매/자재", "구매", "회사", "부서별"],
     fields: [
-      { key: "provider", label: "공급자 상호 / 대표", type: "text", placeholder: "예: 마음데이터 주식회사 (대표 김철수)" },
+      { key: "provider", label: "공급자 상호 / 대표", type: "text", placeholder: "예: 마음데이타 주식회사 (대표 김철수)" },
       { key: "customer", label: "수신처 / 귀하", type: "text", placeholder: "예: 미래상사 귀하" },
       { key: "estDate", label: "견적 일자", type: "text", placeholder: "2026년 06월 15일" },
       { key: "estDetails", label: "견적 주요 품목", type: "text", placeholder: "예: 마움데이터 API 서비스 연간 구독료" },
@@ -1573,10 +1573,10 @@ export const TEMPLATES: DocumentTemplate[] = [
       { key: "description", label: "상세 견적 조건 및 유효기간", type: "textarea", placeholder: "결제 조건 및 견적 유효기간 등을 작성해 주세요." }
     ],
     initialValues: {
-      provider: "마음데이터 주식회사 (대표 김철수)\n사업자등록번호: 120-81-00000\n주소: 서울시 마포구 마포대로 14",
+      provider: "마음데이타 주식회사 (대표 김철수)\n사업자등록번호: 120-81-00000\n주소: 서울시 마포구 마포대로 14",
       customer: "미래소프트 주식회사 귀하",
       estDate: "",
-      estDetails: "마음데이터 기업분석 API 서비스 연간 패키지 라이선스",
+      estDetails: "마음데이타 기업분석 API 서비스 연간 패키지 라이선스",
       totalPrice: "금 5,500,000원 (단가 5,000,000원 / 부가세 500,000원)",
       description: "1. 견적 유효기간 : 제출일로부터 30일간\n2. 결제 조건 : 계약 후 7일 이내 현금 결제\n3. 기술 지원 : 연간 무상 원격 API 유지보수 지원 포함.",
       useApproval: false
@@ -1638,7 +1638,7 @@ export const TEMPLATES: DocumentTemplate[] = [
     popular: false,
     tags: ["발주서", "발주", "계약", "영업", "판매/영업", "구매/자재", "구매", "회사", "부서별"],
     fields: [
-      { key: "provider", label: "공급자 정보 (받는 곳)", type: "text", placeholder: "마음데이터 주식회사" },
+      { key: "provider", label: "공급자 정보 (받는 곳)", type: "text", placeholder: "마음데이타 주식회사" },
       { key: "customer", label: "발주자 정보 (보내는 곳)", type: "text", placeholder: "미래상사" },
       { key: "orderDate", label: "발주 일자", type: "text", placeholder: "2026년 06월 15일" },
       { key: "deliveryDate", label: "납기 기한", type: "text", placeholder: "2026년 06월 30일" },
@@ -1646,7 +1646,7 @@ export const TEMPLATES: DocumentTemplate[] = [
       { key: "description", label: "발주 상세 내용 및 특일사항", type: "textarea", placeholder: "납품 방식 및 운송 조건 등을 기재하세요." }
     ],
     initialValues: {
-      provider: "마음데이터 주식회사 귀하",
+      provider: "마음데이타 주식회사 귀하",
       customer: "주식회사 미래테크\n사업자등록번호: 220-81-12345\n주소: 경기도 수원시 광교로 156",
       orderDate: "",
       deliveryDate: "2026년 06월 30일 (화요일限)",
@@ -2437,7 +2437,7 @@ export const TEMPLATES: DocumentTemplate[] = [
       { key: "duration", label: "재직 기간", type: "text", placeholder: "2023년 05월 01일 ~ 현재" },
       { key: "purpose", label: "사용 용도", type: "text", placeholder: "금융기관 제출용" },
       { key: "date", label: "발행 일자", type: "text", placeholder: "2026년 06월 16일" },
-      { key: "company", label: "발행 회사명", type: "text", placeholder: "마음데이터 주식회사" }
+      { key: "company", label: "발행 회사명", type: "text", placeholder: "마음데이타 주식회사" }
     ],
     initialValues: {
       name: "홍길동",
@@ -2448,7 +2448,7 @@ export const TEMPLATES: DocumentTemplate[] = [
       duration: "2023년 05월 01일 ~ 현재",
       purpose: "금융기관 제출용",
       date: "",
-      company: "마음데이터 주식회사",
+      company: "마음데이타 주식회사",
       useApproval: true
     },
     layout: [
@@ -2525,7 +2525,7 @@ export const TEMPLATES: DocumentTemplate[] = [
       { key: "leaveReason", label: "퇴직 사유", type: "text", placeholder: "개인 사정으로 인한 전직" },
       { key: "purpose", label: "사용 용도", type: "text", placeholder: "이직 제출용" },
       { key: "date", label: "발행 일자", type: "text", placeholder: "2026년 06월 16일" },
-      { key: "company", label: "발행 회사명", type: "text", placeholder: "마음데이터 주식회사" }
+      { key: "company", label: "발행 회사명", type: "text", placeholder: "마음데이타 주식회사" }
     ],
     initialValues: {
       name: "홍길동",
@@ -2538,7 +2538,7 @@ export const TEMPLATES: DocumentTemplate[] = [
       leaveReason: "개인 사정으로 인한 전직",
       purpose: "이직 제출용",
       date: "",
-      company: "마음데이터 주식회사",
+      company: "마음데이타 주식회사",
       useApproval: true
     },
     layout: [
@@ -2626,7 +2626,7 @@ export const TEMPLATES: DocumentTemplate[] = [
       { key: "tasks", label: "주요 인수인계 업무", type: "textarea", placeholder: "- 월간 자금 지출결의서 취합 및 정산 회계 감사 업무" },
       { key: "documents", label: "인계 문서 및 산출물", type: "textarea", placeholder: "- 로컬 서버 계정 패스워드 및 소스 깃 저장소 이전 완료" },
       { key: "pending", label: "미결 및 특이사항", type: "textarea", placeholder: "- 다음 분기 광고 수익형 지면 구축 연동 협의" },
-      { key: "company", label: "회사명", type: "text", placeholder: "마음데이터 주식회사" }
+      { key: "company", label: "회사명", type: "text", placeholder: "마음데이타 주식회사" }
     ],
     initialValues: {
       name: "홍길동",
@@ -2635,10 +2635,10 @@ export const TEMPLATES: DocumentTemplate[] = [
       successor: "이영희",
       successorRank: "대리",
       date: "",
-      tasks: "1. 월간 자금 지출결의서 취합 및 정산 회계 감사 업무\n2. 마음데이터 FORM 템플릿 유지보수 및 기획서 관리",
+      tasks: "1. 월간 자금 지출결의서 취합 및 정산 회계 감사 업무\n2. 마음데이타 FORM 템플릿 유지보수 및 기획서 관리",
       documents: "1. 템플릿 소스 코드 저장소 이전 완료\n2. 로컬 서버 관리자 계정 패스워드 인계 완료",
       pending: "1. IT개발팀과 연계하여 다음 분기 광고 수익형 지면 구축 관련 연동 협약 체결 진행 요망",
-      company: "마음데이터 주식회사",
+      company: "마음데이타 주식회사",
       useApproval: true
     },
     layout: [
@@ -2728,7 +2728,7 @@ export const TEMPLATES: DocumentTemplate[] = [
       { key: "item", label: "영수 내역 / 항목", type: "text", placeholder: "사내 개발 서버 라이브러리 검증 비용 대금" },
       { key: "date", label: "영수 일자", type: "text", placeholder: "2026년 06월 16일" },
       { key: "supplierRegNo", label: "공급자 등록번호", type: "text", placeholder: "120-81-00000" },
-      { key: "supplierName", label: "공급자 상호 / 회사명", type: "text", placeholder: "마음데이터 주식회사" },
+      { key: "supplierName", label: "공급자 상호 / 회사명", type: "text", placeholder: "마음데이타 주식회사" },
       { key: "supplierCEO", label: "공급자 대표자 성명", type: "text", placeholder: "김철수" },
       { key: "supplierAddr", label: "공급자 주소", type: "text", placeholder: "서울특별시 마포구 마포대로 14" }
     ],
@@ -2738,7 +2738,7 @@ export const TEMPLATES: DocumentTemplate[] = [
       item: "사내 개발 서버 라이브러리 검증 비용 대금",
       date: "",
       supplierRegNo: "120-81-00000",
-      supplierName: "마음데이터 주식회사",
+      supplierName: "마음데이타 주식회사",
       supplierCEO: "김철수",
       supplierAddr: "서울특별시 마포구 마포대로 14",
       useApproval: false
@@ -2827,23 +2827,23 @@ export const TEMPLATES: DocumentTemplate[] = [
     tags: ["동의서", "개인정보", "계약", "법률", "행정"],
     fields: [
       { key: "title", label: "수집 동의서 제목", type: "text", placeholder: "서비스 회원 가입 및 정보 제공" },
-      { key: "purpose", label: "수집 및 이용 목적", type: "textarea", placeholder: "마음데이터 서비스 회원가입, 본인 인증 및 고객 관리" },
+      { key: "purpose", label: "수집 및 이용 목적", type: "textarea", placeholder: "마음데이타 서비스 회원가입, 본인 인증 및 고객 관리" },
       { key: "items", label: "수집하는 개인정보 항목", type: "textarea", placeholder: "성명, 생년월일, 연락처, 이메일 주소, 주소" },
       { key: "period", label: "보유 및 이용 기간", type: "textarea", placeholder: "회원 탈퇴 시 또는 목적 달성 시 즉시 파기" },
       { key: "name", label: "동의인 성명", type: "text", placeholder: "홍길동" },
       { key: "phone", label: "동의인 연락처", type: "text", placeholder: "010-1234-5678" },
       { key: "date", label: "동의 일자", type: "text", placeholder: "2026년 06월 16일" },
-      { key: "company", label: "정보 수집 주체 (회사명)", type: "text", placeholder: "마음데이터 주식회사" }
+      { key: "company", label: "정보 수집 주체 (회사명)", type: "text", placeholder: "마음데이타 주식회사" }
     ],
     initialValues: {
       title: "서비스 이용 및 맞춤 무료 서식 정보 제공",
-      purpose: "마음데이터 서비스 가입, 본인 인증 및 맞춤 무료 서식 서비스 제공",
+      purpose: "마음데이타 서비스 가입, 본인 인증 및 맞춤 무료 서식 서비스 제공",
       items: "성명, 연락처, 이메일 주소, 주소",
       period: "목적 달성 시 즉시 파기 (단, 법령에 특별한 규정이 있는 경우 해당 기간 보관)",
       name: "홍길동",
       phone: "010-1234-5678",
       date: "",
-      company: "마음데이터 주식회사",
+      company: "마음데이타 주식회사",
       useApproval: false
     },
     layout: [
@@ -2913,7 +2913,7 @@ export const TEMPLATES: DocumentTemplate[] = [
       { key: "birth", label: "생년월일", type: "text", placeholder: "1990년 01월 01일" },
       { key: "rules", label: "서약 규정 조항", type: "textarea", placeholder: "1. 회사의 소스코드, 기술정보를 무단 유출하지 않는다." },
       { key: "date", label: "서약 일자", type: "text", placeholder: "2026년 06월 16일" },
-      { key: "company", label: "서약 대상 회사명", type: "text", placeholder: "마음데이터 주식회사" }
+      { key: "company", label: "서약 대상 회사명", type: "text", placeholder: "마음데이타 주식회사" }
     ],
     initialValues: {
       name: "홍길동",
@@ -2922,7 +2922,7 @@ export const TEMPLATES: DocumentTemplate[] = [
       birth: "1990년 01월 01일",
       rules: "1. 본인은 업무를 수행함에 있어 지득한 회사의 영업 비밀, 기술 정보, 고객 정보, 기획안, 소스 코드 등의 일체 기밀을 재직 중은 물론 퇴직 후에도 무단 유출하거나 제3자에게 누설하지 않겠습니다.\n2. 본인은 회사의 보안 규정 및 지침을 철저히 준수하겠습니다.\n3. 만일 본 서약 조항을 위반하여 회사에 유무형의 손해를 입힌 경우에는 부정경쟁방지 및 영업비밀보호에 관한 법률 등 관련 법령에 따른 민·형사상의 책임을 전적으로 지겠습니다.",
       date: "",
-      company: "마음데이터 주식회사",
+      company: "마음데이타 주식회사",
       useApproval: false
     },
     layout: [
@@ -2961,7 +2961,7 @@ export const TEMPLATES: DocumentTemplate[] = [
         ]
       },
       { type: "spacer" },
-      { type: "paragraph", value: "서약인은 마음데이터 주식회사의 일원으로서 위 서약 조항을 성실히 준수할 것을 엄숙히 서약하며 본 서약서를 제출합니다." },
+      { type: "paragraph", value: "서약인은 마음데이타 주식회사의 일원으로서 위 서약 조항을 성실히 준수할 것을 엄숙히 서약하며 본 서약서를 제출합니다." },
       { type: "paragraph", value: "{date}", style: { fontSize: "11pt", fontWeight: "bold", textAlign: "center" } },
       { type: "spacer" },
       { type: "sign-block", value: "서약인 : {name} (인)" },
@@ -3397,7 +3397,7 @@ export const TEMPLATES: DocumentTemplate[] = [
     popular: true,
     tags: ["사업자등록", "국세청", "사업자등록신청서", "세무서", "창업관련", "공공민원", "정부서식", "계약"],
     fields: [
-      { key: "bizName", label: "상호 (단체명)", type: "text", placeholder: "마음데이터 팩토리" },
+      { key: "bizName", label: "상호 (단체명)", type: "text", placeholder: "마음데이타 팩토리" },
       { key: "name", label: "대표자 성명", type: "text", placeholder: "홍길동" },
       { key: "delegatorRegNo", label: "대표자 주민등록번호", type: "text", placeholder: "900101-1234567" },
       { key: "bizPhone", label: "전화번호 (사업장)", type: "text", placeholder: "010-1234-5678" },
@@ -3411,7 +3411,7 @@ export const TEMPLATES: DocumentTemplate[] = [
       { key: "date", label: "신청 일자", type: "text", placeholder: "2026년 06월 16일" }
     ],
     initialValues: {
-      bizName: "마음데이터 테크놀로지",
+      bizName: "마음데이타 테크놀로지",
       name: "홍길동",
       delegatorRegNo: "900101-1234567",
       bizPhone: "010-1234-5678",
@@ -3504,7 +3504,7 @@ export const TEMPLATES: DocumentTemplate[] = [
     popular: true,
     tags: ["납세증명서", "국세청", "세무서", "세무/회계", "공공민원", "정부서식", "재무"],
     fields: [
-      { key: "name", label: "신청인 성명 (상호)", type: "text", placeholder: "마음데이터 주식회사" },
+      { key: "name", label: "신청인 성명 (상호)", type: "text", placeholder: "마음데이타 주식회사" },
       { key: "delegatorRegNo", label: "주민(사업자)등록번호", type: "text", placeholder: "120-81-00000" },
       { key: "delegatorAddr", label: "주소 (본점소재지)", type: "text", placeholder: "서울특별시 마포구 마포대로 14" },
       { key: "bizPhone", label: "연락처", type: "text", placeholder: "010-1234-5678" },
@@ -3515,7 +3515,7 @@ export const TEMPLATES: DocumentTemplate[] = [
       { key: "date", label: "신청 일자", type: "text", placeholder: "2026년 06월 16일" }
     ],
     initialValues: {
-      name: "마음데이터 주식회사 (대표자: 홍길동)",
+      name: "마음데이타 주식회사 (대표자: 홍길동)",
       delegatorRegNo: "120-81-00000",
       delegatorAddr: "서울특별시 마포구 마포대로 14 (도화동)",
       bizPhone: "010-1234-5678 (대표전화)",
@@ -3604,7 +3604,7 @@ export const TEMPLATES: DocumentTemplate[] = [
       { key: "duration", label: "재직 기간", type: "text", placeholder: "2023년 05월 01일 ~ 현재" },
       { key: "purpose", label: "사용 용도", type: "text", placeholder: "금융기관 제출용" },
       { key: "date", label: "작성/발급 일자", type: "text", placeholder: "2026년 06월 16일" },
-      { key: "company", label: "회사명", type: "text", placeholder: "마음데이터 주식회사" }
+      { key: "company", label: "회사명", type: "text", placeholder: "마음데이타 주식회사" }
     ],
     initialValues: {
       name: "홍길동",
@@ -3615,7 +3615,7 @@ export const TEMPLATES: DocumentTemplate[] = [
       duration: "2023년 05월 01일 ~ 현재",
       purpose: "금융기관 제출용",
       date: "",
-      company: "마음데이터 주식회사",
+      company: "마음데이타 주식회사",
       useApproval: true
     },
     layout: [
@@ -3864,7 +3864,7 @@ export const TEMPLATES: DocumentTemplate[] = [
     popular: true,
     tags: ["비밀유지", "NDA", "계약", "협약", "보안", "법률"],
     fields: [
-      { key: "firstParty", label: "정보제공자 (갑) 상호", type: "text", placeholder: "마음데이터 주식회사" },
+      { key: "firstParty", label: "정보제공자 (갑) 상호", type: "text", placeholder: "마음데이타 주식회사" },
       { key: "firstCEO", label: "갑 대표이사 성명", type: "text", placeholder: "김철수" },
       { key: "firstAddr", label: "갑 본점 주소", type: "text", placeholder: "서울특별시 마포구 마포대로 14" },
       { key: "secondParty", label: "정보수령자 (을) 상호", type: "text", placeholder: "디지털파트너스 주식회사" },
@@ -3876,7 +3876,7 @@ export const TEMPLATES: DocumentTemplate[] = [
       { key: "date", label: "계약 체결 일자", type: "text", placeholder: "2026년 06월 16일" }
     ],
     initialValues: {
-      firstParty: "마음데이터 주식회사",
+      firstParty: "마음데이타 주식회사",
       firstCEO: "김철수",
       firstAddr: "서울특별시 마포구 마포대로 14",
       secondParty: "디지털파트너스 주식회사",
@@ -3927,7 +3927,7 @@ export const TEMPLATES: DocumentTemplate[] = [
     popular: true,
     tags: ["동업", "동업계약", "계약", "공동사업", "스타트업"],
     fields: [
-      { key: "businessName", label: "공동 사업명", type: "text", placeholder: "마음데이터 카페 공동 창업" },
+      { key: "businessName", label: "공동 사업명", type: "text", placeholder: "마음데이타 카페 공동 창업" },
       { key: "firstParty", label: "동업자 (갑) 성명", type: "text", placeholder: "김철수" },
       { key: "firstBirth", label: "갑 주민등록번호", type: "text", placeholder: "750101-1234567" },
       { key: "firstAddr", label: "갑 주소", type: "text", placeholder: "서울특별시 마포구 마포대로 14" },
@@ -3940,7 +3940,7 @@ export const TEMPLATES: DocumentTemplate[] = [
       { key: "date", label: "동업 계약 체결일", type: "text", placeholder: "2026년 06월 16일" }
     ],
     initialValues: {
-      businessName: "마음데이터 카페 공동 창업 및 운영",
+      businessName: "마음데이타 카페 공동 창업 및 운영",
       firstParty: "김철수",
       firstBirth: "750101-1234567",
       firstAddr: "서울특별시 마포구 마포대로 14",
@@ -3992,7 +3992,7 @@ export const TEMPLATES: DocumentTemplate[] = [
     popular: true,
     tags: ["용역계약", "표준계약서", "외주", "프리랜서", "계약", "비즈니스"],
     fields: [
-      { key: "client", label: "발주사 (갑) 상호", type: "text", placeholder: "마음데이터 주식회사" },
+      { key: "client", label: "발주사 (갑) 상호", type: "text", placeholder: "마음데이타 주식회사" },
       { key: "clientCEO", label: "갑 대표자 성명", type: "text", placeholder: "김철수" },
       { key: "clientAddr", label: "갑 주소", type: "text", placeholder: "서울특별시 마포구 마포대로 14" },
       { key: "provider", label: "용역수행사 (을) 상호", type: "text", placeholder: "개발컴퍼니 주식회사" },
@@ -4006,7 +4006,7 @@ export const TEMPLATES: DocumentTemplate[] = [
       { key: "date", label: "계약 일자", type: "text", placeholder: "2026년 06월 16일" }
     ],
     initialValues: {
-      client: "마음데이터 주식회사",
+      client: "마음데이타 주식회사",
       clientCEO: "김철수",
       clientAddr: "서울특별시 마포구 마포대로 14",
       provider: "개발컴퍼니 주식회사",
@@ -4098,7 +4098,7 @@ export const TEMPLATES: DocumentTemplate[] = [
       { key: "address", label: "서약자 주소", type: "text", placeholder: "서울특별시 마포구 마포대로 14" },
       { key: "dept", label: "소속 부서", type: "text", placeholder: "기술개발팀" },
       { key: "rank", label: "직급", type: "text", placeholder: "대리" },
-      { key: "company", label: "서약 회사명 (귀하)", type: "text", placeholder: "마음데이터 주식회사" },
+      { key: "company", label: "서약 회사명 (귀하)", type: "text", placeholder: "마음데이타 주식회사" },
       { key: "targetSecrets", label: "서약 대상 비밀 범위", type: "textarea", placeholder: "회사의 마케팅 계획, 소스코드, 고객 데이터베이스, 인공지능 모형 가중치 등" },
       { key: "date", label: "서약 작성 일자", type: "text", placeholder: "2026년 06월 16일" }
     ],
@@ -4108,7 +4108,7 @@ export const TEMPLATES: DocumentTemplate[] = [
       address: "서울특별시 마포구 마포대로 14",
       dept: "기술개발팀",
       rank: "대리",
-      company: "마음데이터 주식회사 대표이사 귀하",
+      company: "마음데이타 주식회사 대표이사 귀하",
       targetSecrets: "1. 회사가 보유한 웹 서비스 소스코드 및 데이터베이스 스키마 정보\n2. 마케팅 기획안, 재무 실적 통계 및 고객 정보\n3. 회사가 특허 출원 중이거나 독점적으로 운영하는 알고리즘 모형 데이터",
       date: "",
       useApproval: false
@@ -4173,7 +4173,7 @@ export const TEMPLATES: DocumentTemplate[] = [
       { key: "details", label: "발생 경위 및 상세 정황", type: "textarea", placeholder: "사건의 발생 원인, 진행 과정 등을 사실대로 기재하세요." },
       { key: "countermeasure", label: "반성 및 향후 대책", type: "textarea", placeholder: "재발 방지를 위한 행동 수칙 및 다짐을 기재하세요." },
       { key: "date", label: "경위서 작성 일자", type: "text", placeholder: "2026년 06월 16일" },
-      { key: "company", label: "수신 (제출처)", type: "text", placeholder: "마음데이터 주식회사 대표이사 귀하" }
+      { key: "company", label: "수신 (제출처)", type: "text", placeholder: "마음데이타 주식회사 대표이사 귀하" }
     ],
     initialValues: {
       dept: "마케팅기획부",
@@ -4185,7 +4185,7 @@ export const TEMPLATES: DocumentTemplate[] = [
       details: "2026년 6월 12일 광고 관리자 페이지 내에서 일일 예산 설정값을 정비하는 과정에서, 대리인의 키보드 오타 입력으로 인해 설정 한도가 과잉 세팅되어 당초 예산이었던 500,000원 대비 2,000,000원이 초과하여 결제 및 지출되는 실수가 발생하였습니다.",
       countermeasure: "차후에는 광고비 지출 설정을 마친 후 즉시 부서장과의 이중 확인 절차를 거치겠으며, 시스템 설정 모듈 내 정기 모니터링 체크리스트를 준수하여 동종의 오입력 사고가 재발하지 않도록 각별히 유의하겠습니다.",
       date: "",
-      company: "마음데이터 주식회사 대표이사 귀하",
+      company: "마음데이타 주식회사 대표이사 귀하",
       useApproval: true
     },
     layout: [
@@ -4528,7 +4528,7 @@ export const TEMPLATES: DocumentTemplate[] = [
     popular: true,
     tags: ["제안서", "사업제휴", "제안", "비즈니스", "재무", "기획서"],
     fields: [
-      { key: "proposer", label: "제안사 상호", type: "text", placeholder: "마음데이터 주식회사" },
+      { key: "proposer", label: "제안사 상호", type: "text", placeholder: "마음데이타 주식회사" },
       { key: "proposerCEO", label: "대표자 성명", type: "text", placeholder: "김철수" },
       { key: "contact", label: "담당자 연락처 / 메일", type: "text", placeholder: "gildong@maumdata.com" },
       { key: "proposalTitle", label: "제안서 제목", type: "text", placeholder: "빅데이터 기반 서식 플랫폼 공동 API 제휴 제안" },
@@ -4538,12 +4538,12 @@ export const TEMPLATES: DocumentTemplate[] = [
       { key: "date", label: "제안 일자", type: "text", placeholder: "2026년 06월 16일" }
     ],
     initialValues: {
-      proposer: "마음데이터 주식회사",
+      proposer: "마음데이타 주식회사",
       proposerCEO: "김철수",
       contact: "홍길동 팀장 (010-1234-5678, gildong@maumdata.com)",
       proposalTitle: "인공지능 기반 오피스 서식 조판 기술 공동 제약 및 API 연동 제휴",
       background: "현재 문서 자동화 시장의 급격한 성장에 따라 정형화된 행정 및 비즈니스 서식에 대한 기업들의 수요가 증가하고 있습니다. 이에 본 제안사는 고도화된 동적 서식 조판 기술을 귀사의 서비스에 내재화하여 이용자의 편의성을 도모하고자 합니다.",
-      details: "1. 마음데이터의 서식 설계 API 엔진을 귀사 포털 사이트에 임베딩 방식으로 연동\n2. 사용자별 맞춤형 실무 서식 100종의 템플릿 실시간 스트리밍 제공\n3. 사용료 결제 시스템의 연동 및 수익 5:5 배분 쉐어 모델 구축",
+      details: "1. 마음데이타의 서식 설계 API 엔진을 귀사 포털 사이트에 임베딩 방식으로 연동\n2. 사용자별 맞춤형 실무 서식 100종의 템플릿 실시간 스트리밍 제공\n3. 사용료 결제 시스템의 연동 및 수익 5:5 배분 쉐어 모델 구축",
       expectedEffect: "1. 귀사 고객의 문서 작업 소요 시간을 80% 이상 획기적으로 절감\n2. 신규 트래픽 유입 및 월정액 서식 구독 비즈니스를 통한 공동 영업 이익 창출\n3. 고품격 인쇄 출력 기능을 제공함으로써 오피스 브랜드 신뢰도 제고",
       date: "",
       useApproval: true
@@ -5318,7 +5318,7 @@ export const TEMPLATES: DocumentTemplate[] = [
     tags: ["사업자등록", "사업자변경", "사업자정정", "세무서", "국세청", "행정"],
     fields: [
       { key: "bizNo", label: "사업자등록번호", type: "text", placeholder: "120-81-00000" },
-      { key: "bizName", label: "상호 (회사명)", type: "text", placeholder: "마음데이터 주식회사" },
+      { key: "bizName", label: "상호 (회사명)", type: "text", placeholder: "마음데이타 주식회사" },
       { key: "ownerName", label: "대표자 성명", type: "text", placeholder: "홍길동" },
       { key: "bizPhone", label: "대표 연락처", type: "text", placeholder: "010-1234-5678" },
       { key: "updateItem", label: "정정할 항목", type: "text", placeholder: "예: 사업장 소재지 이전" },
@@ -5329,7 +5329,7 @@ export const TEMPLATES: DocumentTemplate[] = [
     ],
     initialValues: {
       bizNo: "120-81-00000",
-      bizName: "마음데이터",
+      bizName: "마음데이타",
       ownerName: "홍길동",
       bizPhone: "02-123-4567 (010-1234-5678)",
       updateItem: "사업장 소재지 이전",
@@ -5431,7 +5431,7 @@ export const TEMPLATES: DocumentTemplate[] = [
     tags: ["휴업신고", "폐업신고", "세무서", "국세청", "사업중단", "행정"],
     fields: [
       { key: "bizNo", label: "사업자등록번호", type: "text", placeholder: "120-81-00000" },
-      { key: "bizName", label: "상호 (법인명)", type: "text", placeholder: "마음데이터" },
+      { key: "bizName", label: "상호 (법인명)", type: "text", placeholder: "마음데이타" },
       { key: "ownerName", label: "대표자 성명", type: "text", placeholder: "홍길동" },
       { key: "ownerRegNo", label: "주민등록번호", type: "text", placeholder: "900101-1234567" },
       { key: "bizAddr", label: "사업장 소재지 (주소)", type: "text", placeholder: "서울특별시 마포구 마포대로 14" },
@@ -5445,7 +5445,7 @@ export const TEMPLATES: DocumentTemplate[] = [
     ],
     initialValues: {
       bizNo: "120-81-00000",
-      bizName: "마음데이터 테크놀로지",
+      bizName: "마음데이타 테크놀로지",
       ownerName: "홍길동",
       ownerRegNo: "900101-1234567",
       bizAddr: "서울특별시 마포구 마포대로 14 (도화동)",
@@ -5678,7 +5678,7 @@ export const TEMPLATES: DocumentTemplate[] = [
     fields: [
       { key: "name", label: "신청인 성명", type: "text", placeholder: "홍길동" },
       { key: "regNo", label: "주민등록번호", type: "text", placeholder: "900101-1234567" },
-      { key: "bizName", label: "상호 (개인사업자인 경우)", type: "text", placeholder: "마음데이터" },
+      { key: "bizName", label: "상호 (개인사업자인 경우)", type: "text", placeholder: "마음데이타" },
       { key: "addr", label: "신청인 주소", type: "text", placeholder: "서울특별시 마포구 마포대로 14" },
       { key: "phone", label: "연락처", type: "text", placeholder: "010-1234-5678" },
       { key: "year", label: "증명 대상 귀속연도", type: "text", placeholder: "2025년도" },
@@ -5691,7 +5691,7 @@ export const TEMPLATES: DocumentTemplate[] = [
     initialValues: {
       name: "홍길동",
       regNo: "900101-1234567",
-      bizName: "마음데이터 테크 (개인사업자 겸업)",
+      bizName: "마음데이타 테크 (개인사업자 겸업)",
       addr: "서울특별시 마포구 마포대로 14 (도화동)",
       phone: "010-1234-5678",
       year: "2025년도",
@@ -5907,7 +5907,7 @@ export const TEMPLATES: DocumentTemplate[] = [
       { key: "birth", label: "생년월일", type: "text", placeholder: "1990.01.01" },
       { key: "phone", label: "연락처", type: "text", placeholder: "010-1234-5678" },
       { key: "email", label: "이메일 주소", type: "text", placeholder: "gildong@maumdata.com" },
-      { key: "recipient", label: "수신 기관 (제출 관청)", type: "text", placeholder: "마음데이터 행정지원실 귀중" },
+      { key: "recipient", label: "수신 기관 (제출 관청)", type: "text", placeholder: "마음데이타 행정지원실 귀중" },
       { key: "date", label: "동의 작성 일자", type: "text", placeholder: "2026년 06월 16일" }
     ],
     initialValues: {
@@ -6215,14 +6215,14 @@ export const TEMPLATES: DocumentTemplate[] = [
     popular: false,
     tags: ["IR", "피치덱", "스타트업", "투자유치", "사업요약"],
     fields: [
-      { key: "projectName", label: "프로젝트 및 회사명", type: "text", placeholder: "마음데이터 (MaumData)" },
+      { key: "projectName", label: "프로젝트 및 회사명", type: "text", placeholder: "마음데이타 (MaumData)" },
       { key: "problem", label: "문제 정의 (Problem)", type: "textarea", placeholder: "서류 조판의 디지털화 부재 및 조판 정밀도 한계" },
       { key: "solution", label: "해결 방안 (Solution)", type: "textarea", placeholder: "12열 대칭 격자 구조 기반의 실시간 PDF 조판 플랫폼 구축" },
       { key: "marketSize", label: "시장 규모 (Market)", type: "text", placeholder: "국내 비즈니스 서식 1.2조원 시장" },
       { key: "bizModel", label: "수익 모델 (Biz Model)", type: "text", placeholder: "SaaS 구독 서비스 및 API 라이선스 판매" }
     ],
     initialValues: {
-      projectName: "마음데이터 (MaumData)",
+      projectName: "마음데이타 (MaumData)",
       problem: "비즈니스 및 공공기관 서식의 디지털화 부족과 PDF 출력 시 격자 틀어짐 현상 발생으로 인한 불필요한 인쇄 자원 낭비 및 행정 피로도 누적",
       solution: "12열 대칭 격자를 엄격하게 준수하는 반응형 웹 레이아웃 템플릿 제공 및 1페이지 강제 조판 인쇄 컴파일러 구축",
       marketSize: "국내 비즈니스 서식 다운로드 및 전장 거래 시장 연간 1.2조원 규모 추산",
@@ -6924,7 +6924,7 @@ export const TEMPLATES: DocumentTemplate[] = [
     initialValues: {
       client: "주식회사 마음테크 대표이사 이대표",
       worker: "최디자",
-      projectName: "마음데이터 법정 공식 서식 18종 반응형 UI 및 모듈 교정 용역",
+      projectName: "마음데이타 법정 공식 서식 18종 반응형 UI 및 모듈 교정 용역",
       price: "3,500,000원 (부가가치세 별도)",
       payTerm: "계약 체결 시 선금 50%(1,750,000원), 최종 검수 통과 완료 후 50% 지급",
       date: ""
@@ -8185,7 +8185,7 @@ export const TEMPLATES: DocumentTemplate[] = [
       reporter: "이대리",
       dept: "개발본부 1팀",
       dateRange: "2026년 06월 15일 ~ 2026년 06월 19일 (6월 3주차)",
-      achieved: "- 마음데이터 무료 법률 서식 7종 전체 컴파일러 12열 그리드 연동 완료\n- 구글 서치콘솔 크롤러 유입 증가를 위한 sitemap.xml 쿼리 인덱싱 보완\n- PDF 인쇄 조판 한글 폰트(Noto Sans) 깨짐 예방 모듈 완성",
+      achieved: "- 마음데이타 무료 법률 서식 7종 전체 컴파일러 12열 그리드 연동 완료\n- 구글 서치콘솔 크롤러 유입 증가를 위한 sitemap.xml 쿼리 인덱싱 보완\n- PDF 인쇄 조판 한글 폰트(Noto Sans) 깨짐 예방 모듈 완성",
       planned: "- Neon DB 커넥션 풀 누수 복구 테스트 및 상시 스케줄러 보강\n- DART Open API 일일 제한 도달 시 IP Proxy 분할 스크립트 설계\n- 수기식 표준 세금계산서 디자인 템플릿 마이그레이션 적용 테스트",
       issue: "- 기안 결재 라인 간소화를 위해 그룹웨어 API의 실시간 연동 지원 필요\n- DART Crawler 대용량 배치로 인한 로컬 IP 접속 차단 방지 방안 수립 요망",
       date: "2026년 06월 16일"
@@ -8418,7 +8418,7 @@ export const TEMPLATES: DocumentTemplate[] = [
       ceo: "이대표",
       worker: "홍길동",
       workerId: "1990년 05월 15일",
-      workDesc: "1. 마음데이터 무료 법률 문서 에디터 화면 UI 컴포넌트 고도화 및 CSS 정비\n2. 12열 반응형 그리드 렌더링 검증 및 다중 페이지 인쇄 모듈 구현 및 QA",
+      workDesc: "1. 마음데이타 무료 법률 문서 에디터 화면 UI 컴포넌트 고도화 및 CSS 정비\n2. 12열 반응형 그리드 렌더링 검증 및 다중 페이지 인쇄 모듈 구현 및 QA",
       contractPeriod: "2026년 06월 16일부터 2026년 12월 15일까지 (총 6개월간)",
       salaryRate: "월 총액 금 4,500,000원 정 (VAT 별도, 소득세 3.3% 공제대상)",
       salaryDate: "매월 25일 (지급 기일이 공휴일인 경우 그 전일 지급)",

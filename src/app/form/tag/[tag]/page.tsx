@@ -15,11 +15,11 @@ export async function generateMetadata(props: TagPageProps): Promise<Metadata> {
   const decodedTag = decodeURIComponent(tag);
   
   return {
-    title: `무료 ${decodedTag} 서식 양식 모음 | 마음데이터 FORM`,
+    title: `무료 ${decodedTag} 서식 양식 모음 | 마음데이타 FORM`,
     description: `${decodedTag} 관련 추천 표준 문서 양식들을 모았습니다. 회원가입이나 설치 없이 웹에서 바로 내용을 기입하고 깔끔한 A4 PDF로 다운로드 및 즉시 인쇄를 진행해보세요.`,
-    keywords: [decodedTag, `${decodedTag} 양식`, `${decodedTag} 서식`, "무료서식", "마음데이터"],
+    keywords: [decodedTag, `${decodedTag} 양식`, `${decodedTag} 서식`, "무료서식", "마음데이타"],
     openGraph: {
-      title: `무료 ${decodedTag} 서식 양식 모음 | 마음데이터 FORM`,
+      title: `무료 ${decodedTag} 서식 양식 모음 | 마음데이타 FORM`,
       description: `${decodedTag} 관련 행정/법률/노무 서식을 웹에서 직접 작성하고 출력해보세요.`,
       type: "website"
     }

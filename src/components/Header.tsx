@@ -12,11 +12,11 @@ export default function Header() {
       <div className="container header-inner">
         {isFormCenter ? (
           <Link href="/form" className="logo">
-            마음데이터<span className="logo-accent" style={{ color: "var(--color-primary)" }}>FORM</span>
+            마음데이타<span className="logo-accent" style={{ color: "var(--color-primary)" }}>FORM</span>
           </Link>
         ) : (
           <Link href="/" className="logo">
-            마음데이터<span className="logo-accent">BIZ</span>
+            마음데이타<span className="logo-accent">BIZ</span>
           </Link>
         )}
 
@@ -56,7 +56,7 @@ export default function Header() {
                   border: "1px solid var(--color-border)"
                 }}
               >
-                마음데이터 BIZ 가기 →
+                마음데이타 BIZ 가기 →
               </Link>
             </>
           ) : (

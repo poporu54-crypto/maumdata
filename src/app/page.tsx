@@ -73,7 +73,7 @@ export default async function MainPage() {
             fontWeight: 700,
             marginBottom: "16px"
           }}>
-            <span>✨ 마음데이터 독자적인 기업 분석 엔진</span>
+            <span>✨ 마음데이타 독자적인 기업 분석 엔진</span>
           </div>
           <h1 className="hero-title">
             모든 기업 정보를 <br className="br-pc" />

@@ -2811,7 +2811,7 @@ export default function DocumentEditor({ templateId, initialTemplate }: { templa
         <div className="editor-form-panel">
           <div>
             <span style={{ fontSize: "0.8rem", color: "var(--color-primary)", fontWeight: 700 }}>
-              마음데이터 FORM &middot; {template.category} 카테고리
+              마음데이타 FORM &middot; {template.category} 카테고리
             </span>
             <h2 style={{ fontSize: "1.45rem", fontWeight: 700, margin: "4px 0" }}>
               {template.title}

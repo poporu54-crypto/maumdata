@@ -21,7 +21,7 @@ interface AdSpaceProps {
 
 const MOCK_ADS = [
   {
-    title: "🎁 마음데이터 FORM 공식 론칭!",
+    title: "🎁 마음데이타 FORM 공식 론칭!",
     desc: "사직서, 이력서, 계약서 등 직장인 필수 문서 12종 무료 편집 및 즉시 PDF/인쇄 다운로드 지원",
     badge: "공지사항",
     bgColor: "linear-gradient(135deg, #1f2937 0%, #111827 100%)",
@@ -29,7 +29,7 @@ const MOCK_ADS = [
     actionText: "양식 보러가기",
   },
   {
-    title: "⚡ 마음데이터 BIZ 기업 신용도 분석 출시",
+    title: "⚡ 마음데이타 BIZ 기업 신용도 분석 출시",
     desc: "국민연금 공공 데이터 기반 실시간 퇴사율 추이 및 조직 건강도 등급 판별 엔진 가동 중",
     badge: "신기능",
     bgColor: "linear-gradient(135deg, #3182f6 0%, #1b64da 100%)",

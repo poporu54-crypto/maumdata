@@ -13,17 +13,17 @@ export const metadata: Metadata = {
     canonical: "./",
   },
   title: {
-    template: "%s | 마음데이터",
-    default: "마음데이터(MaumData)",
+    template: "%s | 마음데이타",
+    default: "마음데이타(MaumData)",
   },
   description: "국세청 실시간 사업자 상태 조회 및 트랜드, 기업분석, 업종분석, 통계, 무료제공 사업자 정보조회 사이트.",
   keywords: ["사업자등록번호 조회", "실시간 사업자 상태", "계속사업자", "휴업", "폐업", "기업 정보 검색", "민간 데이터 포털"],
   authors: [{ name: "MaumData Team" }],
   openGraph: {
-    title: "마음데이터(MaumData)",
+    title: "마음데이타(MaumData)",
     description: "국세청 실시간 사업자 상태 조회 및 트랜드, 기업분석, 업종분석, 통계, 무료제공 사업자 정보조회 사이트.",
     url: "https://www.maumdata.com",
-    siteName: "마음데이터",
+    siteName: "마음데이타",
     locale: "ko_KR",
     type: "website",
     images: [
@@ -31,13 +31,13 @@ export const metadata: Metadata = {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "마음데이터 최첨단 기업분석 포털",
+        alt: "마음데이타 최첨단 기업분석 포털",
       }
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "마음데이터(MaumData)",
+    title: "마음데이타(MaumData)",
     description: "국세청 실시간 사업자 상태 조회 및 트랜드, 기업분석, 업종분석, 통계, 무료제공 사업자 정보조회 사이트.",
     images: ["/og-image.png"],
   },
@@ -83,10 +83,10 @@ export default function RootLayout({
               <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "24px" }}>
                 <div>
                   <div style={{ fontWeight: 800, color: "var(--color-text-sub)", fontSize: "1rem", marginBottom: "12px" }}>
-                    마음데이터 BIZ
+                    마음데이타 BIZ
                   </div>
                   <p style={{ maxWidth: "400px", lineHeight: 1.6 }}>
-                    마음데이터 독자 기업 정밀 분석 엔진을 바탕으로 구축된 대한민국 대표 민간 기업 데이터 포털 사이트입니다.
+                    마음데이타 독자 기업 정밀 분석 엔진을 바탕으로 구축된 대한민국 대표 민간 기업 데이터 포털 사이트입니다.
                   </p>
                 </div>
                 <div style={{ display: "flex", gap: "48px" }}>
@@ -118,7 +118,7 @@ export default function RootLayout({
               <hr style={{ border: "none", borderTop: "1px solid var(--color-border)" }} />
               <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "12px" }}>
                 <div>
-                  © 2026 MaumData Inc. All rights reserved. 본 서비스에서 제공하는 기업 정보 및 통계 분석 데이터는 독자적인 데이터 필터링을 거쳐 제공되는 마음데이터의 자산입니다.
+                  © 2026 MaumData Inc. All rights reserved. 본 서비스에서 제공하는 기업 정보 및 통계 분석 데이터는 독자적인 데이터 필터링을 거쳐 제공되는 마음데이타의 자산입니다.
                 </div>
               </div>
             </div>
