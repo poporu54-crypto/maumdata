@@ -37,6 +37,7 @@ export default function AdminLoginPage() {
       const data = await res.json();
 
       if (res.ok && data.success) {
+        sessionStorage.setItem("maumdata_admin_key", password.trim());
         router.push("/admin");
         router.refresh();
       } else {

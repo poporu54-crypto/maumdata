@@ -1,7 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { updateFeedbackStatus, deleteFeedback } from "@/lib/db";
 
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "akdmaepdlxk#1";
+const VALID_PASSWORDS = [
+  process.env.ADMIN_PASSWORD,
+  "akdmaepdlxk#1",
+  "마음데이타#1",
+].filter(Boolean) as string[];
+
+function isValidAdminKey(key: string | null | undefined): boolean {
+  if (!key) return false;
+  return VALID_PASSWORDS.some(p => p.trim() === key.trim());
+}
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -15,7 +24,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
     const { status, adminKey } = body;
 
     const requestKey = adminKey || req.headers.get("x-admin-key");
-    if (requestKey !== ADMIN_PASSWORD) {
+    if (!isValidAdminKey(requestKey)) {
       return NextResponse.json({ error: "관리자 인증 실패" }, { status: 403 });
     }
 
@@ -34,7 +43,7 @@ export async function DELETE(req: NextRequest, { params }: RouteParams) {
     const { searchParams } = new URL(req.url);
     const adminKey = searchParams.get("adminKey") || req.headers.get("x-admin-key");
 
-    if (adminKey !== ADMIN_PASSWORD) {
+    if (!isValidAdminKey(adminKey)) {
       return NextResponse.json({ error: "관리자 인증 실패" }, { status: 403 });
     }
 

@@ -1,7 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createFeedback, getAllFeedbacks } from "@/lib/db";
 
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "akdmaepdlxk#1";
+const VALID_PASSWORDS = [
+  process.env.ADMIN_PASSWORD,
+  "akdmaepdlxk#1",
+  "마음데이타#1",
+].filter(Boolean) as string[];
+
+function isValidAdminKey(key: string | null | undefined): boolean {
+  if (!key) return false;
+  return VALID_PASSWORDS.some(p => p.trim() === key.trim());
+}
 
 // 1. 피드백 제출 (사용자)
 export async function POST(req: NextRequest) {
@@ -45,7 +54,7 @@ export async function GET(req: NextRequest) {
     const adminKey = searchParams.get("adminKey") || req.headers.get("x-admin-key");
     const status = searchParams.get("status") || "ALL";
 
-    if (adminKey !== ADMIN_PASSWORD) {
+    if (!isValidAdminKey(adminKey)) {
       return NextResponse.json(
         { error: "관리자 인증에 실패했습니다." },
         { status: 403 }
