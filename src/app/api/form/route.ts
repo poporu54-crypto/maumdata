@@ -7,9 +7,10 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const q = searchParams.get("q") || "";
     const tag = searchParams.get("tag") || null;
+    const category = searchParams.get("category") || null;
 
     // DB에서 검색 수행
-    const dbResults = await searchTemplatesFromDB(q, tag);
+    const dbResults = await searchTemplatesFromDB(q, tag, category);
 
     return NextResponse.json({
       success: true,

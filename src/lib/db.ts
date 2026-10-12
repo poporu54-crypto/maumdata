@@ -872,23 +872,67 @@ export async function getTemplateByIdFromDB(id: string) {
   }
 }
 
-// 9. DB 기반 서식 검색 및 필터링
-export async function searchTemplatesFromDB(q: string, tag: string | null) {
+// 9. DB 기반 서식 검색 및 필터링 (지능형 키워드 확장 및 카테고리 필터 지원)
+export async function searchTemplatesFromDB(
+  q: string = "",
+  tag: string | null = null,
+  category: string | null = null
+) {
   try {
     let queryText = "SELECT id, title, category, description as desc, popular, tags FROM document_templates WHERE 1=1";
     const params: any[] = [];
     
-    if (tag) {
-      params.push(tag);
-      queryText += ` AND $${params.length} = ANY(tags)`;
+    // 1. 대분류 카테고리 필터
+    if (category && category.trim().length > 0) {
+      params.push(category.trim());
+      queryText += ` AND category = $${params.length}`;
+    }
+
+    // 2. 태그 스마트 매칭 필터
+    if (tag && tag.trim().length > 0) {
+      const cleanTag = tag.trim();
+      const { TAG_RULES } = await import("./tagRules");
+      const rule = TAG_RULES[cleanTag];
+
+      if (rule) {
+        const orClauses: string[] = [];
+        
+        // (1) 기본 태그 완전 일치
+        params.push(cleanTag);
+        orClauses.push(`$${params.length} = ANY(tags)`);
+
+        // (2) 규칙 관련 태그 교집합 매칭
+        if (rule.tags && rule.tags.length > 0) {
+          params.push(rule.tags);
+          orClauses.push(`tags && $${params.length}`);
+        }
+
+        // (3) 규칙 키워드 제목/설명 매칭
+        if (rule.keywords && rule.keywords.length > 0) {
+          rule.keywords.forEach(kw => {
+            params.push(`%${kw}%`);
+            orClauses.push(`(title ILIKE $${params.length} OR description ILIKE $${params.length})`);
+          });
+        }
+
+        queryText += ` AND (${orClauses.join(" OR ")})`;
+      } else {
+        // 정의된 규칙이 없는 경우 기본 태그 일치 및 제목 매칭
+        params.push(cleanTag);
+        const pTagIdx = params.length;
+        params.push(`%${cleanTag}%`);
+        const pKwIdx = params.length;
+        queryText += ` AND ($${pTagIdx} = ANY(tags) OR title ILIKE $${pKwIdx} OR description ILIKE $${pKwIdx})`;
+      }
     }
     
+    // 3. 검색어 필터
     if (q && q.trim().length > 0) {
       params.push(`%${q.trim()}%`);
       queryText += ` AND (title ILIKE $${params.length} OR description ILIKE $${params.length})`;
     }
     
-    queryText += " ORDER BY title ASC";
+    queryText += " ORDER BY popular DESC, title ASC";
     
     const res = await query(queryText, params);
     return res.rows;

@@ -2,6 +2,7 @@ import React from "react";
 import Link from "next/link";
 import { Metadata } from "next";
 import { searchTemplatesFromDB } from "@/lib/db";
+import { matchesTagRule } from "@/lib/tagRules";
 import { TEMPLATES } from "@/app/form/templatesData";
 import AdSpace from "@/components/AdSpace";
 
@@ -31,8 +32,8 @@ export default async function TagPage(props: TagPageProps) {
   const { tag } = await props.params;
   const decodedTag = decodeURIComponent(tag);
 
-  // 로컬 템플릿 중 해당 태그 매칭 필터링
-  const localMatched = TEMPLATES.filter((tpl) => tpl.tags.includes(decodedTag));
+  // 로컬 템플릿 중 해당 태그 지능형 매칭 필터링
+  const localMatched = TEMPLATES.filter((tpl) => matchesTagRule(tpl, decodedTag));
 
   // DB 템플릿 중 해당 태그 매칭 쿼리 (실시간)
   let dbMatched: any[] = [];

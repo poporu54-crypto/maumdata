@@ -4,29 +4,32 @@ import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { TEMPLATES } from "./templatesData";
+import { matchesTagRule } from "@/lib/tagRules";
 import AdSpace from "@/components/AdSpace";
 import FeedbackModal from "@/components/FeedbackModal";
 
-// freeforms.co.kr 스타일의 세분화된 대분류-소분류 카테고리 정의
+// freeforms 스타일의 세분화된 대분류-소분류 카테고리 정의
 const FORM_CATEGORIES = [
   {
     key: "노무",
     title: "📋 인사 / 노무 서식",
     desc: "근로계약서, 사직서, 연차신청서, 이력서 등 노무 필수 양식",
+    count: "60+종",
     color: "linear-gradient(135deg, rgba(49, 130, 246, 0.03) 0%, rgba(49, 130, 246, 0.09) 100%)",
     borderColor: "rgba(49, 130, 246, 0.15)",
     subcategories: [
       { name: "근로계약서", tag: "근로계약서" },
       { name: "사직서", tag: "사직서" },
       { name: "휴가신청서", tag: "휴가신청서" },
-      { name: "이력서/자소설", tag: "이력서" },
-      { name: "인사/노무일반", tag: "인사" }
+      { name: "이력서/자소설", tag: "이력서/자소설" },
+      { name: "인사/노무일반", tag: "인사/노무일반" }
     ]
   },
   {
     key: "행정",
     title: "📂 기획 / 행정 서식",
     desc: "기안서, 품의서, 회의록, 경위서 등 사내 행정 양식",
+    count: "45+종",
     color: "linear-gradient(135deg, rgba(0, 180, 216, 0.03) 0%, rgba(0, 180, 216, 0.09) 100%)",
     borderColor: "rgba(0, 180, 216, 0.15)",
     subcategories: [
@@ -34,54 +37,58 @@ const FORM_CATEGORIES = [
       { name: "품의서", tag: "품의서" },
       { name: "회의록", tag: "회의록" },
       { name: "경위서/시말서", tag: "경위서/시말서" },
-      { name: "행정/사무일반", tag: "행정" }
+      { name: "행정/사무일반", tag: "행정/사무일반" }
     ]
   },
   {
     key: "재무",
     title: "💰 세무 / 회계 / 경리",
     desc: "지출결의서, 영수증, 출납, 자금 관리 서식",
+    count: "25+종",
     color: "linear-gradient(135deg, rgba(45, 202, 115, 0.03) 0%, rgba(45, 202, 115, 0.09) 100%)",
     borderColor: "rgba(45, 202, 115, 0.15)",
     subcategories: [
       { name: "지출결의서", tag: "지출결의서" },
-      { name: "경리/출납", tag: "경리" },
-      { name: "회계/재무", tag: "회계" },
-      { name: "세무/소득세", tag: "세무" }
+      { name: "경리/출납", tag: "경리/출납" },
+      { name: "회계/재무", tag: "회계/재무" },
+      { name: "세무/소득세", tag: "세무/소득세" }
     ]
   },
   {
     key: "계약",
     title: "🤝 계약 / 영업 / 구매",
     desc: "견적서, 발주서, 표준 계약서 및 거래 양식",
+    count: "100+종",
     color: "linear-gradient(135deg, rgba(255, 157, 0, 0.03) 0%, rgba(255, 157, 0, 0.09) 100%)",
     borderColor: "rgba(255, 157, 0, 0.15)",
     subcategories: [
       { name: "견적서", tag: "견적서" },
       { name: "발주서", tag: "발주서" },
-      { name: "구매/자재", tag: "구매" },
-      { name: "판매/영업", tag: "영업" },
-      { name: "거래일반", tag: "계약" }
+      { name: "구매/자재", tag: "구매/자재" },
+      { name: "판매/영업", tag: "판매/영업" },
+      { name: "거래일반", tag: "거래일반" }
     ]
   },
   {
     key: "법률",
     title: "⚖️ 법률 / 민사 서식",
     desc: "차용증, 내용증명, 위임장 등 법적 권리 증빙 서식",
+    count: "55+종",
     color: "linear-gradient(135deg, rgba(160, 32, 240, 0.03) 0%, rgba(160, 32, 240, 0.09) 100%)",
     borderColor: "rgba(160, 32, 240, 0.15)",
     subcategories: [
       { name: "차용증/금전", tag: "차용증/금전" },
       { name: "내용증명", tag: "내용증명" },
-      { name: "채권/채무", tag: "채권" },
-      { name: "민사/가사", tag: "민사" },
-      { name: "법률일반", tag: "법률" }
+      { name: "채권/채무", tag: "채권/채무" },
+      { name: "민사/가사", tag: "민사/가사" },
+      { name: "법률일반", tag: "법률일반" }
     ]
   },
   {
     key: "정부",
     title: "🏛️ 정부 / 공공 민원 서식",
     desc: "정부24, 대법원, 국세청 등의 대한민국 공식 민원 양식",
+    count: "35+종",
     color: "linear-gradient(135deg, rgba(49, 130, 246, 0.03) 0%, rgba(49, 130, 246, 0.09) 100%)",
     borderColor: "rgba(49, 130, 246, 0.15)",
     subcategories: [
@@ -89,25 +96,49 @@ const FORM_CATEGORIES = [
       { name: "가족관계", tag: "가족관계" },
       { name: "사업자등록", tag: "사업자등록" },
       { name: "납세증명서", tag: "납세증명서" },
-      { name: "정부서식일반", tag: "정부서식" }
+      { name: "정부서식일반", tag: "정부서식일반" }
     ]
   }
 ];
 
 export default function DocsPage() {
   const router = useRouter();
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [dbTemplates, setDbTemplates] = useState<any[]>([]);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const gridSectionRef = useRef<HTMLDivElement>(null);
 
-  // 태그 선택 핸들러 (태그별 고유 URL 라우팅으로 이동하여 SEO 및 광고 노출 효과 극대화)
-  const handleSelectTag = (tag: string) => {
-    router.push(`/form/tag/${encodeURIComponent(tag)}`);
+  // 카테고리 대분류 선택 핸들러
+  const handleSelectCategory = (catKey: string | null) => {
+    if (selectedCategory === catKey) {
+      setSelectedCategory(null);
+    } else {
+      setSelectedCategory(catKey);
+      setSelectedTag(null); // 카테고리 전환 시 소분류 태그 해제
+    }
+    setTimeout(() => {
+      gridSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 50);
   };
 
-  // 검색어 및 태그가 바뀔 때마다 DB 템플릿 검색
+  // 소분류 태그 선택 핸들러 (즉각 필터링 및 서식 그리드로 부드럽게 스크롤)
+  const handleSelectTag = (tag: string, parentCatKey?: string) => {
+    if (selectedTag === tag) {
+      setSelectedTag(null);
+    } else {
+      setSelectedTag(tag);
+      if (parentCatKey) {
+        setSelectedCategory(parentCatKey);
+      }
+    }
+    setTimeout(() => {
+      gridSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 50);
+  };
+
+  // 검색어, 태그, 카테고리가 바뀔 때마다 DB 템플릿 검색
   useEffect(() => {
     let active = true;
     const delayDebounceFn = setTimeout(async () => {
@@ -115,6 +146,7 @@ export default function DocsPage() {
         const queryParams = new URLSearchParams();
         if (searchQuery) queryParams.set("q", searchQuery);
         if (selectedTag) queryParams.set("tag", selectedTag);
+        if (selectedCategory) queryParams.set("category", selectedCategory);
 
         const res = await fetch(`/api/form?${queryParams.toString()}`);
         if (!res.ok) throw new Error("Search failed");
@@ -126,22 +158,24 @@ export default function DocsPage() {
       } catch (err) {
         console.error("Failed to fetch templates from DB:", err);
       }
-    }, 300); // 300ms 디바운스
+    }, 250); // 250ms 디바운스
 
     return () => {
       active = false;
       clearTimeout(delayDebounceFn);
     };
-  }, [searchQuery, selectedTag]);
+  }, [searchQuery, selectedTag, selectedCategory]);
 
-  // 로컬 필터링 적용
+  // 로컬 필터링 적용 (지능형 매칭 규칙 활용)
   const filteredTemplates = TEMPLATES.filter((tpl) => {
-    const matchesTag = !selectedTag || tpl.tags.includes(selectedTag);
+    const matchesCategory = !selectedCategory || tpl.category === selectedCategory;
+    const matchesTag = !selectedTag || matchesTagRule(tpl, selectedTag);
     const matchesSearch = 
+      !searchQuery ||
       tpl.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
       tpl.desc.toLowerCase().includes(searchQuery.toLowerCase()) ||
       tpl.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase()));
-    return matchesTag && matchesSearch;
+    return matchesCategory && matchesTag && matchesSearch;
   });
 
   // 로컬과 DB에서 나온 결과를 병합하고, 중복 ID는 제거
@@ -165,7 +199,7 @@ export default function DocsPage() {
       <AdSpace format="horizontal" style={{ width: "100%", margin: "0 auto 32px auto" }} />
 
       {/* 2. 헤더 정보 */}
-      <div className="docs-header" style={{ marginBottom: "40px", textAlign: "center" }}>
+      <div className="docs-header" style={{ marginBottom: "32px", textAlign: "center" }}>
         <span 
           style={{ 
             backgroundColor: "var(--color-primary-light)", 
@@ -187,14 +221,13 @@ export default function DocsPage() {
       </div>
 
       {/* 3. 검색 폼 */}
-      <div style={{ position: "relative", width: "100%", maxWidth: "600px", margin: "0 auto 40px auto" }}>
+      <div style={{ position: "relative", width: "100%", maxWidth: "600px", margin: "0 auto 24px auto" }}>
         <input 
           type="text"
           placeholder="필요한 서식명 또는 카테고리 검색 (예: 사직서, 근로계약서, 지출결의서...)"
           value={searchQuery}
           onChange={(e) => {
             setSearchQuery(e.target.value);
-            // 검색어 입력 시 소분류 태그 필터 해제하여 전체 검색 가능하게 유도
             if (selectedTag) setSelectedTag(null);
           }}
           style={{
@@ -216,81 +249,174 @@ export default function DocsPage() {
         <span style={{ position: "absolute", right: "20px", top: "18px", fontSize: "1.2rem", opacity: 0.6 }}>🔍</span>
       </div>
 
+      {/* 3-1. 카테고리 빠른 필터 바 (Quick Filter Bar) */}
+      <div style={{ 
+        display: "flex", 
+        flexWrap: "wrap", 
+        justifyContent: "center", 
+        gap: "8px", 
+        marginBottom: "48px" 
+      }}>
+        <button
+          onClick={() => handleSelectCategory(null)}
+          style={{
+            padding: "8px 16px",
+            borderRadius: "24px",
+            fontSize: "0.88rem",
+            fontWeight: 700,
+            border: !selectedCategory ? "1.5px solid var(--color-primary)" : "1.5px solid var(--color-border)",
+            backgroundColor: !selectedCategory ? "var(--color-primary)" : "var(--bg-color-card)",
+            color: !selectedCategory ? "#ffffff" : "var(--color-text-main)",
+            cursor: "pointer",
+            transition: "all 0.2s ease",
+            boxShadow: "var(--shadow-sm)"
+          }}
+        >
+          🌐 전체 ({allTemplates.length > 0 && !selectedCategory ? allTemplates.length : "320+"})
+        </button>
+        {FORM_CATEGORIES.map((cat) => {
+          const isCatActive = selectedCategory === cat.key;
+          return (
+            <button
+              key={cat.key}
+              onClick={() => handleSelectCategory(cat.key)}
+              style={{
+                padding: "8px 16px",
+                borderRadius: "24px",
+                fontSize: "0.88rem",
+                fontWeight: 700,
+                border: isCatActive ? "1.5px solid var(--color-primary)" : "1.5px solid var(--color-border)",
+                backgroundColor: isCatActive ? "var(--color-primary)" : "var(--bg-color-card)",
+                color: isCatActive ? "#ffffff" : "var(--color-text-main)",
+                cursor: "pointer",
+                transition: "all 0.2s ease",
+                boxShadow: isCatActive ? "0 4px 12px rgba(49, 130, 246, 0.25)" : "var(--shadow-sm)"
+              }}
+            >
+              {cat.title.split(" ")[0]} {cat.key} ({cat.count})
+            </button>
+          );
+        })}
+      </div>
+
       {/* 4. A-Z 카테고리 대형 진열판 (freeforms 스타일 우리화) */}
       <div style={{ marginBottom: "56px" }}>
-        <h2 style={{ fontSize: "1.35rem", fontWeight: 800, color: "var(--color-text-main)", marginBottom: "24px", paddingLeft: "4px" }}>
-          🗂️ 카테고리별 전체 서식 찾아보기
-        </h2>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+          <h2 style={{ fontSize: "1.35rem", fontWeight: 800, color: "var(--color-text-main)", margin: 0, paddingLeft: "4px" }}>
+            🗂️ 카테고리별 전체 서식 찾아보기
+          </h2>
+          {selectedCategory && (
+            <button
+              onClick={() => handleSelectCategory(null)}
+              style={{
+                fontSize: "0.82rem",
+                color: "var(--color-primary)",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                fontWeight: 700
+              }}
+            >
+              전체 카테고리 보기 ↺
+            </button>
+          )}
+        </div>
         
         <div style={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
           gap: "24px"
         }}>
-          {FORM_CATEGORIES.map((cat, i) => (
-            <div 
-              key={i}
-              className="card" 
-              style={{
-                padding: "24px",
-                border: `1.5px solid ${cat.borderColor}`,
-                background: cat.color,
-                display: "flex",
-                flexDirection: "column",
-                gap: "14px",
-                borderRadius: "var(--radius-md)",
-                transition: "var(--transition-smooth)"
-              }}
-            >
-              <div>
-                <h3 style={{ fontSize: "1.15rem", fontWeight: 800, color: "var(--color-text-main)", marginBottom: "6px" }}>
-                  {cat.title}
-                </h3>
-                <p style={{ fontSize: "0.85rem", color: "var(--color-text-sub)", lineHeight: 1.4, margin: 0 }}>
-                  {cat.desc}
-                </p>
-              </div>
+          {FORM_CATEGORIES.map((cat, i) => {
+            const isCatActive = selectedCategory === cat.key;
+            return (
+              <div 
+                key={i}
+                className="card" 
+                onClick={() => handleSelectCategory(cat.key)}
+                style={{
+                  padding: "24px",
+                  border: isCatActive ? "2px solid var(--color-primary)" : `1.5px solid ${cat.borderColor}`,
+                  background: cat.color,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "14px",
+                  borderRadius: "var(--radius-md)",
+                  transition: "var(--transition-smooth)",
+                  cursor: "pointer",
+                  boxShadow: isCatActive ? "0 8px 24px rgba(49, 130, 246, 0.18)" : "var(--shadow-sm)",
+                  transform: isCatActive ? "translateY(-2px)" : "none"
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "8px" }}>
+                  <div>
+                    <h3 style={{ fontSize: "1.15rem", fontWeight: 800, color: "var(--color-text-main)", marginBottom: "6px" }}>
+                      {cat.title}
+                    </h3>
+                    <p style={{ fontSize: "0.85rem", color: "var(--color-text-sub)", lineHeight: 1.4, margin: 0 }}>
+                      {cat.desc}
+                    </p>
+                  </div>
+                  <span 
+                    style={{
+                      fontSize: "0.75rem",
+                      fontWeight: 700,
+                      color: isCatActive ? "var(--color-primary)" : "var(--color-text-desc)",
+                      backgroundColor: isCatActive ? "var(--color-primary-light)" : "var(--bg-color-card)",
+                      padding: "4px 10px",
+                      borderRadius: "12px",
+                      whiteSpace: "nowrap",
+                      border: "1px solid var(--color-border)"
+                    }}
+                  >
+                    {isCatActive ? "선택됨 ✓" : `전체 (${cat.count}) →`}
+                  </span>
+                </div>
 
-              {/* 하부 소분류 태그 리스트 */}
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "4px" }}>
-                {cat.subcategories.map((sub, idx) => {
-                  const isActive = selectedTag === sub.tag;
-                  return (
-                    <button
-                      key={idx}
-                      onClick={() => handleSelectTag(sub.tag)}
-                      style={{
-                        backgroundColor: isActive ? "var(--color-primary)" : "var(--bg-color-card)",
-                        color: isActive ? "#ffffff" : "var(--color-text-sub)",
-                        border: "1px solid var(--color-border)",
-                        borderRadius: "20px",
-                        padding: "6px 12px",
-                        fontSize: "0.8rem",
-                        fontWeight: 600,
-                        cursor: "pointer",
-                        transition: "var(--transition-smooth)",
-                        boxShadow: "var(--shadow-sm)"
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!isActive) {
-                          e.currentTarget.style.borderColor = "var(--color-primary)";
-                          e.currentTarget.style.color = "var(--color-primary)";
-                        }
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!isActive) {
-                          e.currentTarget.style.borderColor = "var(--color-border)";
-                          e.currentTarget.style.color = "var(--color-text-sub)";
-                        }
-                      }}
-                    >
-                      {sub.name}
-                    </button>
-                  );
-                })}
+                {/* 하부 소분류 태그 리스트 */}
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "4px" }}>
+                  {cat.subcategories.map((sub, idx) => {
+                    const isActive = selectedTag === sub.tag;
+                    return (
+                      <button
+                        key={idx}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSelectTag(sub.tag, cat.key);
+                        }}
+                        style={{
+                          backgroundColor: isActive ? "var(--color-primary)" : "var(--bg-color-card)",
+                          color: isActive ? "#ffffff" : "var(--color-text-sub)",
+                          border: isActive ? "1px solid var(--color-primary)" : "1px solid var(--color-border)",
+                          borderRadius: "20px",
+                          padding: "6px 12px",
+                          fontSize: "0.8rem",
+                          fontWeight: 600,
+                          cursor: "pointer",
+                          transition: "var(--transition-smooth)",
+                          boxShadow: "var(--shadow-sm)"
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!isActive) {
+                            e.currentTarget.style.borderColor = "var(--color-primary)";
+                            e.currentTarget.style.color = "var(--color-primary)";
+                          }
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!isActive) {
+                            e.currentTarget.style.borderColor = "var(--color-border)";
+                            e.currentTarget.style.color = "var(--color-text-sub)";
+                          }
+                        }}
+                      >
+                        {sub.name}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
@@ -301,11 +427,18 @@ export default function DocsPage() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", flexWrap: "wrap", gap: "12px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <h3 style={{ fontSize: "1.25rem", fontWeight: 800, color: "var(--color-text-main)", margin: 0 }}>
-              📄 {selectedTag ? `"${selectedTag}" 서식 목록` : "모든 무료 서식"}
+              📄 {selectedTag 
+                ? `"${selectedTag}" 관련 서식 목록` 
+                : selectedCategory 
+                  ? `"${selectedCategory}" 카테고리 전체 서식` 
+                  : "모든 무료 서식"}
             </h3>
-            {selectedTag && (
+            {(selectedTag || selectedCategory) && (
               <button
-                onClick={() => setSelectedTag(null)}
+                onClick={() => {
+                  setSelectedTag(null);
+                  setSelectedCategory(null);
+                }}
                 style={{
                   backgroundColor: "var(--color-primary-light)",
                   color: "var(--color-primary)",
@@ -320,7 +453,7 @@ export default function DocsPage() {
                   gap: "4px"
                 }}
               >
-                필터 해제 ✕
+                전체 보기 ✕
               </button>
             )}
           </div>
