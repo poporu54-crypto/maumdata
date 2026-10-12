@@ -1,5 +1,6 @@
 import React from "react";
 import { Metadata } from "next";
+import Link from "next/link";
 import DateSelector from "@/components/DateSelector";
 import { HistoryEntry } from "@/lib/statScheduler";
 import { getStatsHistory } from "@/lib/db";
@@ -36,10 +37,11 @@ export default async function NewBizStatsPage({ searchParams }: PageProps) {
   const dates = history.map(h => h.date);
 
   // 대상 날짜의 엔트리 조회
-  let activeEntry = history.find(h => h.date === queryDate);
-  if (!activeEntry && history.length > 0) {
-    activeEntry = history[history.length - 1];
+  let activeIndex = history.findIndex(h => h.date === queryDate);
+  if (activeIndex === -1 && history.length > 0) {
+    activeIndex = history.length - 1;
   }
+  let activeEntry = activeIndex >= 0 ? history[activeIndex] : null;
 
   if (!activeEntry) {
     activeEntry = {
@@ -49,6 +51,21 @@ export default async function NewBizStatsPage({ searchParams }: PageProps) {
       activeBizRate: 91.4,
       industryRatios: { retail: 25.2, ict: 2.1, manufacturing: 8.6, others: 64.1 }
     };
+  }
+
+  // 차트에 표시할 최근 7일간의 히스토리 슬라이스 (데이터가 뭉치지 않도록 최대 7개 구간으로 필터링)
+  let displayHistory: HistoryEntry[] = [];
+  if (history.length > 0) {
+    const endIdx = activeIndex >= 0 ? activeIndex + 1 : history.length;
+    const startIdx = Math.max(0, endIdx - 7);
+    displayHistory = history.slice(startIdx, endIdx);
+
+    // 선택 날짜가 앞부분이라 7개 미만인데 전체 데이터가 7개 이상이면 앞에서부터 7개 확보
+    if (displayHistory.length < 7 && history.length >= 7) {
+      displayHistory = history.slice(0, 7);
+    }
+  } else {
+    displayHistory = [activeEntry];
   }
 
   // 7대 권역 비율 및 계산
@@ -65,26 +82,30 @@ export default async function NewBizStatsPage({ searchParams }: PageProps) {
 
   // 최근 7일 개업 트렌드 SVG 그래프 연산
   const generateTrendPath = () => {
-    if (history.length === 0) return null;
-    const width = 450;
-    const height = 140;
-    const padding = 25;
-    const activeWidth = width - padding * 2;
-    const activeHeight = height - padding * 2;
+    if (displayHistory.length === 0) return null;
+    const width = 500;
+    const height = 150;
+    const paddingX = 40;
+    const paddingTop = 35;
+    const paddingBottom = 25;
+    const activeWidth = width - paddingX * 2;
+    const activeHeight = height - paddingTop - paddingBottom;
 
-    const values = history.map(h => h.newBizToday);
-    const minVal = Math.min(...values) * 0.95;
-    const maxVal = Math.max(...values) * 1.05;
-    const valRange = maxVal - minVal;
+    const values = displayHistory.map(h => h.newBizToday);
+    const minVal = Math.min(...values);
+    const maxVal = Math.max(...values);
+    const valRange = maxVal === minVal ? 1 : maxVal - minVal;
 
-    const points = history.map((h, idx) => {
-      const x = padding + (idx / (history.length - 1)) * activeWidth;
-      const y = padding + activeHeight - ((h.newBizToday - minVal) / valRange) * activeHeight;
+    const points = displayHistory.map((h, idx) => {
+      const x = displayHistory.length === 1 
+        ? width / 2 
+        : paddingX + (idx / (displayHistory.length - 1)) * activeWidth;
+      const y = paddingTop + activeHeight - ((h.newBizToday - minVal) / valRange) * activeHeight;
       return { x, y };
     });
 
-    const linePath = points.map((p, idx) => `${idx === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
-    const areaPath = `${linePath} L ${points[points.length - 1].x} ${height - padding} L ${points[0].x} ${height - padding} Z`;
+    const linePath = points.map((p, idx) => `${idx === 0 ? "M" : "L"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(" ");
+    const areaPath = `${linePath} L ${points[points.length - 1].x.toFixed(1)} ${height - paddingBottom} L ${points[0].x.toFixed(1)} ${height - paddingBottom} Z`;
 
     return { linePath, areaPath, points };
   };
@@ -162,65 +183,78 @@ export default async function NewBizStatsPage({ searchParams }: PageProps) {
             최근 7일간 기록된 일일 개업 수의 유기적인 변화 흐름 그래프입니다.
           </p>
 
-          {trendData && history.length > 0 ? (
+          {trendData && displayHistory.length > 0 ? (
             <div style={{ width: "100%", overflowX: "auto" }}>
-              <div style={{ minWidth: "450px", position: "relative" }}>
-                <svg width="100%" height="140" viewBox="0 0 450 140" style={{ overflow: "visible" }}>
+              <div style={{ minWidth: "460px", position: "relative" }}>
+                <svg width="100%" height="150" viewBox="0 0 500 150" style={{ overflow: "visible" }}>
                   <defs>
                     <linearGradient id="newBizAreaGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="var(--color-primary)" stopOpacity="0.4" />
+                      <stop offset="0%" stopColor="var(--color-primary)" stopOpacity="0.35" />
                       <stop offset="100%" stopColor="var(--color-primary)" stopOpacity="0.0" />
                     </linearGradient>
                   </defs>
                   
                   {/* 격자 백그라운드 선 */}
-                  <line x1="25" y1="25" x2="425" y2="25" stroke="rgba(255, 255, 255, 0.04)" strokeWidth="1" strokeDasharray="3 3" />
-                  <line x1="25" y1="70" x2="425" y2="70" stroke="rgba(255, 255, 255, 0.04)" strokeWidth="1" strokeDasharray="3 3" />
-                  <line x1="25" y1="115" x2="425" y2="115" stroke="rgba(255, 255, 255, 0.04)" strokeWidth="1" strokeDasharray="3 3" />
+                  <line x1="30" y1="35" x2="470" y2="35" stroke="rgba(255, 255, 255, 0.05)" strokeWidth="1" strokeDasharray="3 3" />
+                  <line x1="30" y1="75" x2="470" y2="75" stroke="rgba(255, 255, 255, 0.05)" strokeWidth="1" strokeDasharray="3 3" />
+                  <line x1="30" y1="125" x2="470" y2="125" stroke="rgba(255, 255, 255, 0.05)" strokeWidth="1" strokeDasharray="3 3" />
 
                   {/* 그라디언트 에어리어 */}
                   <path d={trendData.areaPath} fill="url(#newBizAreaGrad)" />
                   {/* 메인 꺾은선 */}
                   <path d={trendData.linePath} fill="none" stroke="var(--color-primary)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
 
-                  {/* 도트 마커 및 말풍선 값 */}
+                  {/* 도트 마커 및 개업 수 레이블 */}
                   {trendData.points.map((p, idx) => {
-                    const isSelected = history[idx].date === activeEntry.date;
+                    const isSelected = displayHistory[idx].date === activeEntry.date;
                     return (
                       <g key={idx}>
+                        {isSelected && (
+                          <circle cx={p.x} cy={p.y} r="11" fill="var(--color-primary)" opacity="0.25" />
+                        )}
                         <circle 
                           cx={p.x} cy={p.y} 
-                          r={isSelected ? "7" : "5"} 
+                          r={isSelected ? "6.5" : "4.5"} 
                           fill={isSelected ? "#a855f7" : "var(--color-primary)"} 
+                          stroke="#ffffff"
+                          strokeWidth="2"
                         />
-                        <circle cx={p.x} cy={p.y} r="2.5" fill="white" />
                         <text 
                           x={p.x} y={p.y - 12} 
                           textAnchor="middle" 
-                          fontSize={isSelected ? "11" : "9"} 
-                          fontWeight={isSelected ? "800" : "700"} 
+                          fontSize={isSelected ? "11.5" : "10"} 
+                          fontWeight={isSelected ? "800" : "600"} 
                           fill={isSelected ? "#a855f7" : "var(--color-text-main)"}
                         >
-                          {history[idx].newBizToday}
+                          {displayHistory[idx].newBizToday.toLocaleString()}
                         </text>
                       </g>
                     );
                   })}
                 </svg>
                 {/* X축 레이블 */}
-                <div style={{ display: "flex", justifyContent: "space-between", padding: "0 12px", marginTop: "10px" }}>
-                  {history.map((h, idx) => (
-                    <span 
-                      key={idx} 
-                      style={{ 
-                        fontSize: "0.75rem", 
-                        color: h.date === activeEntry.date ? "var(--color-text-main)" : "var(--color-text-desc)", 
-                        fontWeight: h.date === activeEntry.date ? 800 : 600 
-                      }}
-                    >
-                      {h.date.substring(5)}
-                    </span>
-                  ))}
+                <div style={{ display: "flex", justifyContent: "space-between", padding: "0 20px", marginTop: "12px" }}>
+                  {displayHistory.map((h, idx) => {
+                    const isSelected = h.date === activeEntry.date;
+                    return (
+                      <Link 
+                        key={idx} 
+                        href={`/stats/new-biz?date=${h.date}`}
+                        style={{ 
+                          textDecoration: "none",
+                          fontSize: "0.78rem", 
+                          color: isSelected ? "var(--color-primary)" : "var(--color-text-desc)", 
+                          fontWeight: isSelected ? 800 : 500,
+                          backgroundColor: isSelected ? "var(--color-primary-light)" : "transparent",
+                          padding: "2px 6px",
+                          borderRadius: "6px",
+                          transition: "all 0.2s"
+                        }}
+                      >
+                        {h.date.substring(5)}
+                      </Link>
+                    );
+                  })}
                 </div>
               </div>
             </div>

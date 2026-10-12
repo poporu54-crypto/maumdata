@@ -909,6 +909,60 @@ export async function getAllTemplatesFromDB() {
   }
 }
 
+// 11. 사용자 피드백(버그신고/제안) 데이터베이스 헬퍼
+export interface FeedbackItem {
+  id: number;
+  message: string;
+  url?: string;
+  userAgent?: string;
+  userId?: string;
+  category?: string;
+  status: string;
+  createdAt: string;
+}
+
+export async function createFeedback(data: {
+  message: string;
+  url?: string;
+  userAgent?: string;
+  userId?: string;
+  category?: string;
+}) {
+  const res = await query(
+    `INSERT INTO feedbacks (message, url, user_agent, user_id, category, status)
+     VALUES ($1, $2, $3, $4, $5, 'PENDING')
+     RETURNING id, message, url, user_agent as "userAgent", user_id as "userId", category, status, created_at as "createdAt"`,
+    [data.message, data.url || null, data.userAgent || null, data.userId || null, data.category || "suggestion"]
+  );
+  return res.rows[0];
+}
+
+export async function getAllFeedbacks(status?: string) {
+  let queryText = `SELECT id, message, url, user_agent as "userAgent", user_id as "userId", category, status, created_at as "createdAt"
+                   FROM feedbacks`;
+  const params: any[] = [];
+  if (status && status !== "ALL") {
+    params.push(status);
+    queryText += ` WHERE status = $1`;
+  }
+  queryText += ` ORDER BY id DESC LIMIT 200`;
+  const res = await query(queryText, params);
+  return res.rows;
+}
+
+export async function updateFeedbackStatus(id: number, status: string) {
+  const res = await query(
+    `UPDATE feedbacks SET status = $1 WHERE id = $2 RETURNING id, status`,
+    [status, id]
+  );
+  return res.rows[0];
+}
+
+export async function deleteFeedback(id: number) {
+  await query(`DELETE FROM feedbacks WHERE id = $1`, [id]);
+  return true;
+}
+
 
 
 

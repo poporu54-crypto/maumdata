@@ -4,6 +4,8 @@ import ThemeRegistry from "@/components/ThemeRegistry";
 import Header from "@/components/Header";
 import Link from "next/link";
 import Script from "next/script";
+import FooterFeedbackButton from "@/components/FooterFeedbackButton";
+import FeedbackFloatingTrigger from "@/components/FeedbackFloatingTrigger";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.maumdata.com"),
@@ -62,6 +64,8 @@ export default function RootLayout({
             {children}
           </main>
           
+          <FeedbackFloatingTrigger />
+          
           <footer className="footer" style={{
             backgroundColor: "var(--bg-color-card)",
             borderTop: "1px solid var(--color-border)",
@@ -100,6 +104,13 @@ export default function RootLayout({
                     <ul style={{ listStyle: "none", display: "flex", flexDirection: "column", gap: "6px" }}>
                       <li><Link href="/terms" className="footer-link">이용약관</Link></li>
                       <li><Link href="/privacy" className="footer-link">개인정보처리방침</Link></li>
+                    </ul>
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 600, color: "var(--color-text-sub)", marginBottom: "8px" }}>고객 지원</div>
+                    <ul style={{ listStyle: "none", display: "flex", flexDirection: "column", gap: "6px" }}>
+                      <li><FooterFeedbackButton /></li>
+                      <li><Link href="/admin" className="footer-link" style={{ color: "var(--color-text-desc)", fontSize: "0.8rem" }}>관리자 페이지</Link></li>
                     </ul>
                   </div>
                 </div>
