@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createFeedback, getAllFeedbacks } from "@/lib/db";
 
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "akdmaepdlxj#1";
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "akdmaepdlxk#1";
 
 // 1. 피드백 제출 (사용자)
 export async function POST(req: NextRequest) {

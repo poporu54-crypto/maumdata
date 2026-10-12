@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { updateFeedbackStatus, deleteFeedback } from "@/lib/db";
 
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "akdmaepdlxj#1";
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "akdmaepdlxk#1";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
