@@ -110,7 +110,6 @@ export default function RootLayout({
                     <div style={{ fontWeight: 600, color: "var(--color-text-sub)", marginBottom: "8px" }}>고객 지원</div>
                     <ul style={{ listStyle: "none", display: "flex", flexDirection: "column", gap: "6px" }}>
                       <li><FooterFeedbackButton /></li>
-                      <li><Link href="/admin" className="footer-link" style={{ color: "var(--color-text-desc)", fontSize: "0.8rem" }}>관리자 페이지</Link></li>
                     </ul>
                   </div>
                 </div>

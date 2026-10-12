@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { TEMPLATES } from "./templatesData";
 import AdSpace from "@/components/AdSpace";
+import FeedbackModal from "@/components/FeedbackModal";
 
 // freeforms.co.kr 스타일의 세분화된 대분류-소분류 카테고리 정의
 const FORM_CATEGORIES = [
@@ -98,6 +99,7 @@ export default function DocsPage() {
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [dbTemplates, setDbTemplates] = useState<any[]>([]);
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const gridSectionRef = useRef<HTMLDivElement>(null);
 
   // 태그 선택 핸들러 (태그별 고유 URL 라우팅으로 이동하여 SEO 및 광고 노출 효과 극대화)
@@ -443,13 +445,14 @@ export default function DocsPage() {
             <p style={{ color: "var(--color-text-sub)", fontSize: "0.95rem", maxWidth: "550px", margin: "0 auto 24px auto", lineHeight: 1.6 }}>
               마음데이타 FORM은 회원가입 없는 순수 무료 서식 센터입니다. 요청하시는 양식을 전문 법적 검토를 거쳐 영업일 기준 1일 이내에 제작 및 시스템에 무료 배포해 드립니다.
             </p>
-            <Link 
-              href={`/admin?requestForm=${encodeURIComponent(selectedTag || searchQuery || "신규서식")}`} 
+            <button 
+              type="button"
+              onClick={() => setIsFeedbackOpen(true)} 
               className="btn-primary" 
-              style={{ padding: "12px 32px", fontSize: "0.95rem", borderRadius: "10px" }}
+              style={{ padding: "12px 32px", fontSize: "0.95rem", borderRadius: "10px", cursor: "pointer", border: "none" }}
             >
               ⚡ {selectedTag ? `"${selectedTag}"` : ""} 서식 무료 제작 신청하기
-            </Link>
+            </button>
           </div>
         )}
       </div>
@@ -470,10 +473,18 @@ export default function DocsPage() {
         <p style={{ color: "var(--color-text-sub)", fontSize: "0.95rem", marginBottom: "20px", maxWidth: "600px", margin: "0 auto 20px auto" }}>
           사내 전용 결재라인 매핑, 자사 전용 템플릿의 실시간 A4 PDF 출력 자동화 솔루션이 필요한 기업 고객은 문의해 주세요.
         </p>
-        <Link href="/admin" className="btn-secondary" style={{ padding: "10px 24px", fontSize: "0.9rem" }}>
+        <button 
+          type="button"
+          onClick={() => setIsFeedbackOpen(true)}
+          className="btn-secondary" 
+          style={{ padding: "10px 24px", fontSize: "0.9rem", cursor: "pointer", border: "1px solid var(--color-border)" }}
+        >
           기업 맞춤 서식 솔루션 문의
-        </Link>
+        </button>
       </div>
+
+      {/* 7. 피드백 및 제작 요청 모달 */}
+      <FeedbackModal isOpen={isFeedbackOpen} onClose={() => setIsFeedbackOpen(false)} />
 
     </div>
   );
