@@ -174,7 +174,7 @@ export default function AdminPage() {
         >
           <div style={{ fontSize: "3rem", marginBottom: "16px" }}>🔐</div>
           <h2 style={{ fontSize: "1.4rem", fontWeight: 800, color: "var(--color-text-main)", marginBottom: "8px" }}>
-            마음데이터 관리자 센터
+            마음데이타 관리자 센터
           </h2>
           <p style={{ fontSize: "0.88rem", color: "var(--color-text-desc)", marginBottom: "24px" }}>
             관리자 인증 비밀번호를 입력해주세요.
@@ -254,7 +254,7 @@ export default function AdminPage() {
             <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "6px" }}>
               <span style={{ fontSize: "1.5rem" }}>🛡️</span>
               <h1 style={{ fontSize: "1.8rem", fontWeight: 800, color: "var(--color-text-main)", margin: 0 }}>
-                마음데이터 관리자 대시보드
+                마음데이타 관리자 대시보드
               </h1>
             </div>
             <p style={{ margin: 0, fontSize: "0.88rem", color: "var(--color-text-desc)" }}>

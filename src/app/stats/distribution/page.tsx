@@ -14,7 +14,7 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   const { date } = await searchParams;
   const targetDate = date ? decodeURIComponent(date) : "";
   return {
-    title: `국내 산업군별 사업자 분포도 상세 ${targetDate ? `(${targetDate})` : ""} | 마음데이터`,
+    title: `국내 산업군별 사업자 분포도 상세 ${targetDate ? `(${targetDate})` : ""} | 마음데이타`,
     description: `${targetDate ? `${targetDate} 기준 ` : ""}대한민국 통계청 전국사업체조사 API 기반 19대 대분류 업종 상세 정보입니다.`,
   };
 }

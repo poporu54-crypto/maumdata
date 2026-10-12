@@ -316,7 +316,7 @@ export default function EmploymentHealthSection({ business }: EmploymentHealthSe
               월별 고용 히스토리 빌드 대기 중
             </div>
             <p style={{ fontSize: "0.78rem", color: "var(--color-text-desc)", margin: "0 auto", maxWidth: "450px", lineHeight: 1.4 }}>
-              마음데이터 첫 실시간 검증이 개시되었습니다. 매월 사용자의 재검증 혹은 스크립트 배치가 기동될 때마다 월별 데이터가 누적되어 <strong>추이 차트가 자동으로 빌드</strong>됩니다.
+              마음데이타 첫 실시간 검증이 개시되었습니다. 매월 사용자의 재검증 혹은 스크립트 배치가 기동될 때마다 월별 데이터가 누적되어 <strong>추이 차트가 자동으로 빌드</strong>됩니다.
             </p>
           </div>
         )}

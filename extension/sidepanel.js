@@ -142,7 +142,7 @@ async function loadBusinessDetail(bNo) {
     const res = await fetch(`${API_BASE}/api/extension/biz/${bNo}`);
     if (!res.ok) {
       if (res.status === 404) {
-        renderError(`마음데이터 DB에 등록되지 않은 사업자입니다.<br>(${bNo.replace(/(\d{3})(\d{2})(\d{5})/, "$1-$2-$3")})`);
+        renderError(`마음데이타 DB에 등록되지 않은 사업자입니다.<br>(${bNo.replace(/(\d{3})(\d{2})(\d{5})/, "$1-$2-$3")})`);
         return;
       }
       throw new Error("조회 실패");
@@ -248,7 +248,7 @@ function renderDetail(data) {
       badge.style.backgroundColor = "rgba(49, 130, 246, 0.15)";
       badge.style.color = "#3182f6";
     } else {
-      badge.innerText = "마음데이터 종합분석";
+      badge.innerText = "마음데이타 종합분석";
       badge.style.backgroundColor = "rgba(16, 185, 129, 0.15)";
       badge.style.color = "#10b981";
     }

@@ -91,7 +91,7 @@ export default function AdminLoginPage() {
             🔒
           </div>
           <h2 style={{ fontSize: "1.5rem", fontWeight: 800, color: "#ffffff", margin: "0 0 8px 0" }}>
-            마음데이터 관리자
+            마음데이타 관리자
           </h2>
           <p style={{ color: "#8b95a1", fontSize: "0.88rem", margin: 0 }}>
             어드민 세션을 시작하기 위해 비밀번호를 입력하세요.

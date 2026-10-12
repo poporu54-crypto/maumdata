@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "마음데이터 기업 조회 비서",
+  "name": "마음데이타 기업 조회 비서",
   "version": "1.0.0",
   "description": "웹페이지에서 사업자등록번호나 상호명을 드래그하여 실시간 기업 정보를 간편하게 조회합니다.",
   "permissions": [

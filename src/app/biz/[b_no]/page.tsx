@@ -65,7 +65,7 @@ export async function generateMetadata({ params }: { params: any }): Promise<Met
 
   return {
     title: `${name} | 사업자등록번호 ${formattedBNo} 실시간 상태 및 기업정보`,
-    description: `${name}(사업자번호 ${formattedBNo})의 현재 상태는 [${status} (${taxType})] 입니다. 주소: ${business.b_adr}. 업종: ${business.b_sector} | 마음데이터 민간 기업 정보 포털`,
+    description: `${name}(사업자번호 ${formattedBNo})의 현재 상태는 [${status} (${taxType})] 입니다. 주소: ${business.b_adr}. 업종: ${business.b_sector} | 마음데이타 민간 기업 정보 포털`,
     openGraph: {
       title: `${name} (${formattedBNo}) 실시간 사업자 조회`,
       description: `${name}의 국세청 실시간 납세자 상태(${status}), 주소, 매출 추이 및 기업 분석 정보를 제공합니다.`,
@@ -90,7 +90,7 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
     if (!business) return null;
     const sources = {
       public: { text: "금융위원회 공시 정보", color: "#3182f6", bg: "rgba(49, 130, 246, 0.1)" },
-      local: { text: "마음데이터 파트너 정보", color: "#2dca73", bg: "rgba(45, 202, 115, 0.1)" },
+      local: { text: "마음데이타 파트너 정보", color: "#2dca73", bg: "rgba(45, 202, 115, 0.1)" },
       estimated: { text: "추정 데이터 분석치", color: "#8b95a1", bg: "var(--bg-color-main)" }
     };
     const badge = sources[business.dataSource];

@@ -385,7 +385,7 @@ export function InsightSection({ business }: { business: BusinessData }) {
   return (
     <div className="card" style={{ padding: "32px" }}>
       <h3 style={{ fontSize: "1.3rem", fontWeight: 800, color: "var(--color-text-main)", marginBottom: "8px" }}>
-        {business.history && business.history.length > 0 ? "📊 마음데이터 분석 인사이트" : "📊 마음데이터 고용 분석 인사이트"}
+        {business.history && business.history.length > 0 ? "📊 마음데이타 분석 인사이트" : "📊 마음데이타 고용 분석 인사이트"}
       </h3>
       <p style={{ fontSize: "0.85rem", color: "var(--color-text-desc)", marginBottom: "28px" }}>
         {business.history && business.history.length > 0 

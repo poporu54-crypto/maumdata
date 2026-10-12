@@ -2,8 +2,8 @@ import React from "react";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "개인정보처리방침 | 마음데이터",
-  description: "지윤 주식회사가 운영하는 마음데이터(MaumData) 서비스의 개인정보처리방침입니다.",
+  title: "개인정보처리방침 | 마음데이타",
+  description: "지윤 주식회사가 운영하는 마음데이타(MaumData) 서비스의 개인정보처리방침입니다.",
 };
 
 export default function PrivacyPage() {
@@ -118,7 +118,7 @@ export default function PrivacyPage() {
                 <div><strong>개인정보 보호책임자:</strong> 박상욱</div>
                 <div><strong>문의 이메일:</strong> poporu54@gmail.com</div>
                 <div style={{ fontSize: "0.85rem", color: "var(--color-text-desc)", marginTop: "4px" }}>
-                  * 마음데이터 서비스와 관련된 개인정보보호 문의 및 불만을 신속하게 처리해 드립니다.
+                  * 마음데이타 서비스와 관련된 개인정보보호 문의 및 불만을 신속하게 처리해 드립니다.
                 </div>
               </div>
             </section>

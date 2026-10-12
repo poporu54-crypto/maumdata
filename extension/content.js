@@ -1,4 +1,4 @@
-// content.js - 웹페이지 드래그 텍스트 기반 마음데이터 퀵 연동
+// content.js - 웹페이지 드래그 텍스트 기반 마음데이타 퀵 연동
 let quickBizBtn = null;
 let currentSelectedText = "";
 
@@ -7,7 +7,7 @@ function createFloatingButton() {
 
   quickBizBtn = document.createElement("div");
   quickBizBtn.id = "maumdata-floating-btn";
-  quickBizBtn.title = "마음데이터 비서로 기업 조회하기";
+  quickBizBtn.title = "마음데이타 비서로 기업 조회하기";
   
   const icon = document.createElement("span");
   icon.className = "maumdata-btn-icon";

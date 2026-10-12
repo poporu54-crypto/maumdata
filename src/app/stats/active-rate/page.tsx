@@ -15,7 +15,7 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   const { date } = await searchParams;
   const targetDate = date ? decodeURIComponent(date) : "";
   return {
-    title: `계속사업자 비율 상세 분석 ${targetDate ? `(${targetDate})` : ""} | 마음데이터`,
+    title: `계속사업자 비율 상세 분석 ${targetDate ? `(${targetDate})` : ""} | 마음데이타`,
     description: `${targetDate ? `${targetDate} 기준 ` : ""}대한민국 업종별 활성(계속)사업자 비율 및 유지 안정성 통계 데이터입니다.`,
   };
 }

@@ -15,7 +15,7 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   const { date } = await searchParams;
   const targetDate = date ? decodeURIComponent(date) : "";
   return {
-    title: `실시간 개업 현황 상세 분석 ${targetDate ? `(${targetDate})` : ""} | 마음데이터`,
+    title: `실시간 개업 현황 상세 분석 ${targetDate ? `(${targetDate})` : ""} | 마음데이타`,
     description: `${targetDate ? `${targetDate} 기준 ` : ""}대한민국 국세청 100대 생활업종 신규 개업 추세 분석 데이터입니다.`,
   };
 }

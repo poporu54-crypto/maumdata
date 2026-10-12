@@ -2,8 +2,8 @@ import React from "react";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "이용약관 | 마음데이터",
-  description: "지윤 주식회사가 제공하는 마음데이터(MaumData) 서비스 이용약관입니다.",
+  title: "이용약관 | 마음데이타",
+  description: "지윤 주식회사가 제공하는 마음데이타(MaumData) 서비스 이용약관입니다.",
 };
 
 export default function TermsPage() {
@@ -34,7 +34,7 @@ export default function TermsPage() {
                 제1조 (목적)
               </h2>
               <p>
-                본 약관은 <strong>지윤 주식회사</strong>(이하 "회사")가 운영하는 인터넷 서비스 <strong>마음데이터(MaumData)</strong>(이하 "서비스")를 이용함에 있어, 회사와 이용자의 권리, 의무, 책임사항 및 기타 필요한 사항을 규정함을 목적으로 합니다.
+                본 약관은 <strong>지윤 주식회사</strong>(이하 "회사")가 운영하는 인터넷 서비스 <strong>마음데이타(MaumData)</strong>(이하 "서비스")를 이용함에 있어, 회사와 이용자의 권리, 의무, 책임사항 및 기타 필요한 사항을 규정함을 목적으로 합니다.
               </p>
             </section>
 

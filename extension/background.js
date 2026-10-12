@@ -2,7 +2,7 @@
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
     id: "maumdata-quick-biz-search",
-    title: "마음데이터로 기업 조회하기",
+    title: "마음데이타로 기업 조회하기",
     contexts: ["selection"]
   });
   

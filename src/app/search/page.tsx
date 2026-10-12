@@ -15,8 +15,8 @@ export async function generateMetadata({ searchParams }: SearchPageProps): Promi
   const { query } = await searchParams;
   const decodedQuery = query ? decodeURIComponent(query) : "";
   return {
-    title: `"${decodedQuery}" 검색 결과 | 마음데이터 기업 검색`,
-    description: `마음데이터 포털에서 "${decodedQuery}"에 부합하는 실시간 기업 상태 및 3개년 종합 재무 분석 이력을 조회해보세요.`,
+    title: `"${decodedQuery}" 검색 결과 | 마음데이타 기업 검색`,
+    description: `마음데이타 포털에서 "${decodedQuery}"에 부합하는 실시간 기업 상태 및 3개년 종합 재무 분석 이력을 조회해보세요.`,
   };
 }
 

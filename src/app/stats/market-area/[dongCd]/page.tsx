@@ -15,7 +15,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const dongInfo = getDongName(resolvedParams.dongCd);
   
   return {
-    title: `${dongInfo.fullName} 업종별 실시간 상권 분석 리포트 | 마음데이터`,
+    title: `${dongInfo.fullName} 업종별 실시간 상권 분석 리포트 | 마음데이타`,
     description: `${dongInfo.fullName} 지역의 실시간 상가 점포 현황, 업종별 점유 비율, 대표 카페 및 한식집 분포 빅데이터 리포트입니다.`,
   };
 }
@@ -315,7 +315,7 @@ export default async function MarketAreaPage({ params }: PageProps) {
             color: "var(--color-primary)",
             textDecoration: "underline"
           }}>
-            마음데이터 메인 화면으로 이동
+            마음데이타 메인 화면으로 이동
           </Link>
         </div>
 
