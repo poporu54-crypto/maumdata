@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 
 const VALID_PASSWORDS = [
   process.env.ADMIN_PASSWORD,
-  "akdmaepdlxk#1",
-  "마음데이타#1",
 ].filter(Boolean) as string[];
 
 export async function POST(req: NextRequest) {

@@ -11,7 +11,7 @@ export interface DartDisclosure {
   detailUrl: string;  // DART 직접 뷰어 연결 링크
 }
 
-const DART_API_KEY = "0ee2cc9103b1efb7f69767eee411270a9a1fc4a7";
+const DART_API_KEY = process.env.DART_API_KEY || "";
 
 /**
  * 1. 로컬 DB에서 해당 기업의 최근 공시 목록을 가져옵니다. (실시간 외부 API 호출 차단)

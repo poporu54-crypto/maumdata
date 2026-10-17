@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import AdmZip from "adm-zip";
 
-const DART_API_KEY = "0ee2cc9103b1efb7f69767eee411270a9a1fc4a7";
+const DART_API_KEY = process.env.DART_API_KEY || "";
 const CACHE_FILE_PATH = path.join(process.cwd(), "src/data/dart_codes.json");
 
 interface DartMapData {
