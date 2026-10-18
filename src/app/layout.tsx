@@ -6,6 +6,8 @@ import Link from "next/link";
 import Script from "next/script";
 import FooterFeedbackButton from "@/components/FooterFeedbackButton";
 import FeedbackFloatingTrigger from "@/components/FeedbackFloatingTrigger";
+import MobileBottomNav from "@/components/MobileBottomNav";
+import MaumDataLogo from "@/components/MaumDataLogo";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.maumdata.com"),
@@ -65,11 +67,12 @@ export default function RootLayout({
           </main>
           
           <FeedbackFloatingTrigger />
+          <MobileBottomNav />
           
           <footer className="footer" style={{
             backgroundColor: "var(--bg-color-card)",
             borderTop: "1px solid var(--color-border)",
-            padding: "48px 0",
+            padding: "48px 0 96px 0", // 모바일 하단 내비게이션 바 공간 확보
             color: "var(--color-text-desc)",
             fontSize: "0.85rem",
             marginTop: "auto",
@@ -82,8 +85,8 @@ export default function RootLayout({
             }}>
               <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: "24px" }}>
                 <div>
-                  <div style={{ fontWeight: 800, color: "var(--color-text-sub)", fontSize: "1rem", marginBottom: "12px" }}>
-                    마음데이타 BIZ
+                  <div style={{ marginBottom: "12px" }}>
+                    <MaumDataLogo size="sm" variant="biz" />
                   </div>
                   <p style={{ maxWidth: "400px", lineHeight: 1.6 }}>
                     마음데이타 독자 기업 정밀 분석 엔진을 바탕으로 구축된 대한민국 대표 민간 기업 데이터 포털 사이트입니다.

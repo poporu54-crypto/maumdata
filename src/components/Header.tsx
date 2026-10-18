@@ -1,7 +1,9 @@
 "use client";
 
+import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import MaumDataLogo from "./MaumDataLogo";
 
 export default function Header() {
   const pathname = usePathname() || "";
@@ -10,17 +12,16 @@ export default function Header() {
   return (
     <header className="header">
       <div className="container header-inner">
-        {isFormCenter ? (
-          <Link href="/form" className="logo">
-            마음데이타<span className="logo-accent" style={{ color: "var(--color-primary)" }}>FORM</span>
-          </Link>
-        ) : (
-          <Link href="/" className="logo">
-            마음데이타<span className="logo-accent">BIZ</span>
-          </Link>
-        )}
+        {/* SVG 로고 영역 */}
+        <Link href={isFormCenter ? "/form" : "/"} className="header-logo-link">
+          <MaumDataLogo 
+            size="md" 
+            variant={isFormCenter ? "form" : "biz"} 
+          />
+        </Link>
 
-        <nav className="nav-links" style={{ display: "flex", gap: "20px", alignItems: "center" }}>
+        {/* 데스크톱 전용 네비게이션 링크 (모바일에서는 하단 바텀 탭 네비게이션이 담당) */}
+        <nav className="desktop-nav-links">
           {isFormCenter ? (
             <>
               <Link 
@@ -35,28 +36,20 @@ export default function Header() {
                 className={`nav-link ${pathname === "/form/resume" ? "active" : ""}`}
                 style={{ fontWeight: pathname === "/form/resume" ? 700 : 500 }}
               >
-                이력서작성
+                이력서 작성
               </Link>
               <Link 
                 href="/form/resignation" 
                 className={`nav-link ${pathname === "/form/resignation" ? "active" : ""}`}
                 style={{ fontWeight: pathname === "/form/resignation" ? 700 : 500 }}
               >
-                사직서작성
+                사직서 작성
               </Link>
               <Link 
                 href="/" 
-                className="nav-link"
-                style={{ 
-                  color: "var(--color-text-desc)",
-                  fontSize: "0.85rem",
-                  marginLeft: "12px",
-                  padding: "4px 8px",
-                  borderRadius: "6px",
-                  border: "1px solid var(--color-border)"
-                }}
+                className="nav-link btn-portal-switch"
               >
-                마음데이타 BIZ 가기 →
+                기업 BIZ 분석 가기 →
               </Link>
             </>
           ) : (
@@ -65,7 +58,7 @@ export default function Header() {
                 href="/" 
                 className={`nav-link ${pathname === "/" ? "active" : ""}`}
               >
-                홈
+                기업 조회
               </Link>
               <Link 
                 href="/stats/market-area" 
@@ -81,19 +74,21 @@ export default function Header() {
               </Link>
               <Link 
                 href="/form" 
-                className={`nav-link ${pathname.startsWith("/form") ? "active" : ""}`}
-                style={{ 
-                  color: "var(--color-primary)",
-                  fontWeight: 700
-                }}
+                className={`nav-link nav-link-highlight ${pathname.startsWith("/form") ? "active" : ""}`}
               >
-                무료 서식 🎁
+                무료 서식 센터 🎁
               </Link>
             </>
           )}
-          {/* 테마 토글러가 들어가는 영역 */}
-          <div id="theme-toggle-container"></div>
+
+          {/* 테마 토글러 주입 영역 */}
+          <div id="theme-toggle-container" className="theme-toggle-wrapper"></div>
         </nav>
+
+        {/* 모바일 우측 헤더 액션 (테마 토글러 전용) */}
+        <div className="mobile-header-actions">
+          <div id="mobile-theme-toggle-slot"></div>
+        </div>
       </div>
     </header>
   );

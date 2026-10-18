@@ -23,28 +23,22 @@ export default function SearchForm() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawValue = e.target.value;
-    
-    // 오직 숫자와 하이픈으로만 이루어진 입력인 경우에만 자동 사업자번호 포맷팅 적용
     const isNumericOrHyphen = /^[0-9-]*$/.test(rawValue);
     
     if (isNumericOrHyphen) {
       const formatted = formatBusinessNumber(rawValue);
-      // 최대 10자리 숫자 기준 제한
       if (formatted.replace(/[^0-9]/g, "").length <= 10) {
         setQuery(formatted);
       }
     } else {
-      // 그 외 텍스트(상호명/대표자명 등)는 원본 타이핑 그대로 입력 허용
       setQuery(rawValue);
     }
     setError("");
   };
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmedQuery = query.trim();
-
-    if (trimmedQuery.length < 2) {
+  const executeSearch = (targetQuery: string) => {
+    const trimmed = targetQuery.trim();
+    if (trimmed.length < 2) {
       setError("두 글자 이상 입력해 주세요.");
       return;
     }
@@ -61,38 +55,31 @@ export default function SearchForm() {
       "사당1동": "1159062000",
       "범어동": "2726051000",
       "범어1동": "2726051000",
-      
-      // 전국 광역시도 대표 행정동 검색 대응
       "삼평동": "4113510900",
       "분당 삼평동": "4113510900",
       "구월동": "2820054000",
-      "구월1동": "2820054000",
       "치평동": "2914074000",
       "둔산동": "3017056000",
-      "둔산2동": "3017056000",
       "삼산동": "3114059000",
       "보람동": "3611055000",
       "퇴계동": "5111059000",
       "성안동": "4311151000",
       "불당동": "4413310700",
       "효자동": "4511160500",
-      "효자5동": "4511160500",
       "여천동": "4613063000",
       "제철동": "4711163000",
       "상남동": "4812355000",
       "노형동": "5011066000",
-      "제주 노형동": "5011066000"
     };
 
-    const targetDongCd = dongMapping[trimmedQuery];
+    const targetDongCd = dongMapping[trimmed];
     if (targetDongCd) {
       router.push(`/stats/market-area/${targetDongCd}`);
       return;
     }
 
-    const cleanNumber = trimmedQuery.replace(/[^0-9]/g, "");
-    // 숫자와 하이픈으로만 이루어지고, 숫자 10자리인 경우 사업체 상세로 바로 이동
-    const isOnlyNumberInput = /^[0-9-]*$/.test(trimmedQuery);
+    const cleanNumber = trimmed.replace(/[^0-9]/g, "");
+    const isOnlyNumberInput = /^[0-9-]*$/.test(trimmed);
     if (isOnlyNumberInput && cleanNumber.length === 10) {
       if (!validateBizrNo(cleanNumber)) {
         setError("유효하지 않은 사업자등록번호 형식입니다 (체크섬 수학적 검증 실패).");
@@ -100,60 +87,169 @@ export default function SearchForm() {
       }
       router.push(`/biz/${cleanNumber}`);
     } else {
-      // 텍스트 검색 또는 완성되지 않은 숫자는 검색 결과 페이지로 이동
-      router.push(`/search?query=${encodeURIComponent(trimmedQuery)}`);
+      router.push(`/search?query=${encodeURIComponent(trimmed)}`);
     }
   };
 
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    executeSearch(query);
+  };
+
+  // 모바일/PC 추천 빠른 검색 키워드 칩
+  const quickSuggestions = [
+    { label: "삼성전자", value: "삼성전자", icon: "🏢" },
+    { label: "토스", value: "토스", icon: "🦄" },
+    { label: "스타벅스", value: "스타벅스", icon: "☕" },
+    { label: "카카오", value: "카카오", icon: "🚀" },
+    { label: "역삼동 상권", value: "역삼동", icon: "📍" },
+    { label: "137-86-51839", value: "137-86-51839", icon: "🔢" },
+  ];
+
   return (
-    <form onSubmit={handleSearch} style={{ marginBottom: "24px" }}>
-      <div className="card" style={{
-        padding: "8px 8px 8px 24px",
-        borderRadius: "24px",
-        display: "flex",
-        alignItems: "center",
-        boxShadow: "var(--shadow-md)",
-        border: error ? "2px solid var(--color-danger)" : "1px solid var(--color-border)",
-        backgroundColor: "var(--bg-color-card)",
-        transition: "var(--transition-smooth)"
-      }}>
-        <div style={{ fontSize: "1.5rem", marginRight: "16px" }}>🔍</div>
-        <input
-          type="text"
-          placeholder="사업자번호, 상호, 대표자, 지역명 입력"
-          value={query}
-          onChange={handleInputChange}
+    <div style={{ marginBottom: "28px" }}>
+      <form onSubmit={handleSearch}>
+        <div
+          className="search-input-box"
           style={{
-            flex: 1,
-            minWidth: 0, // 모바일 뷰 잘림 방지용 최소 너비 리셋
-            border: "none",
-            background: "transparent",
-            fontSize: "1.15rem",
-            fontWeight: 600,
-            color: "var(--color-text-main)",
-            padding: "12px 12px 12px 0"
+            padding: "6px 8px 6px 20px",
+            borderRadius: "20px",
+            display: "flex",
+            alignItems: "center",
+            boxShadow: "0 10px 30px rgba(49, 130, 246, 0.08)",
+            border: error ? "2px solid var(--color-danger)" : "1.5px solid var(--color-border)",
+            backgroundColor: "var(--bg-color-card)",
+            transition: "all 0.25s ease",
           }}
-        />
-        <button type="submit" className="btn-primary" style={{
-          borderRadius: "16px",
-          padding: "14px 20px", // 모바일 가로 폭 대응을 위해 좌우 패딩 최적화 (기존 28px)
-          fontSize: "0.95rem",
-          whiteSpace: "nowrap"
-        }}>
-          조회하기
-        </button>
+        >
+          <div style={{ fontSize: "1.3rem", marginRight: "12px", color: "var(--color-primary)", display: "flex", alignItems: "center" }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+          </div>
+
+          <input
+            type="text"
+            placeholder="사업자번호(10자리), 상호명, 대표자 검색"
+            value={query}
+            onChange={handleInputChange}
+            style={{
+              flex: 1,
+              minWidth: 0,
+              border: "none",
+              background: "transparent",
+              fontSize: "1.05rem", // iOS 사파리 자동 줌 방지(16px 이상)
+              fontWeight: 600,
+              color: "var(--color-text-main)",
+              padding: "14px 8px 14px 0",
+              outline: "none",
+            }}
+          />
+
+          {query && (
+            <button
+              type="button"
+              onClick={() => { setQuery(""); setError(""); }}
+              style={{
+                background: "transparent",
+                border: "none",
+                color: "var(--color-text-desc)",
+                cursor: "pointer",
+                padding: "8px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: "50%",
+                marginRight: "4px",
+              }}
+              aria-label="입력 지우기"
+            >
+              ✕
+            </button>
+          )}
+
+          <button
+            type="submit"
+            className="btn-primary"
+            style={{
+              borderRadius: "14px",
+              padding: "12px 22px",
+              fontSize: "0.95rem",
+              fontWeight: 700,
+              whiteSpace: "nowrap",
+              boxShadow: "0 4px 14px rgba(49, 130, 246, 0.35)",
+              border: "none",
+            }}
+          >
+            조회
+          </button>
+        </div>
+
+        {error && (
+          <p
+            style={{
+              color: "var(--color-danger)",
+              fontSize: "0.85rem",
+              fontWeight: 600,
+              marginTop: "8px",
+              paddingLeft: "16px",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+            }}
+          >
+            <span>⚠️</span>
+            <span>{error}</span>
+          </p>
+        )}
+      </form>
+
+      {/* 모바일 친화적 빠른 추천 칩 영역 */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+          overflowX: "auto",
+          WebkitOverflowScrolling: "touch",
+          padding: "10px 4px 4px 4px",
+          scrollbarWidth: "none",
+        }}
+      >
+        <span style={{ fontSize: "0.8rem", color: "var(--color-text-desc)", fontWeight: 700, whiteSpace: "nowrap" }}>
+          추천:
+        </span>
+        {quickSuggestions.map((item) => (
+          <button
+            key={item.value}
+            type="button"
+            onClick={() => {
+              setQuery(item.value);
+              executeSearch(item.value);
+            }}
+            style={{
+              background: "var(--bg-color-main)",
+              border: "1px solid var(--color-border)",
+              borderRadius: "16px",
+              padding: "5px 12px",
+              fontSize: "0.8rem",
+              fontWeight: 600,
+              color: "var(--color-text-sub)",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "4px",
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+              transition: "var(--transition-smooth)",
+            }}
+            className="suggestion-chip"
+          >
+            <span>{item.icon}</span>
+            <span>{item.label}</span>
+          </button>
+        ))}
       </div>
-      {error && (
-        <p style={{
-          color: "var(--color-danger)",
-          fontSize: "0.9rem",
-          fontWeight: 600,
-          marginTop: "8px",
-          paddingLeft: "16px"
-        }}>
-          ⚠️ {error}
-        </p>
-      )}
-    </form>
+    </div>
   );
 }

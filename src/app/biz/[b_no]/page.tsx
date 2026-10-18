@@ -41,8 +41,10 @@ import {
 } from "./components/AnalysisSections";
 import SyncTrigger from "./components/SyncTrigger";
 import EmploymentHealthSection from "./components/EmploymentHealthSection";
+import BizStickyNav from "./components/BizStickyNav";
 
 export const dynamic = "force-dynamic";
+
 
 // 1. 동적 SEO 메타데이터 생성
 export async function generateMetadata({ params }: { params: any }): Promise<Metadata> {
@@ -185,10 +187,13 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+            {/* 모바일/PC 스티키 섹션 바로가기 네비게이션 */}
+            <BizStickyNav />
             
             {/* 기업 요약 헤더 카드 */}
-            <div className="card" style={{ padding: "32px", display: "flex", flexDirection: "column", gap: "16px" }}>
+            <div id="section-overview" className="card" style={{ padding: "32px", display: "flex", flexDirection: "column", gap: "16px", scrollMarginTop: "120px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: "12px" }}>
+
                 <div>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", marginBottom: "8px" }}>
                     <span style={{ fontSize: "0.95rem", color: "var(--color-text-desc)", fontWeight: 700 }}>
@@ -650,7 +655,9 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
 
             {/* 실시간 조직 건강도 대시보드 (국민연금 분석 및 퇴사율 차트) */}
             {business && (
-              <EmploymentHealthSection business={business} />
+              <div id="section-employment" style={{ scrollMarginTop: "120px" }}>
+                <EmploymentHealthSection business={business} />
+              </div>
             )}
 
             {business && business.b_sector && (
@@ -659,18 +666,16 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
               </Suspense>
             )}
 
-            {/* 재무/고용 요약 대시보드 */}
+            {/* 재무/고용 요약 대시보드 및 3개년 공식 재무제표 요약 테이블 */}
             {business && (
-              <InsightSection business={business} />
-            )}
-
-            {/* 3개년 공식 재무제표 요약 테이블 */}
-            {business && (
-              <FinancialTableSection business={business} />
+              <div id="section-finance" style={{ scrollMarginTop: "120px", display: "flex", flexDirection: "column", gap: "24px" }}>
+                <InsightSection business={business} />
+                <FinancialTableSection business={business} />
+              </div>
             )}
 
             {/* 3. 실시간 공공 입찰공고 및 계약 현황 */}
-            <div style={{ marginTop: "32px" }}>
+            <div id="section-bids" style={{ marginTop: "32px", scrollMarginTop: "120px" }}>
               <h4 style={{ fontSize: "1.2rem", fontWeight: 800, color: "var(--color-text-main)", marginBottom: "12px" }}>
                 🏛️ 조달청 나라장터 입찰공고 매칭 내역
               </h4>
@@ -680,7 +685,7 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
             </div>
 
             {/* 4. 지식재산권 (특허/상표) 포트폴리오 */}
-            <div style={{ marginTop: "32px", marginBottom: "16px" }}>
+            <div id="section-ip" style={{ marginTop: "32px", marginBottom: "16px", scrollMarginTop: "120px" }}>
               <h4 style={{ fontSize: "1.2rem", fontWeight: 800, color: "var(--color-text-main)", marginBottom: "12px" }}>
                 💡 보유 특허 및 지식재산권(IP) 포트폴리오
               </h4>
@@ -688,6 +693,7 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                 <PatentsSection companyNm={business?.b_nm || ""} pNm={business?.p_nm || ""} />
               </Suspense>
             </div>
+
 
             {/* 5. 금융감독원 DART 실시간 공시 목록 */}
             {(business?.is_audited || dartCodeToUse) && (

@@ -7,6 +7,7 @@ import { recordSnapshotIfMissing, startSnapshotScheduler } from "@/lib/statSched
 import { query } from "@/lib/db";
 import DragScrollContainer from "@/components/DragScrollContainer";
 import AdBanner from "@/components/AdBanner";
+import InteractiveDemoShowcase from "@/components/InteractiveDemoShowcase";
 
 export const dynamic = "force-dynamic";
 
@@ -85,28 +86,36 @@ export default async function MainPage() {
           </p>
         </div>
 
-        {/* 토스 스타일 대형 검색창 */}
+        {/* 토스 스타일 대형 스마트 검색창 */}
         <SearchForm />
 
+        {/* 1초 실시간 인터랙티브 체험 쇼케이스 (검색 전 강력한 기능 가치 전달) */}
+        <InteractiveDemoShowcase />
+
         {/* 실시간 퀵 링크 */}
-        <div style={{ marginBottom: "56px" }}>
-          <h3 style={{
-            fontSize: "0.85rem",
-            color: "var(--color-text-desc)",
-            fontWeight: 700,
-            textTransform: "uppercase",
-            letterSpacing: "0.05em",
-            marginBottom: "12px",
-            paddingLeft: "4px"
-          }}>
-            실시간 많이 찾는 기업
-          </h3>
+        <div style={{ marginBottom: "48px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px", padding: "0 4px" }}>
+            <h3 style={{
+              fontSize: "0.85rem",
+              color: "var(--color-text-desc)",
+              fontWeight: 700,
+              textTransform: "uppercase",
+              letterSpacing: "0.05em",
+              margin: 0,
+            }}>
+              🔥 실시간 많이 찾는 기업
+            </h3>
+            <span style={{ fontSize: "0.75rem", color: "var(--color-primary)", fontWeight: 600 }}>실시간 자동 집계</span>
+          </div>
+
           <DragScrollContainer 
             className="quick-links-scroll"
             style={{
               display: "flex",
               flexWrap: "nowrap",
               overflowX: "auto",
+              gap: "10px",
+              paddingBottom: "8px",
             }}
           >
             {quickLinks.map((link) => (
@@ -117,20 +126,24 @@ export default async function MainPage() {
                 style={{
                   backgroundColor: "var(--bg-color-card)",
                   border: "1px solid var(--color-border)",
-                  borderRadius: "12px",
-                  padding: "10px 16px",
-                  fontSize: "0.9rem",
-                  fontWeight: 600,
-                  color: "var(--color-text-sub)",
+                  borderRadius: "14px",
+                  padding: "10px 18px",
+                  fontSize: "0.88rem",
+                  fontWeight: 700,
+                  color: "var(--color-text-main)",
                   display: "flex",
                   alignItems: "center",
-                  gap: "6px",
-                  boxShadow: "var(--shadow-sm)",
-                  transition: "var(--transition-smooth)"
+                  gap: "8px",
+                  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)",
+                  transition: "var(--transition-smooth)",
+                  whiteSpace: "nowrap",
                 }}
               >
-                <span>🏢</span>
+                <span style={{ fontSize: "1.1rem" }}>🏢</span>
                 <span>{link.name}</span>
+                <span style={{ fontSize: "0.75rem", color: "var(--color-text-desc)", fontWeight: 500 }}>
+                  ({link.no.slice(0, 3)}-{link.no.slice(3, 5)})
+                </span>
               </Link>
             ))}
           </DragScrollContainer>
