@@ -29,7 +29,7 @@ export default function RequestSignatureModal({
   const [partyACompany, setPartyACompany] = useState(
     formData?.company || formData?.partyA_name || "마음데이타 파트너"
   );
-  const [partyAPhone, setPartyAPhone] = useState(formData?.phone || "");
+  const [partyAEmail, setPartyAEmail] = useState(formData?.email || "");
 
   // 을 정보 (상대방 정보)
   const [partyBName, setPartyBName] = useState(
@@ -38,7 +38,7 @@ export default function RequestSignatureModal({
   const [partyBCompany, setPartyBCompany] = useState(
     formData?.target_company || formData?.partyB_name || ""
   );
-  const [partyBPhone, setPartyBPhone] = useState("");
+  const [partyBEmail, setPartyBEmail] = useState("");
 
   const [loading, setLoading] = useState(false);
   const [createdResult, setCreatedResult] = useState<{
@@ -74,11 +74,11 @@ export default function RequestSignatureModal({
           title: templateTitle,
           partyAName,
           partyACompany,
-          partyAPhone,
+          partyAEmail,
           partyASignature: currentSignature,
           partyBName,
           partyBCompany,
-          partyBPhone,
+          partyBEmail,
           formData
         })
       });
@@ -94,7 +94,7 @@ export default function RequestSignatureModal({
         signToken: data.signToken
       });
       vibrateDevice(50);
-      showAppToast("비대면 서명 요청 링크가 생성되었습니다!");
+      showAppToast("비대면 서명 요청 준비가 완료되었습니다!");
     } catch (err: any) {
       alert(err.message || "오류가 발생했습니다.");
     } finally {
@@ -102,28 +102,90 @@ export default function RequestSignatureModal({
     }
   };
 
-  const handleCopyLink = () => {
-    if (!createdResult) return;
-    vibrateDevice(20);
-    navigator.clipboard.writeText(createdResult.signUrl);
-    showAppToast("서명 요청 링크가 복사되었습니다!");
-    alert("서명 링크가 클립보드에 복사되었습니다.\n거래처에 카카오톡이나 문자로 전송해 주세요.");
+  // 이메일 제목 및 본문 템플릿 생성기
+  const getEmailContent = () => {
+    if (!createdResult) return { subject: "", body: "" };
+
+    const senderDisplay = partyACompany ? `${partyACompany}(${partyAName})` : partyAName;
+    const recipientDisplay = partyBCompany ? `${partyBCompany} ${partyBName} 대표님(귀하)` : `${partyBName} 귀하`;
+
+    const subject = `[전자계약 서명 요청] ${senderDisplay} - '${templateTitle}' 비대면 서명의 건`;
+    const body = `안녕하세요, ${recipientDisplay}.
+
+${senderDisplay}입니다.
+합의된 조건에 따라 작성된 '${templateTitle}'의 비대면 서명을 요청드립니다.
+
+아래의 안전한 전용 링크를 모바일이나 PC에서 클릭하시어,
+계약서 내용을 확인하신 후 화면에서 직접 전자서명 날인해 주시기 바랍니다.
+
+▶ 전자계약서 확인 및 서명 링크:
+${createdResult.signUrl}
+
+* 본 계약은 대한민국 전자서명법 제3조에 따라 법적 구속력을 갖습니다.
+* 스마트폰 화면에서 손가락으로 10초 만에 자필 사인 또는 인감도장을 날인하실 수 있습니다.
+* 서명 완료 시 상호 서명이 날인된 최종 계약서 및 감사증명서를 즉시 다운로드하실 수 있습니다.
+
+감사합니다.
+${senderDisplay} 드림
+${partyAEmail ? `(회신용 이메일: ${partyAEmail})` : ""}`;
+
+    return { subject, body };
   };
 
-  const handleShareKakao = () => {
+  // 1. Gmail 웹메일 작성창 바로 열기
+  const handleOpenGmail = () => {
+    if (!createdResult) return;
+    vibrateDevice(20);
+    const { subject, body } = getEmailContent();
+    const to = partyBEmail.trim();
+    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(to)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.open(gmailUrl, "_blank");
+  };
+
+  // 2. 네이버 메일 작성창 바로 열기
+  const handleOpenNaverMail = () => {
+    if (!createdResult) return;
+    vibrateDevice(20);
+    const { subject, body } = getEmailContent();
+    const to = partyBEmail.trim();
+    const naverUrl = `https://mail.naver.com/v2/folders/0/write?to=${encodeURIComponent(to)}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.open(naverUrl, "_blank");
+  };
+
+  // 3. 스마트폰 기본 메일 앱 (또는 Outlook) 열기 (mailto)
+  const handleOpenDefaultMail = () => {
+    if (!createdResult) return;
+    vibrateDevice(20);
+    const { subject, body } = getEmailContent();
+    const to = partyBEmail.trim();
+    const mailtoUrl = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.location.href = mailtoUrl;
+  };
+
+  // 4. 이메일 전문 복사
+  const handleCopyEmailText = () => {
+    if (!createdResult) return;
+    vibrateDevice(20);
+    const { subject, body } = getEmailContent();
+    const fullText = `제목: ${subject}\n\n${body}`;
+    navigator.clipboard.writeText(fullText);
+    showAppToast("이메일 전문이 클립보드에 복사되었습니다!");
+    alert("이메일 제목과 본문이 모두 복사되었습니다.\n원하시는 메일 프로그램이나 메신저에 붙여넣어 전송하세요!");
+  };
+
+  // 5. 카카오톡/SNS 공유
+  const handleShareMobile = () => {
     if (!createdResult) return;
     vibrateDevice(30);
-    const message = `[마음데이터 전자계약 서명 요청]\n\n${partyACompany || partyAName}님께서 '${templateTitle}' 비대면 서명을 요청하셨습니다.\n\n아래 링크에서 내용을 확인하시고 화면에 서명해 주세요:\n${createdResult.signUrl}`;
-    
+    const { subject, body } = getEmailContent();
     if (navigator.share) {
       navigator.share({
-        title: `${templateTitle} 전자서명 요청`,
-        text: message,
+        title: subject,
+        text: body,
         url: createdResult.signUrl
       }).catch(() => {});
     } else {
-      navigator.clipboard.writeText(message);
-      alert("서명 요청 메시지가 복사되었습니다. 카카오톡 창에 붙여넣어 전송하세요!");
+      handleCopyEmailText();
     }
   };
 
@@ -152,7 +214,7 @@ export default function RequestSignatureModal({
         style={{
           backgroundColor: "var(--color-card)",
           width: "100%",
-          maxWidth: "480px",
+          maxWidth: "500px",
           borderRadius: "20px",
           padding: "24px",
           boxShadow: "0 20px 40px rgba(0,0,0,0.35)",
@@ -167,13 +229,13 @@ export default function RequestSignatureModal({
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-              <span style={{ fontSize: "1.2rem" }}>🤝</span>
+              <span style={{ fontSize: "1.2rem" }}>✉️</span>
               <h3 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 800, color: "var(--color-text-main)" }}>
-                비대면 전자서명 요청 (100% 무료)
+                직접 이메일로 서명 요청하기
               </h3>
             </div>
             <p style={{ margin: "4px 0 0 0", fontSize: "0.8rem", color: "var(--color-text-sub)" }}>
-              상대방에게 카카오톡/문자로 링크를 보내 폰에서 즉시 사인을 받습니다.
+              내 메일(Gmail, 네이버 등)에서 상대방에게 서명 요청 이메일을 직접 보냅니다.
             </p>
           </div>
           <button
@@ -210,10 +272,10 @@ export default function RequestSignatureModal({
                 <span>{currentSignature ? "✅" : "⚠️"}</span>
                 <div>
                   <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--color-text-main)" }}>
-                    {currentSignature ? "내 서명/인감 날인 완료" : "내 서명이 아직 날인되지 않았습니다"}
+                    {currentSignature ? "내 서명 날인 완료" : "내 서명을 먼저 날인해 주세요"}
                   </div>
                   <div style={{ fontSize: "0.75rem", color: "var(--color-text-sub)" }}>
-                    {currentSignature ? "상대방 서명란이 비어있는 상태로 전송됩니다." : "서명을 먼저 등록해야 법적 효력이 발생합니다."}
+                    {currentSignature ? "상대방 서명란이 빈 상태로 전송됩니다." : "서명이 있어야 상대방이 신뢰하고 서명합니다."}
                   </div>
                 </div>
               </div>
@@ -237,14 +299,34 @@ export default function RequestSignatureModal({
               )}
             </div>
 
-            {/* 2. 상대방 정보 입력 */}
+            {/* 2. 발신자 & 수신자 이메일 정보 */}
             <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-              <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--color-text-main)" }}>
-                서명받을 상대방(을) 정보
-              </span>
+              {/* 내 회신 이메일 */}
+              <div>
+                <label style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--color-text-main)", display: "block", marginBottom: "4px" }}>
+                  내 이메일 주소 (상대방이 회신받을 주소)
+                </label>
+                <input
+                  type="email"
+                  value={partyAEmail}
+                  onChange={(e) => setPartyAEmail(e.target.value)}
+                  placeholder="예: mycompany@naver.com"
+                  style={{
+                    width: "100%",
+                    padding: "9px 12px",
+                    borderRadius: "8px",
+                    border: "1px solid var(--color-border)",
+                    backgroundColor: "var(--bg-color-main)",
+                    color: "var(--color-text-main)",
+                    fontSize: "0.9rem"
+                  }}
+                />
+              </div>
+
+              {/* 상대방 정보 */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
                 <div>
-                  <label style={{ fontSize: "0.75rem", color: "var(--color-text-desc)", display: "block", marginBottom: "4px" }}>
+                  <label style={{ fontSize: "0.78rem", color: "var(--color-text-desc)", display: "block", marginBottom: "4px" }}>
                     상대방 상호/소속
                   </label>
                   <input
@@ -264,8 +346,8 @@ export default function RequestSignatureModal({
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: "0.75rem", color: "var(--color-text-desc)", display: "block", marginBottom: "4px" }}>
-                    성명/대표자명 *
+                  <label style={{ fontSize: "0.78rem", color: "var(--color-text-desc)", display: "block", marginBottom: "4px" }}>
+                    상대방 성명 *
                   </label>
                   <input
                     type="text"
@@ -287,17 +369,17 @@ export default function RequestSignatureModal({
               </div>
 
               <div>
-                <label style={{ fontSize: "0.75rem", color: "var(--color-text-desc)", display: "block", marginBottom: "4px" }}>
-                  상대방 연락처 (선택)
+                <label style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--color-text-main)", display: "block", marginBottom: "4px" }}>
+                  상대방 이메일 주소 (수신처)
                 </label>
                 <input
-                  type="text"
-                  value={partyBPhone}
-                  onChange={(e) => setPartyBPhone(e.target.value)}
-                  placeholder="예: 010-1234-5678"
+                  type="email"
+                  value={partyBEmail}
+                  onChange={(e) => setPartyBEmail(e.target.value)}
+                  placeholder="예: partner@gmail.com (메일 작성창에 자동 기입됩니다)"
                   style={{
                     width: "100%",
-                    padding: "8px 12px",
+                    padding: "9px 12px",
                     borderRadius: "8px",
                     border: "1px solid var(--color-border)",
                     backgroundColor: "var(--bg-color-main)",
@@ -308,7 +390,7 @@ export default function RequestSignatureModal({
               </div>
             </div>
 
-            {/* 법적 효력 안내 */}
+            {/* 안내 배너 */}
             <div
               style={{
                 fontSize: "0.76rem",
@@ -319,11 +401,11 @@ export default function RequestSignatureModal({
                 lineHeight: 1.5
               }}
             >
-              ⚖️ <strong>대한민국 전자서명법 제3조 준수</strong><br />
-              양 당사자의 서명 완료 시 시점확인(타임스탬프), 접속 IP, 본인 확인 정보가 기록되어 법적 구속력을 갖습니다.
+              🔒 <strong>개인 간 직접 소통 방식 (P2P Email)</strong><br />
+              마음데이터는 계약서를 임의로 열람하거나 통제하지 않으며, 회원님의 본인 이메일 계정을 통해 상대방과 직접 계약서 및 서명을 주고받습니다.
             </div>
 
-            {/* 요청 생성 버튼 */}
+            {/* 링크 생성 버튼 */}
             <button
               type="button"
               onClick={handleCreateRequest}
@@ -345,78 +427,135 @@ export default function RequestSignatureModal({
                 gap: "8px"
               }}
             >
-              <span>{loading ? "서명 요청 링크 생성 중..." : "🚀 무료 서명 요청 링크 생성"}</span>
+              <span>{loading ? "서명 링크 생성 중..." : "🚀 이메일 발송 준비 완료"}</span>
             </button>
           </>
         ) : (
-          /* 생성 완료 화면 */
-          <div style={{ display: "flex", flexDirection: "column", gap: "16px", textAlign: "center" }}>
-            <div style={{ fontSize: "3rem" }}>🎉</div>
-            <div>
-              <h4 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 800, color: "var(--color-text-main)" }}>
-                서명 요청 링크가 생성되었습니다!
+          /* 생성 완료 화면: 원클릭 이메일러 옵션들 */
+          <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: "2.4rem", marginBottom: "4px" }}>✉️</div>
+              <h4 style={{ margin: 0, fontSize: "1.15rem", fontWeight: 800, color: "var(--color-text-main)" }}>
+                원하시는 메일 서비스로 바로 보내세요!
               </h4>
-              <p style={{ margin: "4px 0 0 0", fontSize: "0.85rem", color: "var(--color-text-sub)" }}>
-                상대방에게 링크를 전달하면 휴대폰에서 10초 만에 서명할 수 있습니다.
+              <p style={{ margin: "4px 0 0 0", fontSize: "0.82rem", color: "var(--color-text-sub)" }}>
+                아래 버튼을 누르면 제목, 내용, 서명 링크가 모두 작성된 메일창이 열립니다.
               </p>
             </div>
 
-            {/* 링크 박스 */}
-            <div
-              style={{
-                backgroundColor: "var(--bg-color-main)",
-                border: "1px solid var(--color-border)",
-                borderRadius: "12px",
-                padding: "12px",
-                fontSize: "0.82rem",
-                color: "#2563eb",
-                fontWeight: 600,
-                wordBreak: "break-all",
-                textAlign: "left"
-              }}
-            >
-              {createdResult.signUrl}
-            </div>
-
-            {/* 공유 버튼들 */}
+            {/* 3대 이메일 작성 버튼 */}
             <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              {/* 1. Gmail */}
               <button
                 type="button"
-                onClick={handleShareKakao}
+                onClick={handleOpenGmail}
                 style={{
-                  backgroundColor: "#fee500",
-                  color: "#191919",
-                  border: "none",
+                  backgroundColor: "#ffffff",
+                  color: "#d93025",
+                  border: "1.5px solid #ea4335",
                   borderRadius: "12px",
-                  padding: "14px",
+                  padding: "12px 16px",
                   fontWeight: 800,
-                  fontSize: "0.95rem",
+                  fontSize: "0.92rem",
                   cursor: "pointer",
                   display: "flex",
                   alignItems: "center",
-                  justifyContent: "center",
-                  gap: "6px",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.08)"
+                  justifyContent: "space-between",
+                  boxShadow: "0 2px 6px rgba(234, 67, 53, 0.1)"
                 }}
               >
-                <span>💬 카카오톡으로 서명 요청 보내기</span>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <span style={{ fontSize: "1.3rem" }}>🔴</span>
+                  <span>Gmail(구글)로 바로 보내기</span>
+                </div>
+                <span style={{ fontSize: "0.85rem", color: "#64748b" }}>열기 ➔</span>
               </button>
 
+              {/* 2. 네이버 메일 */}
               <button
                 type="button"
-                onClick={handleCopyLink}
+                onClick={handleOpenNaverMail}
+                style={{
+                  backgroundColor: "#03c75a",
+                  color: "#ffffff",
+                  border: "none",
+                  borderRadius: "12px",
+                  padding: "12px 16px",
+                  fontWeight: 800,
+                  fontSize: "0.92rem",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  boxShadow: "0 2px 8px rgba(3, 199, 90, 0.2)"
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <span style={{ fontSize: "1.2rem", fontWeight: 900 }}>N</span>
+                  <span>네이버 메일로 바로 보내기</span>
+                </div>
+                <span style={{ fontSize: "0.85rem", opacity: 0.9 }}>열기 ➔</span>
+              </button>
+
+              {/* 3. 스마트폰 기본 메일앱 / Outlook */}
+              <button
+                type="button"
+                onClick={handleOpenDefaultMail}
                 style={{
                   backgroundColor: "var(--bg-color-main)",
                   color: "var(--color-text-main)",
                   border: "1px solid var(--color-border)",
                   borderRadius: "12px",
-                  padding: "12px",
+                  padding: "12px 16px",
                   fontWeight: 700,
                   fontSize: "0.9rem",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between"
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <span style={{ fontSize: "1.2rem" }}>📱</span>
+                  <span>스마트폰 기본 메일앱 / 아웃룩 열기</span>
+                </div>
+                <span style={{ fontSize: "0.85rem", color: "#64748b" }}>열기 ➔</span>
+              </button>
+            </div>
+
+            {/* 복사 & 카카오톡 보조 옵션 */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+              <button
+                type="button"
+                onClick={handleCopyEmailText}
+                style={{
+                  backgroundColor: "var(--bg-color-main)",
+                  color: "var(--color-text-main)",
+                  border: "1px solid var(--color-border)",
+                  borderRadius: "10px",
+                  padding: "10px",
+                  fontWeight: 600,
+                  fontSize: "0.82rem",
                   cursor: "pointer"
                 }}
               >
-                📋 링크 복사하기
+                📋 이메일 전문 복사
+              </button>
+              <button
+                type="button"
+                onClick={handleShareMobile}
+                style={{
+                  backgroundColor: "#fee500",
+                  color: "#191919",
+                  border: "none",
+                  borderRadius: "10px",
+                  padding: "10px",
+                  fontWeight: 700,
+                  fontSize: "0.82rem",
+                  cursor: "pointer"
+                }}
+              >
+                💬 카톡/기타 공유
               </button>
             </div>
 
@@ -429,7 +568,7 @@ export default function RequestSignatureModal({
                 color: "var(--color-text-desc)",
                 fontSize: "0.85rem",
                 cursor: "pointer",
-                marginTop: "4px"
+                marginTop: "2px"
               }}
             >
               닫기

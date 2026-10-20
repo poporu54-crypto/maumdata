@@ -74,6 +74,49 @@ export default function SignContractPage({ params }: { params: Promise<{ token: 
     window.print();
   };
 
+  const getReplyEmailContent = () => {
+    const to = formData?.partyAEmail || "";
+    const senderDisplay = contract?.partyBCompany ? `${contract.partyBCompany}(${contract.partyBName})` : (contract?.partyBName || "수신인");
+    const recipientDisplay = contract?.partyACompany ? `${contract.partyACompany} ${contract.partyAName} 대표님(귀하)` : `${contract?.partyAName} 귀하`;
+
+    const subject = `[계약 체결 완료] ${senderDisplay} - '${contract?.title}' 전자서명 완료 알림`;
+    const body = `안녕하세요, ${recipientDisplay}.
+
+${senderDisplay}입니다.
+요청해 주신 '${contract?.title}'의 전자서명을 정상적으로 완료하였습니다.
+
+아래 전용 링크에서 양 당사자의 서명이 날인된 최종 체결본 및 법적 감사증명서(Audit Trail)를 열람하고 PDF로 다운로드 보관하실 수 있습니다.
+
+▶ 최종 체결본 확인 링크:
+${typeof window !== "undefined" ? window.location.href : ""}
+
+감사합니다.
+${senderDisplay} 드림`;
+
+    return { to, subject, body };
+  };
+
+  const handleReplyGmail = () => {
+    vibrateDevice(20);
+    const { to, subject, body } = getReplyEmailContent();
+    const url = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(to)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.open(url, "_blank");
+  };
+
+  const handleReplyNaver = () => {
+    vibrateDevice(20);
+    const { to, subject, body } = getReplyEmailContent();
+    const url = `https://mail.naver.com/v2/folders/0/write?to=${encodeURIComponent(to)}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.open(url, "_blank");
+  };
+
+  const handleReplyDefaultMail = () => {
+    vibrateDevice(20);
+    const { to, subject, body } = getReplyEmailContent();
+    const mailtoUrl = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.location.href = mailtoUrl;
+  };
+
   if (loading) {
     return (
       <div style={{ minHeight: "80vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -144,14 +187,35 @@ export default function SignContractPage({ params }: { params: Promise<{ token: 
                 </p>
               </div>
             </div>
-            <button
-              onClick={handlePrint}
-              type="button"
-              className="btn-primary"
-              style={{ padding: "8px 16px", fontSize: "0.88rem", backgroundColor: "#059669" }}
-            >
-              🖨️ 체결본 PDF 인쇄/저장
-            </button>
+            <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
+              <button
+                onClick={handlePrint}
+                type="button"
+                className="btn-primary"
+                style={{ padding: "8px 16px", fontSize: "0.88rem", backgroundColor: "#059669" }}
+              >
+                🖨️ 체결본 PDF 인쇄/저장
+              </button>
+              <button
+                onClick={handleReplyDefaultMail}
+                type="button"
+                style={{
+                  padding: "8px 14px",
+                  fontSize: "0.88rem",
+                  backgroundColor: "#ffffff",
+                  color: "#065f46",
+                  border: "1px solid #10b981",
+                  borderRadius: "8px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "4px"
+                }}
+              >
+                <span>✉️ 원작성자에게 완료 메일 회신</span>
+              </button>
+            </div>
           </div>
         ) : (
           <div

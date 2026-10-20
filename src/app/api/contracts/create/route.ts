@@ -14,13 +14,22 @@ export async function POST(request: NextRequest) {
       partyACompany,
       partyABno,
       partyAPhone,
+      partyAEmail,
       partyASignature,
       partyBName,
       partyBCompany,
       partyBBno,
       partyBPhone,
+      partyBEmail,
       formData
     } = body;
+
+    // 이메일 정보 formData에 보존
+    const enrichedFormData = {
+      ...formData,
+      partyAEmail: partyAEmail || formData?.email || "",
+      partyBEmail: partyBEmail || ""
+    };
 
     if (!templateId || !title || !formData) {
       return NextResponse.json(
@@ -51,7 +60,7 @@ export async function POST(request: NextRequest) {
       partyBCompany,
       partyBBno,
       partyBPhone,
-      formData,
+      formData: enrichedFormData,
       signToken
     });
 
