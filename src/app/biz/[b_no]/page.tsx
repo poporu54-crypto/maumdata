@@ -42,6 +42,7 @@ import {
 import SyncTrigger from "./components/SyncTrigger";
 import EmploymentHealthSection from "./components/EmploymentHealthSection";
 import BizStickyNav from "./components/BizStickyNav";
+import QuickContractModal from "./components/QuickContractModal";
 
 export const dynamic = "force-dynamic";
 
@@ -304,6 +305,19 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
               initialBSttCd={apiStatus?.b_stt_cd || "01"}
               ntsLastSyncAt={business?.ntsLastSyncAt}
             />
+
+            {/* 기업 맞춤 서식 1초 생성 모달 */}
+            {business && (
+              <QuickContractModal
+                business={{
+                  b_no: cleanBNo,
+                  b_nm: business.b_nm || "",
+                  b_owner: business.p_nm || "",
+                  b_adr: business.b_adr || "",
+                  b_sector: business.b_sector || ""
+                }}
+              />
+            )}
 
             {/* 기본 정보 그리드 */}
             <div style={{

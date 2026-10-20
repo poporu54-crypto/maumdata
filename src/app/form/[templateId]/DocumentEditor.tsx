@@ -5,6 +5,9 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { getTemplateById, DocumentTemplate, LayoutElement } from "../templatesData";
 import AdSpace from "@/components/AdSpace";
+import { shareDocumentPdf, vibrateDevice, showAppToast } from "@/lib/appBridge";
+import DocumentSignatureModal from "@/components/DocumentSignatureModal";
+import CompanySearchModal, { SelectedCompany } from "@/components/CompanySearchModal";
 
 interface DynamicDocumentRendererProps {
   layout: LayoutElement[];
@@ -239,6 +242,23 @@ const DynamicDocumentRenderer: React.FC<DynamicDocumentRendererProps> = ({
             <div key={elIdx} style={{ display: "flex", flexDirection: "column", alignItems: "center", margin: "10px 0 15px 0" }}>
               <h1 style={{ textAlign: "center", fontSize: "22pt", fontWeight: 900, margin: 0, letterSpacing: tokens.titleLetterSpacing, color: tokens.titleColor, ...element.style }}>
                 {bindData(element.value)}
+                {data?.signatureImage && (
+                  <img
+                    src={data.signatureImage}
+                    alt="전자서명/인감"
+                    style={{
+                      height: "46px",
+                      width: "auto",
+                      maxHeight: "46px",
+                      objectFit: "contain",
+                      pointerEvents: "none",
+                      filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.1))",
+                      marginLeft: "10px",
+                      display: "inline-block",
+                      verticalAlign: "middle"
+                    }}
+                  />
+                )}
               </h1>
               {tokens.titleBorderBottom && (
                 <div style={{ width: "60px", height: "3px", backgroundColor: "#3b82f6", marginTop: "12px", borderRadius: "1.5px" }} />
@@ -460,6 +480,23 @@ const DynamicDocumentRenderer: React.FC<DynamicDocumentRendererProps> = ({
             >
               <div style={{ fontSize: `${11 + spacing.fontDelta}pt`, fontWeight: "bold" }}>
                 {bindData(element.value)}
+                {data?.signatureImage && (
+                  <img
+                    src={data.signatureImage}
+                    alt="전자서명/인감"
+                    style={{
+                      height: "46px",
+                      width: "auto",
+                      maxHeight: "46px",
+                      objectFit: "contain",
+                      pointerEvents: "none",
+                      filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.1))",
+                      marginLeft: "10px",
+                      display: "inline-block",
+                      verticalAlign: "middle"
+                    }}
+                  />
+                )}
               </div>
             </div>
           );
@@ -514,6 +551,57 @@ export default function DocumentEditor({ templateId, initialTemplate }: { templa
   const [logoImage, setLogoImage] = useState<string | null>(null);
   const [logoText, setLogoText] = useState<string>("[YOUR LOGO]");
   const [companyInfoText, setCompanyInfoText] = useState<string>("마음데이타 | www.maumdata.com");
+  
+  // 모바일/앱 특화: 전자서명 & 기업검색 & 공유 상태
+  const [isSignatureModalOpen, setIsSignatureModalOpen] = useState(false);
+  const [isCompanySearchModalOpen, setIsCompanySearchModalOpen] = useState(false);
+  const [signatureImage, setSignatureImage] = useState<string | null>(null);
+
+  const handleSelectCompanyFromDb = (comp: SelectedCompany) => {
+    vibrateDevice(40);
+    const cleanBno = comp.b_no ? comp.b_no.replace(/[^0-9]/g, "") : "";
+    const formattedBno = cleanBno.length === 10
+      ? cleanBno.replace(/(\d{3})(\d{2})(\d{5})/, "$1-$2-$3")
+      : comp.b_no;
+
+    setData((prev: any) => {
+      const next = { ...prev };
+      ["company", "partyB_name", "client", "client_name", "target_company", "supplier", "receiver", "receiverName", "buyer"].forEach((k) => {
+        if (next.hasOwnProperty(k)) next[k] = comp.b_nm;
+      });
+      ["b_no", "partyB_bno", "business_number", "client_bno", "registration_number"].forEach((k) => {
+        if (next.hasOwnProperty(k)) next[k] = formattedBno || comp.b_no;
+      });
+      ["owner", "partyB_owner", "ceo", "representative", "client_rep", "president"].forEach((k) => {
+        if (next.hasOwnProperty(k)) next[k] = comp.p_nm;
+      });
+      ["address", "partyB_address", "location", "client_address"].forEach((k) => {
+        if (next.hasOwnProperty(k)) next[k] = comp.b_adr;
+      });
+      return next;
+    });
+    showAppToast(`${comp.b_nm} 정보가 서식에 자동 입력되었습니다.`);
+  };
+
+  const handleApplySignature = (sigDataUrl: string) => {
+    setSignatureImage(sigDataUrl);
+    setData((prev: any) => ({
+      ...prev,
+      signatureImage: sigDataUrl,
+      stampImage: sigDataUrl
+    }));
+    showAppToast("전자 서명/도장이 문서에 반영되었습니다.");
+  };
+
+  const handleShareDoc = async () => {
+    vibrateDevice(30);
+    const docTitle = template?.title || "마음데이터 서식";
+    await shareDocumentPdf({
+      title: docTitle,
+      text: `[${docTitle}] 마음데이터에서 생성된 문서입니다.`,
+      fileName: `${docTitle}.pdf`
+    });
+  };
   const logoInputRef = useRef<HTMLInputElement>(null);
 
   const triggerLogoUpload = (e: React.MouseEvent) => {
@@ -600,6 +688,35 @@ export default function DocumentEditor({ templateId, initialTemplate }: { templa
       }
       if (initData.hasOwnProperty("estDate")) {
         initData.estDate = formattedDate;
+      }
+      // 기업 상세 또는 스캐너에서 전달된 기업 데이터 자동 주입
+      if (typeof window !== "undefined") {
+        const urlParams = new URLSearchParams(window.location.search);
+        const partyBName = urlParams.get("partyB_name");
+        const partyBBno = urlParams.get("partyB_bno");
+        const partyBOwner = urlParams.get("partyB_owner");
+        const partyBAddress = urlParams.get("partyB_address");
+
+        if (partyBName) {
+          ["company", "partyB_name", "client", "client_name", "target_company", "supplier", "receiver", "receiverName", "buyer"].forEach((k) => {
+            if (initData.hasOwnProperty(k)) initData[k] = partyBName;
+          });
+        }
+        if (partyBBno) {
+          ["b_no", "partyB_bno", "business_number", "client_bno", "registration_number"].forEach((k) => {
+            if (initData.hasOwnProperty(k)) initData[k] = partyBBno;
+          });
+        }
+        if (partyBOwner) {
+          ["owner", "partyB_owner", "ceo", "representative", "client_rep", "president"].forEach((k) => {
+            if (initData.hasOwnProperty(k)) initData[k] = partyBOwner;
+          });
+        }
+        if (partyBAddress) {
+          ["address", "partyB_address", "location", "client_address"].forEach((k) => {
+            if (initData.hasOwnProperty(k)) initData[k] = partyBAddress;
+          });
+        }
       }
       setData(initData);
     }
@@ -3148,7 +3265,80 @@ export default function DocumentEditor({ templateId, initialTemplate }: { templa
             </div>
 
             {/* 상단 액션 컨트롤러 */}
-            <div className="a4-actions-bar" style={{ display: "flex", gap: "8px", width: "100%", maxWidth: "700px", marginBottom: "16px" }}>
+            <div className="a4-actions-bar" style={{ display: "flex", gap: "8px", width: "100%", maxWidth: "700px", marginBottom: "16px", flexWrap: "wrap" }}>
+              <button
+                type="button"
+                onClick={handleShareDoc}
+                style={{
+                  flex: 1.5,
+                  minWidth: "140px",
+                  padding: "10px 14px",
+                  borderRadius: "8px",
+                  border: "none",
+                  backgroundColor: "#fee500",
+                  color: "#191919",
+                  fontWeight: 800,
+                  fontSize: "0.9rem",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "6px",
+                  boxShadow: "0 2px 6px rgba(0,0,0,0.08)"
+                }}
+              >
+                <span>💬 카카오톡 / 원클릭 공유</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  vibrateDevice(20);
+                  setIsSignatureModalOpen(true);
+                }}
+                style={{
+                  flex: 1.2,
+                  minWidth: "120px",
+                  padding: "10px 12px",
+                  borderRadius: "8px",
+                  border: "1px solid var(--color-border)",
+                  backgroundColor: "var(--bg-color-card)",
+                  color: "var(--color-text-main)",
+                  fontWeight: 700,
+                  fontSize: "0.88rem",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "6px"
+                }}
+              >
+                <span>✍️ 전자서명 · 도장</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  vibrateDevice(20);
+                  setIsCompanySearchModalOpen(true);
+                }}
+                style={{
+                  flex: 1.2,
+                  minWidth: "120px",
+                  padding: "10px 12px",
+                  borderRadius: "8px",
+                  border: "1px solid #3b82f6",
+                  backgroundColor: "rgba(59, 130, 246, 0.08)",
+                  color: "#2563eb",
+                  fontWeight: 700,
+                  fontSize: "0.88rem",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "6px"
+                }}
+              >
+                <span>🔍 상대방 기업 DB</span>
+              </button>
               <button onClick={handlePrint} className="btn-primary" style={{ flex: 1.5, padding: "10px" }}>
                 🖨️ PDF 저장 및 인쇄
               </button>
@@ -3236,6 +3426,21 @@ export default function DocumentEditor({ templateId, initialTemplate }: { templa
         </div>
 
       </div>
+
+      {/* 전자 서명 · 인감 모달 */}
+      <DocumentSignatureModal
+        isOpen={isSignatureModalOpen}
+        onClose={() => setIsSignatureModalOpen(false)}
+        onApplySignature={handleApplySignature}
+        defaultSignerName={data?.name || data?.partyA_owner || data?.owner || "대표자"}
+      />
+
+      {/* 기업 DB 검색 및 자동 입력 모달 */}
+      <CompanySearchModal
+        isOpen={isCompanySearchModalOpen}
+        onClose={() => setIsCompanySearchModalOpen(false)}
+        onSelectCompany={handleSelectCompanyFromDb}
+      />
     </div>
   );
 }

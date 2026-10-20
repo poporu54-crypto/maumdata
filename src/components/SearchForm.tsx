@@ -3,10 +3,13 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { validateBizrNo } from "@/lib/bizValidation";
+import BusinessCardScannerModal from "./BusinessCardScannerModal";
+import { vibrateDevice } from "@/lib/appBridge";
 
 export default function SearchForm() {
   const [query, setQuery] = useState("");
   const [error, setError] = useState("");
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
   const router = useRouter();
 
   // 사업자번호 포맷팅 (XXX-XX-XXXXX)
@@ -98,6 +101,7 @@ export default function SearchForm() {
 
   // 모바일/PC 추천 빠른 검색 키워드 칩
   const quickSuggestions = [
+    { label: "명함/등록증 스캔", value: "__SCAN__", icon: "📷", isScan: true },
     { label: "삼성전자", value: "삼성전자", icon: "🏢" },
     { label: "토스", value: "토스", icon: "🦄" },
     { label: "스타벅스", value: "스타벅스", icon: "☕" },
@@ -169,6 +173,34 @@ export default function SearchForm() {
             </button>
           )}
 
+                    {/* 명함/사업자등록증 카메라 스캔 버튼 */}
+          <button
+            type="button"
+            onClick={() => {
+              vibrateDevice(30);
+              setIsScannerOpen(true);
+            }}
+            style={{
+              background: "rgba(37, 99, 235, 0.08)",
+              border: "1px solid rgba(37, 99, 235, 0.2)",
+              color: "#2563eb",
+              cursor: "pointer",
+              padding: "8px 12px",
+              display: "flex",
+              alignItems: "center",
+              gap: "4px",
+              borderRadius: "10px",
+              marginRight: "6px",
+              fontSize: "0.82rem",
+              fontWeight: 700,
+              flexShrink: 0
+            }}
+            title="명함 또는 사업자등록증 촬영 스캔"
+          >
+            <span style={{ fontSize: "1.1rem" }}>📷</span>
+            <span style={{ display: "inline-block" }}>스캔</span>
+          </button>
+
           <button
             type="submit"
             className="btn-primary"
@@ -225,6 +257,11 @@ export default function SearchForm() {
             key={item.value}
             type="button"
             onClick={() => {
+              if ((item as any).isScan) {
+                vibrateDevice(30);
+                setIsScannerOpen(true);
+                return;
+              }
               setQuery(item.value);
               executeSearch(item.value);
             }}
@@ -250,6 +287,16 @@ export default function SearchForm() {
           </button>
         ))}
       </div>
+
+      {/* 명함 · 사업자등록증 카메라 스캔 모달 */}
+      <BusinessCardScannerModal
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+        onDetectedBusinessNo={(bNo) => {
+          setQuery(bNo);
+          executeSearch(bNo);
+        }}
+      />
     </div>
   );
 }
