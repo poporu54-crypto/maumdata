@@ -1007,6 +1007,133 @@ export async function deleteFeedback(id: number) {
   return true;
 }
 
+// ----------------------------------------------------
+// 무료 전자계약 플랫폼 (e-Contract) DB 함수군
+// ----------------------------------------------------
+
+export async function ensureContractsTable() {
+  await query(`
+    CREATE TABLE IF NOT EXISTS contracts (
+      id VARCHAR(64) PRIMARY KEY,
+      template_id VARCHAR(64) NOT NULL,
+      title VARCHAR(255) NOT NULL,
+      status VARCHAR(32) NOT NULL DEFAULT 'WAITING_PARTY_B',
+      party_a_name VARCHAR(128),
+      party_a_company VARCHAR(128),
+      party_a_bno VARCHAR(32),
+      party_a_phone VARCHAR(32),
+      party_a_signature TEXT,
+      party_a_signed_at TIMESTAMPTZ,
+      party_a_ip VARCHAR(64),
+      party_b_name VARCHAR(128),
+      party_b_company VARCHAR(128),
+      party_b_bno VARCHAR(32),
+      party_b_phone VARCHAR(32),
+      party_b_signature TEXT,
+      party_b_signed_at TIMESTAMPTZ,
+      party_b_ip VARCHAR(64),
+      form_data JSONB NOT NULL,
+      sign_token VARCHAR(64) UNIQUE NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_contracts_sign_token ON contracts(sign_token);
+  `);
+}
+
+export async function createContract(data: {
+  id: string;
+  templateId: string;
+  title: string;
+  partyAName?: string;
+  partyACompany?: string;
+  partyABno?: string;
+  partyAPhone?: string;
+  partyASignature?: string;
+  partyAIp?: string;
+  partyBName?: string;
+  partyBCompany?: string;
+  partyBBno?: string;
+  partyBPhone?: string;
+  formData: any;
+  signToken: string;
+}) {
+  await ensureContractsTable();
+  const res = await query(
+    `INSERT INTO contracts (
+      id, template_id, title, status,
+      party_a_name, party_a_company, party_a_bno, party_a_phone,
+      party_a_signature, party_a_signed_at, party_a_ip,
+      party_b_name, party_b_company, party_b_bno, party_b_phone,
+      form_data, sign_token, created_at, updated_at
+    ) VALUES (
+      $1, $2, $3, 'WAITING_PARTY_B',
+      $4, $5, $6, $7,
+      $8, NOW(), $9,
+      $10, $11, $12, $13,
+      $14, $15, NOW(), NOW()
+    ) RETURNING *`,
+    [
+      data.id,
+      data.templateId,
+      data.title,
+      data.partyAName || "",
+      data.partyACompany || "",
+      data.partyABno || "",
+      data.partyAPhone || "",
+      data.partyASignature || "",
+      data.partyAIp || "",
+      data.partyBName || "",
+      data.partyBCompany || "",
+      data.partyBBno || "",
+      data.partyBPhone || "",
+      JSON.stringify(data.formData),
+      data.signToken,
+    ]
+  );
+  return res.rows[0];
+}
+
+export async function getContractBySignToken(token: string) {
+  await ensureContractsTable();
+  const res = await query(
+    `SELECT * FROM contracts WHERE sign_token = $1 LIMIT 1`,
+    [token]
+  );
+  return res.rows[0] || null;
+}
+
+export async function getContractById(id: string) {
+  await ensureContractsTable();
+  const res = await query(
+    `SELECT * FROM contracts WHERE id = $1 LIMIT 1`,
+    [id]
+  );
+  return res.rows[0] || null;
+}
+
+export async function completePartyBSignature(
+  token: string,
+  partyBSignature: string,
+  partyBIp: string,
+  partyBName?: string
+) {
+  await ensureContractsTable();
+  const res = await query(
+    `UPDATE contracts SET
+      party_b_signature = $1,
+      party_b_signed_at = NOW(),
+      party_b_ip = $2,
+      party_b_name = COALESCE(NULLIF($3, ''), party_b_name),
+      status = 'COMPLETED',
+      updated_at = NOW()
+     WHERE sign_token = $4
+     RETURNING *`,
+    [partyBSignature, partyBIp, partyBName || "", token]
+  );
+  return res.rows[0] || null;
+}
+
 
 
 

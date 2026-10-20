@@ -8,6 +8,7 @@ import AdSpace from "@/components/AdSpace";
 import { shareDocumentPdf, vibrateDevice, showAppToast } from "@/lib/appBridge";
 import DocumentSignatureModal from "@/components/DocumentSignatureModal";
 import CompanySearchModal, { SelectedCompany } from "@/components/CompanySearchModal";
+import RequestSignatureModal from "@/components/RequestSignatureModal";
 
 interface DynamicDocumentRendererProps {
   layout: LayoutElement[];
@@ -555,6 +556,7 @@ export default function DocumentEditor({ templateId, initialTemplate }: { templa
   // 모바일/앱 특화: 전자서명 & 기업검색 & 공유 상태
   const [isSignatureModalOpen, setIsSignatureModalOpen] = useState(false);
   const [isCompanySearchModalOpen, setIsCompanySearchModalOpen] = useState(false);
+  const [isRequestSigModalOpen, setIsRequestSigModalOpen] = useState(false);
   const [signatureImage, setSignatureImage] = useState<string | null>(null);
 
   const handleSelectCompanyFromDb = (comp: SelectedCompany) => {
@@ -3268,6 +3270,32 @@ export default function DocumentEditor({ templateId, initialTemplate }: { templa
             <div className="a4-actions-bar" style={{ display: "flex", gap: "8px", width: "100%", maxWidth: "700px", marginBottom: "16px", flexWrap: "wrap" }}>
               <button
                 type="button"
+                onClick={() => {
+                  vibrateDevice(30);
+                  setIsRequestSigModalOpen(true);
+                }}
+                style={{
+                  flex: 1.6,
+                  minWidth: "160px",
+                  padding: "10px 14px",
+                  borderRadius: "8px",
+                  border: "none",
+                  background: "linear-gradient(135deg, #2563eb, #1d4ed8)",
+                  color: "#ffffff",
+                  fontWeight: 800,
+                  fontSize: "0.92rem",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "6px",
+                  boxShadow: "0 4px 12px rgba(37, 99, 235, 0.3)"
+                }}
+              >
+                <span>🤝 비대면 서명 요청 (무료)</span>
+              </button>
+              <button
+                type="button"
                 onClick={handleShareDoc}
                 style={{
                   flex: 1.5,
@@ -3440,6 +3468,20 @@ export default function DocumentEditor({ templateId, initialTemplate }: { templa
         isOpen={isCompanySearchModalOpen}
         onClose={() => setIsCompanySearchModalOpen(false)}
         onSelectCompany={handleSelectCompanyFromDb}
+      />
+
+      {/* 비대면 전자서명 요청 모달 */}
+      <RequestSignatureModal
+        isOpen={isRequestSigModalOpen}
+        onClose={() => setIsRequestSigModalOpen(false)}
+        templateId={templateId}
+        templateTitle={template?.title || "계약서"}
+        formData={data}
+        currentSignature={signatureImage || data?.signatureImage}
+        onRequireSignature={() => {
+          setIsRequestSigModalOpen(false);
+          setIsSignatureModalOpen(true);
+        }}
       />
     </div>
   );
