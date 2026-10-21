@@ -1,38 +1,47 @@
 import { NextResponse, NextRequest } from "next/server";
-import { getContractsByEmailOrPhone, getContractsByIds } from "@/lib/db";
+import { getContractsByUserId, getContractsByIds, deleteContractForUser } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
+
+function mapContractRow(c: any) {
+  return {
+    id: c.id,
+    templateId: c.template_id,
+    title: c.title,
+    status: c.status,
+    partyAName: c.party_a_name,
+    partyACompany: c.party_a_company,
+    partyASignedAt: c.party_a_signed_at,
+    partyAUserId: c.party_a_user_id || "",
+    partyBName: c.party_b_name,
+    partyBCompany: c.party_b_company,
+    partyBSignedAt: c.party_b_signed_at,
+    partyBUserId: c.party_b_user_id || "",
+    signToken: c.sign_token,
+    accessPin: c.access_pin || "",
+    r2Key: c.r2_key || "",
+    createdAt: c.created_at,
+    updatedAt: c.updated_at,
+  };
+}
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const query = searchParams.get("query") || "";
+    const userId = searchParams.get("userId") || "";
+    const userEmail = searchParams.get("email") || "";
 
-    if (query.trim().length < 2) {
+    if (!userId && !userEmail) {
       return NextResponse.json(
-        { error: "검색어(이메일 또는 휴대폰번호)를 2글자 이상 입력해 주세요." },
-        { status: 400 }
+        { error: "보관함 조회를 위해 로그인이 필요합니다." },
+        { status: 401 }
       );
     }
 
-    const contracts = await getContractsByEmailOrPhone(query);
+    const contracts = await getContractsByUserId(userId, userEmail);
     return NextResponse.json({
       success: true,
-      contracts: contracts.map((c) => ({
-        id: c.id,
-        templateId: c.template_id,
-        title: c.title,
-        status: c.status,
-        partyAName: c.party_a_name,
-        partyACompany: c.party_a_company,
-        partyASignedAt: c.party_a_signed_at,
-        partyBName: c.party_b_name,
-        partyBCompany: c.party_b_company,
-        partyBSignedAt: c.party_b_signed_at,
-        signToken: c.sign_token,
-        createdAt: c.created_at,
-        updatedAt: c.updated_at
-      }))
+      contracts: contracts.map(mapContractRow),
     });
   } catch (err: any) {
     console.error("Failed to query my contracts:", err);
@@ -46,38 +55,46 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { contractIds } = body;
+    const { action, contractId, contractIds, userId, userEmail } = body;
 
-    if (!Array.isArray(contractIds) || contractIds.length === 0) {
-      return NextResponse.json({ success: true, contracts: [] });
+    // 1. 보관함에서 계약서 삭제 요청
+    if (action === "delete" && contractId) {
+      await deleteContractForUser(contractId, userId);
+      return NextResponse.json({ success: true });
     }
 
-    // 최대 50개 제한
-    const safeIds = contractIds.slice(0, 50).filter((id) => typeof id === "string");
-    const contracts = await getContractsByIds(safeIds);
+    // 2. 로그인 계정 영구 계약서 + 기기 로컬 계약서 통합 조회
+    const mergedMap = new Map<string, any>();
+
+    if (userId || userEmail) {
+      const userContracts = await getContractsByUserId(userId || "", userEmail || "");
+      for (const c of userContracts) {
+        mergedMap.set(c.id, mapContractRow(c));
+      }
+    }
+
+    if (Array.isArray(contractIds) && contractIds.length > 0) {
+      const safeIds = contractIds.slice(0, 50).filter((id) => typeof id === "string");
+      const localContracts = await getContractsByIds(safeIds);
+      for (const c of localContracts) {
+        if (!mergedMap.has(c.id)) {
+          mergedMap.set(c.id, mapContractRow(c));
+        }
+      }
+    }
+
+    const sorted = Array.from(mergedMap.values()).sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
 
     return NextResponse.json({
       success: true,
-      contracts: contracts.map((c) => ({
-        id: c.id,
-        templateId: c.template_id,
-        title: c.title,
-        status: c.status,
-        partyAName: c.party_a_name,
-        partyACompany: c.party_a_company,
-        partyASignedAt: c.party_a_signed_at,
-        partyBName: c.party_b_name,
-        partyBCompany: c.party_b_company,
-        partyBSignedAt: c.party_b_signed_at,
-        signToken: c.sign_token,
-        createdAt: c.created_at,
-        updatedAt: c.updated_at
-      }))
+      contracts: sorted,
     });
   } catch (err: any) {
     console.error("Failed to batch query contracts:", err);
     return NextResponse.json(
-      { error: "최근 계약서 조회 실패: " + err.message },
+      { error: "보관함 조회 실패: " + err.message },
       { status: 500 }
     );
   }

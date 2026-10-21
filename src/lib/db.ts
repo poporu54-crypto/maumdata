@@ -1034,11 +1034,73 @@ export async function ensureContractsTable() {
       party_b_ip VARCHAR(64),
       form_data JSONB NOT NULL,
       sign_token VARCHAR(64) UNIQUE NOT NULL,
+      access_pin VARCHAR(16),
+      party_a_user_id VARCHAR(128),
+      party_b_user_id VARCHAR(128),
+      r2_key VARCHAR(255),
+      deleted_by_a BOOLEAN DEFAULT FALSE,
+      deleted_by_b BOOLEAN DEFAULT FALSE,
       created_at TIMESTAMPTZ DEFAULT NOW(),
       updated_at TIMESTAMPTZ DEFAULT NOW()
     );
+    ALTER TABLE contracts ADD COLUMN IF NOT EXISTS access_pin VARCHAR(16);
+    ALTER TABLE contracts ADD COLUMN IF NOT EXISTS party_a_user_id VARCHAR(128);
+    ALTER TABLE contracts ADD COLUMN IF NOT EXISTS party_b_user_id VARCHAR(128);
+    ALTER TABLE contracts ADD COLUMN IF NOT EXISTS r2_key VARCHAR(255);
+    ALTER TABLE contracts ADD COLUMN IF NOT EXISTS deleted_by_a BOOLEAN DEFAULT FALSE;
+    ALTER TABLE contracts ADD COLUMN IF NOT EXISTS deleted_by_b BOOLEAN DEFAULT FALSE;
     CREATE INDEX IF NOT EXISTS idx_contracts_sign_token ON contracts(sign_token);
+    CREATE INDEX IF NOT EXISTS idx_contracts_party_a_user ON contracts(party_a_user_id);
+    CREATE INDEX IF NOT EXISTS idx_contracts_party_b_user ON contracts(party_b_user_id);
+
+    CREATE TABLE IF NOT EXISTS contract_users (
+      id VARCHAR(128) PRIMARY KEY,
+      provider VARCHAR(32) NOT NULL DEFAULT 'quick',
+      email VARCHAR(255) UNIQUE NOT NULL,
+      name VARCHAR(128),
+      company VARCHAR(128),
+      password_hash VARCHAR(255),
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
   `);
+}
+
+export async function upsertContractUser(data: {
+  id: string;
+  provider: string;
+  email: string;
+  name?: string;
+  company?: string;
+  passwordHash?: string;
+}) {
+  await ensureContractsTable();
+  const res = await query(
+    `INSERT INTO contract_users (id, provider, email, name, company, password_hash, created_at)
+     VALUES ($1, $2, LOWER($3), $4, $5, $6, NOW())
+     ON CONFLICT (email) DO UPDATE SET
+       name = COALESCE(NULLIF($4, ''), contract_users.name),
+       company = COALESCE(NULLIF($5, ''), contract_users.company),
+       password_hash = COALESCE(NULLIF($6, ''), contract_users.password_hash)
+     RETURNING id, provider, email, name, company, created_at`,
+    [
+      data.id,
+      data.provider,
+      data.email.trim(),
+      data.name || "",
+      data.company || "",
+      data.passwordHash || "",
+    ]
+  );
+  return res.rows[0];
+}
+
+export async function getContractUserByEmail(email: string) {
+  await ensureContractsTable();
+  const res = await query(
+    `SELECT * FROM contract_users WHERE email = LOWER($1) LIMIT 1`,
+    [email.trim()]
+  );
+  return res.rows[0] || null;
 }
 
 export async function createContract(data: {
@@ -1051,27 +1113,30 @@ export async function createContract(data: {
   partyAPhone?: string;
   partyASignature?: string;
   partyAIp?: string;
+  partyAUserId?: string;
   partyBName?: string;
   partyBCompany?: string;
   partyBBno?: string;
   partyBPhone?: string;
   formData: any;
   signToken: string;
+  accessPin?: string;
+  r2Key?: string;
 }) {
   await ensureContractsTable();
   const res = await query(
     `INSERT INTO contracts (
       id, template_id, title, status,
       party_a_name, party_a_company, party_a_bno, party_a_phone,
-      party_a_signature, party_a_signed_at, party_a_ip,
+      party_a_signature, party_a_signed_at, party_a_ip, party_a_user_id,
       party_b_name, party_b_company, party_b_bno, party_b_phone,
-      form_data, sign_token, created_at, updated_at
+      form_data, sign_token, access_pin, r2_key, created_at, updated_at
     ) VALUES (
       $1, $2, $3, 'WAITING_PARTY_B',
       $4, $5, $6, $7,
-      $8, NOW(), $9,
-      $10, $11, $12, $13,
-      $14, $15, NOW(), NOW()
+      $8, NOW(), $9, $10,
+      $11, $12, $13, $14,
+      $15, $16, $17, $18, NOW(), NOW()
     ) RETURNING *`,
     [
       data.id,
@@ -1083,12 +1148,15 @@ export async function createContract(data: {
       data.partyAPhone || "",
       data.partyASignature || "",
       data.partyAIp || "",
+      data.partyAUserId || "",
       data.partyBName || "",
       data.partyBCompany || "",
       data.partyBBno || "",
       data.partyBPhone || "",
       JSON.stringify(data.formData),
       data.signToken,
+      data.accessPin || "",
+      data.r2Key || "",
     ]
   );
   return res.rows[0];
@@ -1116,7 +1184,9 @@ export async function completePartyBSignature(
   token: string,
   partyBSignature: string,
   partyBIp: string,
-  partyBName?: string
+  partyBName?: string,
+  partyBUserId?: string,
+  r2Key?: string
 ) {
   await ensureContractsTable();
   const res = await query(
@@ -1125,37 +1195,52 @@ export async function completePartyBSignature(
       party_b_signed_at = NOW(),
       party_b_ip = $2,
       party_b_name = COALESCE(NULLIF($3, ''), party_b_name),
+      party_b_user_id = COALESCE(NULLIF($4, ''), party_b_user_id),
+      r2_key = COALESCE(NULLIF($5, ''), r2_key),
       status = 'COMPLETED',
       updated_at = NOW()
-     WHERE sign_token = $4
+     WHERE sign_token = $6
      RETURNING *`,
-    [partyBSignature, partyBIp, partyBName || "", token]
+    [partyBSignature, partyBIp, partyBName || "", partyBUserId || "", r2Key || "", token]
   );
   return res.rows[0] || null;
 }
 
-export async function getContractsByEmailOrPhone(searchKey: string) {
+export async function bindUserToContract(token: string, userId: string, role: "A" | "B") {
   await ensureContractsTable();
-  const cleanPhone = searchKey.replace(/[^0-9]/g, "");
-  const trimmed = searchKey.trim().toLowerCase();
+  if (role === "A") {
+    await query(
+      `UPDATE contracts SET party_a_user_id = $1, deleted_by_a = FALSE WHERE sign_token = $2`,
+      [userId, token]
+    );
+  } else {
+    await query(
+      `UPDATE contracts SET party_b_user_id = $1, deleted_by_b = FALSE WHERE sign_token = $2`,
+      [userId, token]
+    );
+  }
+}
+
+export async function getContractsByUserId(userId: string, userEmail?: string) {
+  if (!userId && !userEmail) return [];
+  await ensureContractsTable();
+  const emailLower = (userEmail || "").trim().toLowerCase();
 
   const res = await query(
     `SELECT id, template_id, title, status,
-            party_a_name, party_a_company, party_a_bno, party_a_phone, party_a_signed_at,
-            party_b_name, party_b_company, party_b_bno, party_b_phone, party_b_signed_at,
-            sign_token, created_at, updated_at
+            party_a_name, party_a_company, party_a_bno, party_a_phone, party_a_signed_at, party_a_user_id,
+            party_b_name, party_b_company, party_b_bno, party_b_phone, party_b_signed_at, party_b_user_id,
+            sign_token, access_pin, r2_key, created_at, updated_at
      FROM contracts
-     WHERE LOWER(party_a_name) = $1
-        OR LOWER(party_b_name) = $1
-        OR party_a_phone = $1
-        OR party_b_phone = $1
-        OR ($2 != '' AND (REPLACE(party_a_phone, '-', '') = $2 OR REPLACE(party_b_phone, '-', '') = $2))
-        OR LOWER(form_data->>'email') = $1
-        OR LOWER(form_data->>'partyAEmail') = $1
-        OR LOWER(form_data->>'partyBEmail') = $1
+     WHERE (
+       (party_a_user_id = $1 AND COALESCE(deleted_by_a, FALSE) = FALSE)
+       OR (party_b_user_id = $1 AND COALESCE(deleted_by_b, FALSE) = FALSE)
+       OR ($2 != '' AND LOWER(form_data->>'partyAEmail') = $2 AND COALESCE(deleted_by_a, FALSE) = FALSE)
+       OR ($2 != '' AND LOWER(form_data->>'partyBEmail') = $2 AND COALESCE(deleted_by_b, FALSE) = FALSE)
+     )
      ORDER BY created_at DESC
-     LIMIT 50`,
-    [trimmed, cleanPhone]
+     LIMIT 100`,
+    [userId, emailLower]
   );
   return res.rows;
 }
@@ -1165,16 +1250,37 @@ export async function getContractsByIds(ids: string[]) {
   await ensureContractsTable();
   const res = await query(
     `SELECT id, template_id, title, status,
-            party_a_name, party_a_company, party_a_bno, party_a_phone, party_a_signed_at,
-            party_b_name, party_b_company, party_b_bno, party_b_phone, party_b_signed_at,
-            sign_token, created_at, updated_at
+            party_a_name, party_a_company, party_a_bno, party_a_phone, party_a_signed_at, party_a_user_id,
+            party_b_name, party_b_company, party_b_bno, party_b_phone, party_b_signed_at, party_b_user_id,
+            sign_token, access_pin, r2_key, created_at, updated_at
      FROM contracts
      WHERE id = ANY($1::varchar[])
+       AND COALESCE(deleted_by_a, FALSE) = FALSE
      ORDER BY created_at DESC
      LIMIT 50`,
     [ids]
   );
   return res.rows;
+}
+
+export async function deleteContractForUser(contractId: string, userId?: string) {
+  await ensureContractsTable();
+  if (userId) {
+    await query(
+      `UPDATE contracts SET
+        deleted_by_a = CASE WHEN party_a_user_id = $2 THEN TRUE ELSE deleted_by_a END,
+        deleted_by_b = CASE WHEN party_b_user_id = $2 THEN TRUE ELSE deleted_by_b END,
+        updated_at = NOW()
+       WHERE id = $1`,
+      [contractId, userId]
+    );
+  } else {
+    await query(
+      `UPDATE contracts SET deleted_by_a = TRUE, updated_at = NOW() WHERE id = $1`,
+      [contractId]
+    );
+  }
+  return true;
 }
 
 

@@ -1,5 +1,6 @@
 import { NextResponse, NextRequest } from "next/server";
 import { createContract } from "@/lib/db";
+import { uploadContractSnapshotToR2 } from "@/lib/r2";
 import crypto from "crypto";
 
 export const dynamic = "force-dynamic";
@@ -16,20 +17,15 @@ export async function POST(request: NextRequest) {
       partyAPhone,
       partyAEmail,
       partyASignature,
+      partyAUserId,
       partyBName,
       partyBCompany,
       partyBBno,
       partyBPhone,
       partyBEmail,
-      formData
+      accessPin,
+      formData,
     } = body;
-
-    // 이메일 정보 formData에 보존
-    const enrichedFormData = {
-      ...formData,
-      partyAEmail: partyAEmail || formData?.email || "",
-      partyBEmail: partyBEmail || ""
-    };
 
     if (!templateId || !title || !formData) {
       return NextResponse.json(
@@ -38,13 +34,40 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // IP 추출
+    const enrichedFormData = {
+      ...formData,
+      partyAEmail: partyAEmail || formData?.email || "",
+      partyBEmail: partyBEmail || "",
+    };
+
     const forwardedFor = request.headers.get("x-forwarded-for");
     const clientIp = forwardedFor ? forwardedFor.split(",")[0].trim() : "127.0.0.1";
 
-    // 고유 ID 및 서명 토큰 생성
     const contractId = `cnt_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`;
     const signToken = `sig_${crypto.randomBytes(16).toString("hex")}`;
+    const safePin = accessPin ? String(accessPin).trim() : "";
+
+    // Cloudflare R2에 계약서 스냅샷 백업
+    const r2Key = await uploadContractSnapshotToR2(contractId, {
+      id: contractId,
+      templateId,
+      title,
+      status: "WAITING_PARTY_B",
+      partyAName,
+      partyACompany,
+      partyABno,
+      partyAPhone,
+      partyAEmail,
+      partyASignature,
+      partyAIp: clientIp,
+      partyBName,
+      partyBCompany,
+      partyBBno,
+      partyBPhone,
+      partyBEmail,
+      formData: enrichedFormData,
+      createdAt: new Date().toISOString(),
+    });
 
     const newContract = await createContract({
       id: contractId,
@@ -56,12 +79,15 @@ export async function POST(request: NextRequest) {
       partyAPhone,
       partyASignature,
       partyAIp: clientIp,
+      partyAUserId: partyAUserId || "",
       partyBName,
       partyBCompany,
       partyBBno,
       partyBPhone,
       formData: enrichedFormData,
-      signToken
+      signToken,
+      accessPin: safePin,
+      r2Key: r2Key || "",
     });
 
     const host = request.headers.get("host") || "www.maumdata.com";
@@ -73,9 +99,11 @@ export async function POST(request: NextRequest) {
       contractId,
       signToken,
       signUrl,
+      accessPin: safePin,
+      r2Key: r2Key || "",
       title: newContract.title,
       status: newContract.status,
-      createdAt: newContract.created_at
+      createdAt: newContract.created_at,
     });
   } catch (err: any) {
     console.error("Failed to create contract:", err);
