@@ -217,8 +217,11 @@ export async function getCorpFinanceInfo(crno: string): Promise<CorpFinanceDetai
 export async function searchCorpOutline(corpNm: string): Promise<CorpBasicOutline[]> {
   if (!corpNm || corpNm.trim().length < 2) return [];
 
-  const encodedCorpNm = encodeURIComponent(corpNm.trim());
-  const url = `https://apis.data.go.kr/1160100/service/GetCorpBasicInfoService_V2/getCorpBasicOutline_V2?serviceKey=${SERVICE_KEY}&pageNo=1&numOfRows=15&resultType=json&corpNm=${encodedCorpNm}`;
+  const cleanQuery = corpNm
+    .replace(/주식회사|\(주\)|（주）|유한회사|\(유\)/g, "")
+    .trim();
+  const encodedCorpNm = encodeURIComponent(cleanQuery.length >= 2 ? cleanQuery : corpNm.trim());
+  const url = `https://apis.data.go.kr/1160100/service/GetCorpBasicInfoService_V2/getCorpOutline_V2?serviceKey=${SERVICE_KEY}&pageNo=1&numOfRows=30&resultType=json&corpNm=${encodedCorpNm}`;
 
   try {
     const response = await fetch(url, {
@@ -250,17 +253,31 @@ export async function searchCorpOutline(corpNm: string): Promise<CorpBasicOutlin
     const items = json?.response?.body?.items?.item;
     if (items) {
       const list = Array.isArray(items) ? items : [items];
-      return list.map((item: any) => ({
-        crno: item.crno || "",
-        corpNm: item.corpNm || "",
-        corpEnm: item.corpEnm || "",
-        bizrNo: item.bizrNo || "",
-        enpRprFnm: item.enpRprFnm || "",
-        enpBsadr: item.enpBsadr || "",
-        enpEstbDt: item.enpEstbDt || "",
-        enpIndyNm: item.enpIndyNm || "",
-        enpEntprScaleNm: item.enpEntprScaleNm || "일반기업",
-      }));
+      const byBzno = new Map<string, CorpBasicOutline>();
+      for (const item of list) {
+        const bzno = String(item.bzno || item.bizrNo || "").replace(/[^0-9]/g, "");
+        if (bzno.length !== 10 || byBzno.has(bzno)) continue;
+        const baseAddr = (item.enpBsadr || "").trim();
+        const dtlAddr = (item.enpDtadr || "").trim();
+        const fullAddr = dtlAddr && !baseAddr.includes(dtlAddr) ? `${baseAddr} ${dtlAddr}`.trim() : baseAddr;
+        const rawName = item.enpPbanCmpyNm || item.corpNm || "";
+        const corpNmFormatted =
+          item.corpDcdNm === "주식회사" && !rawName.includes("주식회사") && !rawName.includes("(주)")
+            ? `${rawName} 주식회사`
+            : rawName;
+        byBzno.set(bzno, {
+          crno: item.crno && !/^0+$/.test(String(item.crno).replace(/[^0-9]/g, "")) ? item.crno : "",
+          corpNm: corpNmFormatted,
+          corpEnm: item.corpEnsnNm || item.corpEnm || "",
+          bizrNo: bzno,
+          enpRprFnm: item.enpRprFnm || "-",
+          enpBsadr: fullAddr || "-",
+          enpEstbDt: item.enpEstbDt || "",
+          enpIndyNm: item.sicNm || item.enpIndyNm || "기타 서비스업",
+          enpEntprScaleNm: item.smenpYn === "Y" ? "중소기업" : "일반기업",
+        });
+      }
+      return Array.from(byBzno.values());
     }
 
     return [];

@@ -127,7 +127,10 @@ async function NoSearchResultSection({ searchQuery }: { searchQuery: string }) {
         &ldquo;{searchQuery}&rdquo; 검색 결과가 없습니다
       </h3>
       <p style={{ fontSize: "0.9rem", color: "var(--color-text-desc)", maxWidth: "400px", margin: "0 auto 24px auto" }}>
-        사업자등록번호(10자리), 상호명 또는 대표자명을 다시 한 번 정확히 확인해 주세요.
+        사업자등록번호(10자리), 법인 상호명 또는 대표자명을 다시 한 번 정확히 확인해 주세요.<br />
+        <span style={{ display: "inline-block", marginTop: "10px", padding: "10px 14px", borderRadius: "10px", backgroundColor: "rgba(49, 130, 246, 0.06)", border: "1px solid rgba(49, 130, 246, 0.2)", fontSize: "0.82rem", color: "var(--color-text-sub)", lineHeight: 1.5 }}>
+          💡 <strong style={{ color: "var(--color-primary)" }}>개인사업자(일반상사 등)를 찾으시나요?</strong> 정부 공공데이터 정책상 미등록 개인사업자는 한글 상호명만으로 사업자번호를 역조회할 수 없습니다. <strong>사업자등록번호 10자리 숫자</strong>로 검색하시거나 <strong>📷 스캔</strong>을 이용하시면 즉시 조회·등록됩니다.
+        </span>
       </p>
       
       <div style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", gap: "12px" }}>
@@ -179,7 +182,7 @@ async function SearchResultList({ searchQuery }: { searchQuery: string }) {
     }
 
     let publicMatches: CorpBasicOutline[] = [];
-    if (localMatches.length === 0) {
+    if (localMatches.length < 10) {
       try {
         console.log(`[Search API] No local matches for "${searchQuery}". Querying public API...`);
         publicMatches = await searchCorpOutline(searchQuery);
