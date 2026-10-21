@@ -346,7 +346,7 @@ ${createdResult.signUrl}${pinLine}`;
               <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
                   <div>
-                    <label style={{ fontSize: "0.78rem", color: "var(--color-text-desc)", display: "block", marginBottom: "4px" }}>
+                    <label style={{ fontSize: "0.78rem", fontWeight: 700, color: "#0f172a", display: "block", marginBottom: "4px" }}>
                       상대방 상호/소속
                     </label>
                     <input
@@ -358,15 +358,15 @@ ${createdResult.signUrl}${pinLine}`;
                         width: "100%",
                         padding: "9px 12px",
                         borderRadius: "8px",
-                        border: "1px solid var(--color-border)",
-                        backgroundColor: "var(--bg-color-main)",
-                        color: "var(--color-text-main)",
+                        border: "1.5px solid #cbd5e1",
+                        backgroundColor: "#ffffff",
+                        color: "#0f172a",
                         fontSize: "0.9rem",
                       }}
                     />
                   </div>
                   <div>
-                    <label style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--color-text-main)", display: "block", marginBottom: "4px" }}>
+                    <label style={{ fontSize: "0.78rem", fontWeight: 700, color: "#0f172a", display: "block", marginBottom: "4px" }}>
                       상대방 성명 *
                     </label>
                     <input
@@ -378,9 +378,9 @@ ${createdResult.signUrl}${pinLine}`;
                         width: "100%",
                         padding: "9px 12px",
                         borderRadius: "8px",
-                        border: "1px solid var(--color-border)",
-                        backgroundColor: "var(--bg-color-main)",
-                        color: "var(--color-text-main)",
+                        border: "1.5px solid #cbd5e1",
+                        backgroundColor: "#ffffff",
+                        color: "#0f172a",
                         fontSize: "0.9rem",
                         fontWeight: 600,
                       }}

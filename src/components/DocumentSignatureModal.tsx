@@ -512,10 +512,10 @@ export default function DocumentSignatureModal({
                   width: "100%",
                   padding: "10px 14px",
                   borderRadius: "10px",
-                  border: "1px solid #cbd5e1",
+                  border: "1.5px solid #cbd5e1",
                   fontSize: "1rem",
                   fontWeight: 700,
-                  backgroundColor: "#f8fafc",
+                  backgroundColor: "#ffffff",
                   color: "#0f172a",
                 }}
               />

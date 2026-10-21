@@ -602,6 +602,45 @@ export default function DocumentEditor({ templateId, initialTemplate }: { templa
   const [isRequestSigModalOpen, setIsRequestSigModalOpen] = useState(false);
   const [signatureImage, setSignatureImage] = useState<string | null>(null);
 
+  // 상단 액션 바 마우스/터치 가로 드래그 스크롤 제어
+  const actionsBarRef = useRef<HTMLDivElement>(null);
+  const isDraggingBar = useRef(false);
+  const dragStartX = useRef(0);
+  const dragScrollLeft = useRef(0);
+  const hasDraggedBar = useRef(false);
+
+  const handleBarMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    const bar = actionsBarRef.current;
+    if (!bar) return;
+    isDraggingBar.current = true;
+    hasDraggedBar.current = false;
+    dragStartX.current = e.pageX - bar.offsetLeft;
+    dragScrollLeft.current = bar.scrollLeft;
+  };
+
+  const handleBarMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isDraggingBar.current || !actionsBarRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - actionsBarRef.current.offsetLeft;
+    const walk = (x - dragStartX.current) * 1.3;
+    if (Math.abs(walk) > 5) {
+      hasDraggedBar.current = true;
+    }
+    actionsBarRef.current.scrollLeft = dragScrollLeft.current - walk;
+  };
+
+  const handleBarMouseUpOrLeave = () => {
+    isDraggingBar.current = false;
+  };
+
+  const handleBarClickCapture = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (hasDraggedBar.current) {
+      e.stopPropagation();
+      e.preventDefault();
+      hasDraggedBar.current = false;
+    }
+  };
+
   const handleSelectCompanyFromDb = (comp: SelectedCompany) => {
     vibrateDevice(40);
     const cleanBno = comp.b_no ? comp.b_no.replace(/[^0-9]/g, "") : "";
@@ -3309,8 +3348,34 @@ export default function DocumentEditor({ templateId, initialTemplate }: { templa
               </div>
             </div>
 
-            {/* 상단 액션 컨트롤러 */}
-            <div className="a4-actions-bar" style={{ display: "flex", gap: "8px", width: "100%", maxWidth: "700px", marginBottom: "16px", flexWrap: "wrap" }}>
+            {/* 상단 액션 컨트롤러 (마우스 & 손가락 가로 드래그 스크롤 지원) */}
+            <style dangerouslySetInnerHTML={{__html: `
+              .a4-actions-bar::-webkit-scrollbar { display: none; }
+              .a4-actions-bar { -ms-overflow-style: none; scrollbar-width: none; }
+            `}} />
+            <div
+              ref={actionsBarRef}
+              className="a4-actions-bar"
+              onMouseDown={handleBarMouseDown}
+              onMouseMove={handleBarMouseMove}
+              onMouseUp={handleBarMouseUpOrLeave}
+              onMouseLeave={handleBarMouseUpOrLeave}
+              onClickCapture={handleBarClickCapture}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                width: "100%",
+                maxWidth: "700px",
+                marginBottom: "16px",
+                flexWrap: "nowrap",
+                overflowX: "auto",
+                WebkitOverflowScrolling: "touch",
+                cursor: "grab",
+                userSelect: "none",
+                padding: "2px 0 4px 0",
+              }}
+            >
               <button
                 type="button"
                 onClick={() => {
@@ -3318,47 +3383,25 @@ export default function DocumentEditor({ templateId, initialTemplate }: { templa
                   setIsRequestSigModalOpen(true);
                 }}
                 style={{
-                  flex: 1.6,
-                  minWidth: "160px",
-                  padding: "10px 14px",
-                  borderRadius: "8px",
+                  flexShrink: 0,
+                  whiteSpace: "nowrap",
+                  height: "42px",
+                  padding: "0 16px",
+                  borderRadius: "10px",
                   border: "none",
                   background: "linear-gradient(135deg, #2563eb, #1d4ed8)",
                   color: "#ffffff",
                   fontWeight: 800,
-                  fontSize: "0.92rem",
+                  fontSize: "0.88rem",
                   cursor: "pointer",
-                  display: "flex",
+                  display: "inline-flex",
                   alignItems: "center",
                   justifyContent: "center",
                   gap: "6px",
-                  boxShadow: "0 4px 12px rgba(37, 99, 235, 0.3)"
+                  boxShadow: "0 4px 10px rgba(37, 99, 235, 0.25)",
                 }}
               >
                 <span>🤝 비대면 서명 요청 (무료)</span>
-              </button>
-              <button
-                type="button"
-                onClick={handleShareDoc}
-                style={{
-                  flex: 1.5,
-                  minWidth: "140px",
-                  padding: "10px 14px",
-                  borderRadius: "8px",
-                  border: "none",
-                  backgroundColor: "#fee500",
-                  color: "#191919",
-                  fontWeight: 800,
-                  fontSize: "0.9rem",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "6px",
-                  boxShadow: "0 2px 6px rgba(0,0,0,0.08)"
-                }}
-              >
-                <span>💬 카카오톡 / 원클릭 공유</span>
               </button>
               <button
                 type="button"
@@ -3367,23 +3410,70 @@ export default function DocumentEditor({ templateId, initialTemplate }: { templa
                   setIsSignatureModalOpen(true);
                 }}
                 style={{
-                  flex: 1.2,
-                  minWidth: "120px",
-                  padding: "10px 12px",
-                  borderRadius: "8px",
+                  flexShrink: 0,
+                  whiteSpace: "nowrap",
+                  height: "42px",
+                  padding: "0 14px",
+                  borderRadius: "10px",
                   border: "1px solid var(--color-border)",
                   backgroundColor: "var(--bg-color-card)",
                   color: "var(--color-text-main)",
                   fontWeight: 700,
-                  fontSize: "0.88rem",
+                  fontSize: "0.86rem",
                   cursor: "pointer",
-                  display: "flex",
+                  display: "inline-flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  gap: "6px"
+                  gap: "6px",
                 }}
               >
                 <span>✍️ 전자서명 · 도장</span>
+              </button>
+              <button
+                type="button"
+                onClick={handlePrint}
+                style={{
+                  flexShrink: 0,
+                  whiteSpace: "nowrap",
+                  height: "42px",
+                  padding: "0 16px",
+                  borderRadius: "10px",
+                  border: "none",
+                  backgroundColor: "#3182f6",
+                  color: "#ffffff",
+                  fontWeight: 800,
+                  fontSize: "0.86rem",
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "6px",
+                }}
+              >
+                <span>🖨️ PDF 저장 및 인쇄</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleShareDoc}
+                style={{
+                  flexShrink: 0,
+                  whiteSpace: "nowrap",
+                  height: "42px",
+                  padding: "0 14px",
+                  borderRadius: "10px",
+                  border: "none",
+                  backgroundColor: "#fee500",
+                  color: "#191919",
+                  fontWeight: 800,
+                  fontSize: "0.86rem",
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "6px",
+                }}
+              >
+                <span>💬 카카오톡 공유</span>
               </button>
               <button
                 type="button"
@@ -3392,32 +3482,70 @@ export default function DocumentEditor({ templateId, initialTemplate }: { templa
                   setIsCompanySearchModalOpen(true);
                 }}
                 style={{
-                  flex: 1.2,
-                  minWidth: "120px",
-                  padding: "10px 12px",
-                  borderRadius: "8px",
+                  flexShrink: 0,
+                  whiteSpace: "nowrap",
+                  height: "42px",
+                  padding: "0 14px",
+                  borderRadius: "10px",
                   border: "1px solid #3b82f6",
                   backgroundColor: "rgba(59, 130, 246, 0.08)",
                   color: "#2563eb",
                   fontWeight: 700,
-                  fontSize: "0.88rem",
+                  fontSize: "0.86rem",
                   cursor: "pointer",
-                  display: "flex",
+                  display: "inline-flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  gap: "6px"
+                  gap: "6px",
                 }}
               >
                 <span>🔍 상대방 기업 DB</span>
               </button>
-              <button onClick={handlePrint} className="btn-primary" style={{ flex: 1.5, padding: "10px" }}>
-                🖨️ PDF 저장 및 인쇄
+              <button
+                type="button"
+                onClick={() => handleDownloadDoc("hwp")}
+                style={{
+                  flexShrink: 0,
+                  whiteSpace: "nowrap",
+                  height: "42px",
+                  padding: "0 14px",
+                  borderRadius: "10px",
+                  border: "1px solid var(--color-border)",
+                  backgroundColor: "var(--bg-color-card)",
+                  color: "var(--color-text-sub)",
+                  fontWeight: 700,
+                  fontSize: "0.85rem",
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "5px",
+                }}
+              >
+                <span>📄 한글(HWP)</span>
               </button>
-              <button onClick={() => handleDownloadDoc("hwp")} className="btn-secondary" style={{ flex: 1, padding: "10px", fontSize: "0.85rem" }}>
-                한글(HWP) 파일
-              </button>
-              <button onClick={() => handleDownloadDoc("docx")} className="btn-secondary" style={{ flex: 1, padding: "10px", fontSize: "0.85rem" }}>
-                워드(doc) 파일
+              <button
+                type="button"
+                onClick={() => handleDownloadDoc("docx")}
+                style={{
+                  flexShrink: 0,
+                  whiteSpace: "nowrap",
+                  height: "42px",
+                  padding: "0 14px",
+                  borderRadius: "10px",
+                  border: "1px solid var(--color-border)",
+                  backgroundColor: "var(--bg-color-card)",
+                  color: "var(--color-text-sub)",
+                  fontWeight: 700,
+                  fontSize: "0.85rem",
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "5px",
+                }}
+              >
+                <span>📝 워드(DOC)</span>
               </button>
             </div>
 

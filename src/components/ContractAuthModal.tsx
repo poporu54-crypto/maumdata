@@ -220,9 +220,9 @@ export default function ContractAuthModal({
                 width: "100%",
                 padding: "10px 12px",
                 borderRadius: "10px",
-                border: "1px solid var(--color-border)",
-                backgroundColor: "var(--bg-color-main)",
-                color: "var(--color-text-main)",
+                border: "1.5px solid #cbd5e1",
+                backgroundColor: "#ffffff",
+                color: "#0f172a",
                 fontSize: "0.92rem",
               }}
               required
@@ -243,9 +243,9 @@ export default function ContractAuthModal({
                   width: "100%",
                   padding: "10px 12px",
                   borderRadius: "10px",
-                  border: "1px solid var(--color-border)",
-                  backgroundColor: "var(--bg-color-main)",
-                  color: "var(--color-text-main)",
+                  border: "1.5px solid #cbd5e1",
+                  backgroundColor: "#ffffff",
+                  color: "#0f172a",
                   fontSize: "0.92rem",
                 }}
                 required
@@ -264,9 +264,9 @@ export default function ContractAuthModal({
                   width: "100%",
                   padding: "10px 12px",
                   borderRadius: "10px",
-                  border: "1px solid var(--color-border)",
-                  backgroundColor: "var(--bg-color-main)",
-                  color: "var(--color-text-main)",
+                  border: "1.5px solid #cbd5e1",
+                  backgroundColor: "#ffffff",
+                  color: "#0f172a",
                   fontSize: "0.92rem",
                 }}
               />
