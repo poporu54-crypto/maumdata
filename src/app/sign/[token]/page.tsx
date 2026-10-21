@@ -4,6 +4,7 @@ import React, { useEffect, useState, use } from "react";
 import Link from "next/link";
 import DocumentSignatureModal from "@/components/DocumentSignatureModal";
 import { vibrateDevice, showAppToast } from "@/lib/appBridge";
+import { saveContractToLocal } from "@/lib/contractStorage";
 import MaumDataLogo from "@/components/MaumDataLogo";
 
 export default function SignContractPage({ params }: { params: Promise<{ token: string }> }) {
@@ -61,6 +62,7 @@ export default function SignContractPage({ params }: { params: Promise<{ token: 
       }
 
       setCompleted(true);
+      saveContractToLocal(data.contractId || contract.id);
       vibrateDevice(50);
       showAppToast("계약이 성공적으로 체결되었습니다!");
     } catch (err: any) {

@@ -1134,6 +1134,49 @@ export async function completePartyBSignature(
   return res.rows[0] || null;
 }
 
+export async function getContractsByEmailOrPhone(searchKey: string) {
+  await ensureContractsTable();
+  const cleanPhone = searchKey.replace(/[^0-9]/g, "");
+  const trimmed = searchKey.trim().toLowerCase();
+
+  const res = await query(
+    `SELECT id, template_id, title, status,
+            party_a_name, party_a_company, party_a_bno, party_a_phone, party_a_signed_at,
+            party_b_name, party_b_company, party_b_bno, party_b_phone, party_b_signed_at,
+            sign_token, created_at, updated_at
+     FROM contracts
+     WHERE LOWER(party_a_name) = $1
+        OR LOWER(party_b_name) = $1
+        OR party_a_phone = $1
+        OR party_b_phone = $1
+        OR ($2 != '' AND (REPLACE(party_a_phone, '-', '') = $2 OR REPLACE(party_b_phone, '-', '') = $2))
+        OR LOWER(form_data->>'email') = $1
+        OR LOWER(form_data->>'partyAEmail') = $1
+        OR LOWER(form_data->>'partyBEmail') = $1
+     ORDER BY created_at DESC
+     LIMIT 50`,
+    [trimmed, cleanPhone]
+  );
+  return res.rows;
+}
+
+export async function getContractsByIds(ids: string[]) {
+  if (!ids || ids.length === 0) return [];
+  await ensureContractsTable();
+  const res = await query(
+    `SELECT id, template_id, title, status,
+            party_a_name, party_a_company, party_a_bno, party_a_phone, party_a_signed_at,
+            party_b_name, party_b_company, party_b_bno, party_b_phone, party_b_signed_at,
+            sign_token, created_at, updated_at
+     FROM contracts
+     WHERE id = ANY($1::varchar[])
+     ORDER BY created_at DESC
+     LIMIT 50`,
+    [ids]
+  );
+  return res.rows;
+}
+
 
 
 

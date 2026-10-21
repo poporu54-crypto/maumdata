@@ -46,6 +46,13 @@ export default function Header() {
                 사직서 작성
               </Link>
               <Link 
+                href="/contracts" 
+                className={`nav-link ${pathname.startsWith("/contracts") ? "active" : ""}`}
+                style={{ fontWeight: pathname.startsWith("/contracts") ? 700 : 500 }}
+              >
+                📁 내 계약 보관함
+              </Link>
+              <Link 
                 href="/" 
                 className="nav-link btn-portal-switch"
               >
@@ -77,6 +84,13 @@ export default function Header() {
                 className={`nav-link nav-link-highlight ${pathname.startsWith("/form") ? "active" : ""}`}
               >
                 무료 서식 센터 🎁
+              </Link>
+              <Link 
+                href="/contracts" 
+                className={`nav-link ${pathname.startsWith("/contracts") ? "active" : ""}`}
+                style={{ fontWeight: pathname.startsWith("/contracts") ? 700 : 500 }}
+              >
+                📁 내 계약 보관함
               </Link>
             </>
           )}

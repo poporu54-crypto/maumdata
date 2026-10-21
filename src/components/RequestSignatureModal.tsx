@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { vibrateDevice, showAppToast } from "@/lib/appBridge";
+import { saveContractToLocal } from "@/lib/contractStorage";
 
 interface RequestSignatureModalProps {
   isOpen: boolean;
@@ -93,6 +94,7 @@ export default function RequestSignatureModal({
         signUrl: data.signUrl,
         signToken: data.signToken
       });
+      saveContractToLocal(data.contractId);
       vibrateDevice(50);
       showAppToast("비대면 서명 요청 준비가 완료되었습니다!");
     } catch (err: any) {

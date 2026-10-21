@@ -15,7 +15,7 @@ export default function MobileBottomNav() {
   const isHome = pathname === "/" || pathname.startsWith("/biz") || pathname.startsWith("/search");
   const isMarket = pathname.startsWith("/stats");
   const isForm = pathname.startsWith("/form");
-  const isInsights = pathname.startsWith("/insights");
+  const isContracts = pathname.startsWith("/contracts");
 
   return (
     <>
@@ -114,21 +114,20 @@ export default function MobileBottomNav() {
             <span className="tab-label">무료서식</span>
           </Link>
 
-          {/* 5. 인사이트 */}
+          {/* 5. 계약보관 */}
           <Link
-            href="/insights"
+            href="/contracts"
             onClick={() => vibrateDevice(15)}
-            className={`mobile-nav-tab ${isInsights ? "active" : ""}`}
+            className={`mobile-nav-tab ${isContracts ? "active" : ""}`}
           >
             <div className="tab-icon-wrapper">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={isInsights ? "2.4" : "1.8"} strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-                <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
-                <line x1="12" y1="22.08" x2="12" y2="12" />
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={isContracts ? "2.4" : "1.8"} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                <path d="M9 13l2 2 4-4" />
               </svg>
-              {isInsights && <span className="tab-active-dot" />}
+              {isContracts && <span className="tab-active-dot" />}
             </div>
-            <span className="tab-label">인사이트</span>
+            <span className="tab-label">계약보관</span>
           </Link>
         </div>
       </nav>
