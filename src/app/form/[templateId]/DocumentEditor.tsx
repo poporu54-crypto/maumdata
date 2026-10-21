@@ -231,6 +231,83 @@ const DynamicDocumentRenderer: React.FC<DynamicDocumentRendererProps> = ({
     });
   };
 
+  let hasStampedSeal = false;
+  const renderTextWithSeal = (text: string, forceFallbackAppend = false) => {
+    if (!data?.signatureImage || !text) return text;
+    const sealRegex = /(\(인\)|\(서명\s*또는\s*인\)|\(서명\s*\/\s*인\)|\(인\s*\/\s*서명\)|\(서명·인\)|\(직인\))/;
+    const match = !hasStampedSeal ? text.match(sealRegex) : null;
+    if (match && match.index !== undefined) {
+      hasStampedSeal = true;
+      const before = text.slice(0, match.index);
+      const sealText = match[0];
+      const after = text.slice(match.index + sealText.length);
+      return (
+        <>
+          {before}
+          <span
+            style={{
+              position: "relative",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <span>{sealText}</span>
+            <img
+              src={data.signatureImage}
+              alt="전자서명/인감"
+              style={{
+                position: "absolute",
+                top: "50%",
+                left: "50%",
+                transform: "translate(-50%, -50%)",
+                width: "54px",
+                height: "54px",
+                objectFit: "contain",
+                pointerEvents: "none",
+                opacity: 0.92,
+                mixBlendMode: "multiply",
+                zIndex: 2,
+              }}
+            />
+          </span>
+          {after}
+        </>
+      );
+    }
+    if (forceFallbackAppend && !hasStampedSeal) {
+      hasStampedSeal = true;
+      return (
+        <>
+          {text}
+          <span
+            style={{
+              position: "relative",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              marginLeft: "-18px",
+            }}
+          >
+            <img
+              src={data.signatureImage}
+              alt="전자서명/인감"
+              style={{
+                width: "54px",
+                height: "54px",
+                objectFit: "contain",
+                pointerEvents: "none",
+                opacity: 0.92,
+                mixBlendMode: "multiply",
+              }}
+            />
+          </span>
+        </>
+      );
+    }
+    return text;
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", flexGrow: 1, outline: "none", fontFamily: tokens.fontFamily, color: tokens.textColor }}>
       {layout.map((element, elIdx) => {
@@ -243,23 +320,6 @@ const DynamicDocumentRenderer: React.FC<DynamicDocumentRendererProps> = ({
             <div key={elIdx} style={{ display: "flex", flexDirection: "column", alignItems: "center", margin: "10px 0 15px 0" }}>
               <h1 style={{ textAlign: "center", fontSize: "22pt", fontWeight: 900, margin: 0, letterSpacing: tokens.titleLetterSpacing, color: tokens.titleColor, ...element.style }}>
                 {bindData(element.value)}
-                {data?.signatureImage && (
-                  <img
-                    src={data.signatureImage}
-                    alt="전자서명/인감"
-                    style={{
-                      height: "46px",
-                      width: "auto",
-                      maxHeight: "46px",
-                      objectFit: "contain",
-                      pointerEvents: "none",
-                      filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.1))",
-                      marginLeft: "10px",
-                      display: "inline-block",
-                      verticalAlign: "middle"
-                    }}
-                  />
-                )}
               </h1>
               {tokens.titleBorderBottom && (
                 <div style={{ width: "60px", height: "3px", backgroundColor: "#3b82f6", marginTop: "12px", borderRadius: "1.5px" }} />
@@ -445,7 +505,7 @@ const DynamicDocumentRenderer: React.FC<DynamicDocumentRendererProps> = ({
                             rowSpan={cell.rowSpan}
                             style={{ ...cellStyle, width: cell.width }}
                           >
-                            {cellContent}
+                            {renderTextWithSeal(cellContent)}
                           </td>
                         );
                       })}
@@ -480,24 +540,7 @@ const DynamicDocumentRenderer: React.FC<DynamicDocumentRendererProps> = ({
               }}
             >
               <div style={{ fontSize: `${11 + spacing.fontDelta}pt`, fontWeight: "bold" }}>
-                {bindData(element.value)}
-                {data?.signatureImage && (
-                  <img
-                    src={data.signatureImage}
-                    alt="전자서명/인감"
-                    style={{
-                      height: "46px",
-                      width: "auto",
-                      maxHeight: "46px",
-                      objectFit: "contain",
-                      pointerEvents: "none",
-                      filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.1))",
-                      marginLeft: "10px",
-                      display: "inline-block",
-                      verticalAlign: "middle"
-                    }}
-                  />
-                )}
+                {renderTextWithSeal(bindData(element.value), true)}
               </div>
             </div>
           );

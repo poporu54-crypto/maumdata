@@ -14,30 +14,36 @@ export default function DocumentSignatureModal({
   isOpen,
   onClose,
   onApplySignature,
-  defaultSignerName = "홍길동"
+  defaultSignerName = "홍길동",
 }: DocumentSignatureModalProps) {
-  const [activeTab, setActiveTab] = useState<"draw" | "stamp">("draw");
+  const [activeTab, setActiveTab] = useState<"upload" | "stamp" | "draw">("upload");
   const [signerName, setSignerName] = useState(defaultSignerName);
   const [penColor, setPenColor] = useState<string>("#1e293b");
 
-  // 서명 캔버스
+  // 1. 인감도장 사진 업로드 상태
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const uploadCanvasRef = useRef<HTMLCanvasElement>(null);
+  const [rawUploadedImg, setRawUploadedImg] = useState<HTMLImageElement | null>(null);
+  const [processedUploadUrl, setProcessedUploadUrl] = useState<string | null>(null);
+  const [autoRemoveWhiteBg, setAutoRemoveWhiteBg] = useState<boolean>(true);
+
+  // 2. 디지털 도장 캔버스
+  const stampCanvasRef = useRef<HTMLCanvasElement>(null);
+
+  // 3. 터치 자필 서명 캔버스
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasDrawn, setHasDrawn] = useState(false);
 
-  // 도장 캔버스
-  const stampCanvasRef = useRef<HTMLCanvasElement>(null);
-
-  // 캔버스 초기화
+  // 자필 서명 캔버스 초기화
   useEffect(() => {
     if (isOpen && activeTab === "draw" && canvasRef.current) {
       const canvas = canvasRef.current;
       const ctx = canvas.getContext("2d");
       if (ctx) {
-        // 고해상도 레티나 디스플레이 보정
         const rect = canvas.getBoundingClientRect();
-        canvas.width = rect.width * 2;
-        canvas.height = rect.height * 2;
+        canvas.width = (rect.width || 400) * 2;
+        canvas.height = (rect.height || 180) * 2;
         ctx.scale(2, 2);
         ctx.lineCap = "round";
         ctx.lineJoin = "round";
@@ -47,12 +53,69 @@ export default function DocumentSignatureModal({
     }
   }, [isOpen, activeTab, penColor]);
 
-  // 도장 실시간 렌더링
+  // 디지털 도장 실시간 렌더링
   useEffect(() => {
     if (isOpen && activeTab === "stamp" && stampCanvasRef.current) {
       renderStamp(signerName);
     }
   }, [isOpen, activeTab, signerName]);
+
+  // 업로드된 도장 이미지 배경 투명화(누끼) 처리
+  useEffect(() => {
+    if (!rawUploadedImg || !uploadCanvasRef.current) return;
+    const canvas = uploadCanvasRef.current;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const maxDim = 320;
+    const scale = Math.min(maxDim / rawUploadedImg.width, maxDim / rawUploadedImg.height, 1);
+    const w = Math.max(1, Math.round(rawUploadedImg.width * scale));
+    const h = Math.max(1, Math.round(rawUploadedImg.height * scale));
+
+    canvas.width = w;
+    canvas.height = h;
+    ctx.clearRect(0, 0, w, h);
+    ctx.drawImage(rawUploadedImg, 0, 0, w, h);
+
+    if (autoRemoveWhiteBg) {
+      const imgData = ctx.getImageData(0, 0, w, h);
+      const d = imgData.data;
+      for (let i = 0; i < d.length; i += 4) {
+        const r = d[i];
+        const g = d[i + 1];
+        const b = d[i + 2];
+        const a = d[i + 3];
+        if (a === 0) continue;
+
+        // 밝은 흰색/회색 종이 배경 픽셀은 투명화하고, 붉은 인주나 진한 선은 보존
+        const brightness = (r + g + b) / 3;
+        const redness = r - Math.max(g, b);
+        if (brightness > 205 && redness < 25) {
+          d[i + 3] = 0;
+        } else if (brightness > 175 && redness < 18) {
+          // 경계선 부드럽게 반투명 처리
+          d[i + 3] = Math.round(a * 0.25);
+        }
+      }
+      ctx.putImageData(imgData, 0, 0);
+    }
+
+    setProcessedUploadUrl(canvas.toDataURL("image/png"));
+  }, [rawUploadedImg, autoRemoveWhiteBg]);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        setRawUploadedImg(img);
+      };
+      img.src = reader.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
 
   const renderStamp = (name: string) => {
     const canvas = stampCanvasRef.current;
@@ -65,7 +128,6 @@ export default function DocumentSignatureModal({
     ctx.clearRect(0, 0, 300, 300);
 
     const cleanName = (name || "홍길동").trim();
-    // 3자면 '홍길동인', 2자면 '홍길동인', 4자면 그대로
     let stampText = cleanName;
     if (cleanName.length === 2) stampText = cleanName + "지인";
     else if (cleanName.length === 3) stampText = cleanName + "인";
@@ -75,27 +137,23 @@ export default function DocumentSignatureModal({
     const centerY = 150;
     const radius = 130;
 
-    // 1. 빨간색 원형 테두리 (약간의 인주 질감 효과)
     ctx.strokeStyle = "#dc2626";
     ctx.lineWidth = 14;
     ctx.beginPath();
     ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
     ctx.stroke();
 
-    // 2. 내부 얇은 보조원
     ctx.lineWidth = 2.5;
     ctx.beginPath();
     ctx.arc(centerX, centerY, radius - 12, 0, Math.PI * 2);
     ctx.stroke();
 
-    // 3. 도장 텍스트 (한글 고문체/궁서체 2x2 배치)
     ctx.fillStyle = "#dc2626";
     ctx.font = "bold 60px 'Batang', 'KoPub Batang', serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
 
     if (stampText.length === 4) {
-      // 우상 -> 우하 -> 좌상 -> 좌하 전통 인장 배치 (또는 좌상 우상 좌하 우하)
       ctx.fillText(stampText[0], 100, 100);
       ctx.fillText(stampText[1], 200, 100);
       ctx.fillText(stampText[2], 100, 200);
@@ -105,7 +163,6 @@ export default function DocumentSignatureModal({
     }
   };
 
-  // 터치 및 마우스 드로잉 이벤트
   const getCanvasPos = (e: React.MouseEvent | React.TouchEvent) => {
     const canvas = canvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
@@ -114,12 +171,12 @@ export default function DocumentSignatureModal({
       const touch = e.touches[0];
       return {
         x: touch.clientX - rect.left,
-        y: touch.clientY - rect.top
+        y: touch.clientY - rect.top,
       };
     } else {
       return {
         x: e.clientX - rect.left,
-        y: e.clientY - rect.top
+        y: e.clientY - rect.top,
       };
     }
   };
@@ -166,7 +223,13 @@ export default function DocumentSignatureModal({
 
   const handleApply = () => {
     vibrateDevice(40);
-    if (activeTab === "draw") {
+    if (activeTab === "upload") {
+      if (!processedUploadUrl) {
+        alert("먼저 사용하실 법인/개인 인감도장 사진을 선택해 주세요.");
+        return;
+      }
+      onApplySignature(processedUploadUrl);
+    } else if (activeTab === "draw") {
       const canvas = canvasRef.current;
       if (!canvas || !hasDrawn) {
         alert("서명을 먼저 화면에 작성해 주세요.");
@@ -196,37 +259,39 @@ export default function DocumentSignatureModal({
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: "rgba(15, 23, 42, 0.7)",
-        backdropFilter: "blur(6px)",
+        backgroundColor: "rgba(15, 23, 42, 0.65)",
+        backdropFilter: "blur(4px)",
         zIndex: 10000,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        padding: "16px"
+        padding: "16px",
       }}
     >
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          backgroundColor: "var(--color-card)",
+          backgroundColor: "#ffffff",
+          color: "#0f172a",
           width: "100%",
-          maxWidth: "480px",
+          maxWidth: "500px",
           borderRadius: "20px",
           padding: "24px",
-          boxShadow: "0 20px 40px rgba(0,0,0,0.3)",
+          boxShadow: "0 20px 50px rgba(0,0,0,0.35)",
+          border: "1px solid #e2e8f0",
           display: "flex",
           flexDirection: "column",
-          gap: "16px"
+          gap: "16px",
         }}
       >
         {/* 헤더 */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
           <div>
-            <h3 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 800, color: "var(--color-text-main)" }}>
-              ✍️ 전자 서명 · 인감 도장 생성
+            <h3 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 800, color: "#0f172a" }}>
+              ✍️ 법인·개인 인감도장 및 전자서명 날인
             </h3>
-            <p style={{ margin: "2px 0 0 0", fontSize: "0.8rem", color: "var(--color-text-sub)" }}>
-              손가락으로 사인하거나 디지털 인감 도장을 즉시 만듭니다.
+            <p style={{ margin: "4px 0 0 0", fontSize: "0.82rem", color: "#475569" }}>
+              실제 법인인감 도장 사진을 불러오거나 디지털 인감·자필 서명을 날인합니다.
             </p>
           </div>
           <button
@@ -237,44 +302,44 @@ export default function DocumentSignatureModal({
               border: "none",
               fontSize: "1.4rem",
               cursor: "pointer",
-              color: "var(--color-text-desc)",
-              padding: "4px"
+              color: "#64748b",
+              padding: "4px",
             }}
           >
             ✕
           </button>
         </div>
 
-        {/* 탭 버튼 */}
+        {/* 3단 탭 버튼 */}
         <div
           style={{
-            display: "flex",
-            backgroundColor: "var(--bg-color-main)",
-            borderRadius: "10px",
+            display: "grid",
+            gridTemplateColumns: "1.2fr 1fr 1fr",
+            backgroundColor: "#f1f5f9",
+            borderRadius: "12px",
             padding: "4px",
-            gap: "4px"
+            gap: "4px",
           }}
         >
           <button
             type="button"
             onClick={() => {
               vibrateDevice(20);
-              setActiveTab("draw");
+              setActiveTab("upload");
             }}
             style={{
-              flex: 1,
-              padding: "8px",
+              padding: "9px 6px",
               borderRadius: "8px",
               border: "none",
-              fontWeight: 700,
-              fontSize: "0.88rem",
+              fontWeight: 800,
+              fontSize: "0.82rem",
               cursor: "pointer",
-              backgroundColor: activeTab === "draw" ? "#2563eb" : "transparent",
-              color: activeTab === "draw" ? "#ffffff" : "var(--color-text-sub)",
-              transition: "all 0.2s ease"
+              backgroundColor: activeTab === "upload" ? "#dc2626" : "transparent",
+              color: activeTab === "upload" ? "#ffffff" : "#475569",
+              transition: "all 0.15s ease",
             }}
           >
-            터치 자필 서명
+            📷 도장 사진 불러오기
           </button>
           <button
             type="button"
@@ -283,32 +348,210 @@ export default function DocumentSignatureModal({
               setActiveTab("stamp");
             }}
             style={{
-              flex: 1,
-              padding: "8px",
+              padding: "9px 6px",
               borderRadius: "8px",
               border: "none",
-              fontWeight: 700,
-              fontSize: "0.88rem",
+              fontWeight: 800,
+              fontSize: "0.82rem",
               cursor: "pointer",
               backgroundColor: activeTab === "stamp" ? "#dc2626" : "transparent",
-              color: activeTab === "stamp" ? "#ffffff" : "var(--color-text-sub)",
-              transition: "all 0.2s ease"
+              color: activeTab === "stamp" ? "#ffffff" : "#475569",
+              transition: "all 0.15s ease",
             }}
           >
-            디지털 인감 도장
+            🔴 디지털 도장 생성
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              vibrateDevice(20);
+              setActiveTab("draw");
+            }}
+            style={{
+              padding: "9px 6px",
+              borderRadius: "8px",
+              border: "none",
+              fontWeight: 800,
+              fontSize: "0.82rem",
+              cursor: "pointer",
+              backgroundColor: activeTab === "draw" ? "#2563eb" : "transparent",
+              color: activeTab === "draw" ? "#ffffff" : "#475569",
+              transition: "all 0.15s ease",
+            }}
+          >
+            ✍️ 터치 자필 서명
           </button>
         </div>
 
-        {/* 탭 1: 터치 자필 서명 */}
+        {/* 탭 1: 실제 법인/개인 인감도장 사진 불러오기 */}
+        {activeTab === "upload" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange}
+              style={{ display: "none" }}
+            />
+            <canvas ref={uploadCanvasRef} style={{ display: "none" }} />
+
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              style={{
+                width: "100%",
+                minHeight: "190px",
+                borderRadius: "14px",
+                border: "2px dashed #cbd5e1",
+                backgroundColor: "#f8fafc",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                padding: "16px",
+                cursor: "pointer",
+                gap: "10px",
+              }}
+            >
+              {processedUploadUrl ? (
+                <>
+                  <div
+                    style={{
+                      position: "relative",
+                      padding: "14px 24px",
+                      backgroundColor: "#ffffff",
+                      borderRadius: "10px",
+                      border: "1px solid #e2e8f0",
+                      fontSize: "1.05rem",
+                      fontWeight: 800,
+                      color: "#0f172a",
+                      display: "inline-flex",
+                      alignItems: "center",
+                    }}
+                  >
+                    <span>대표이사 홍길동</span>
+                    <span
+                      style={{
+                        position: "relative",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        marginLeft: "6px",
+                      }}
+                    >
+                      <span>(인)</span>
+                      <img
+                        src={processedUploadUrl}
+                        alt="업로드된 인감 미리보기"
+                        style={{
+                          position: "absolute",
+                          top: "50%",
+                          left: "50%",
+                          transform: "translate(-50%, -50%)",
+                          width: "58px",
+                          height: "58px",
+                          objectFit: "contain",
+                          pointerEvents: "none",
+                        }}
+                      />
+                    </span>
+                  </div>
+                  <span style={{ fontSize: "0.78rem", color: "#2563eb", fontWeight: 700 }}>
+                    🔄 다른 도장 사진으로 변경하려면 클릭하세요
+                  </span>
+                </>
+              ) : (
+                <>
+                  <div style={{ fontSize: "2.4rem" }}>📷</div>
+                  <div style={{ fontSize: "0.95rem", fontWeight: 800, color: "#0f172a" }}>
+                    법인인감 / 사용인감 도장 사진 불러오기
+                  </div>
+                  <div style={{ fontSize: "0.78rem", color: "#64748b", textAlign: "center", lineHeight: 1.4 }}>
+                    흰 종이에 찍어 촬영한 도장 사진(JPG)이나 투명 배경(PNG) 파일을 선택하세요.<br />
+                    문서의 <strong>(인)</strong> 글자 위에 실제 도장처럼 정확히 겹쳐서 찍힙니다.
+                  </div>
+                </>
+              )}
+            </div>
+
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                fontSize: "0.82rem",
+                fontWeight: 700,
+                color: "#334155",
+                cursor: "pointer",
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={autoRemoveWhiteBg}
+                onChange={(e) => setAutoRemoveWhiteBg(e.target.checked)}
+                style={{ width: "16px", height: "16px", cursor: "pointer" }}
+              />
+              <span>✨ 흰 종이 배경 자동 투명화 (글자 위에 도장만 선명하게 겹쳐 찍기)</span>
+            </label>
+          </div>
+        )}
+
+        {/* 탭 2: 디지털 인감 도장 */}
+        {activeTab === "stamp" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "12px", alignItems: "center" }}>
+            <div style={{ width: "100%" }}>
+              <label style={{ fontSize: "0.8rem", fontWeight: 700, color: "#0f172a", marginBottom: "4px", display: "block" }}>
+                도장에 새길 이름 (대표자/성명)
+              </label>
+              <input
+                type="text"
+                value={signerName}
+                onChange={(e) => setSignerName(e.target.value)}
+                placeholder="예: 홍길동"
+                maxLength={4}
+                style={{
+                  width: "100%",
+                  padding: "10px 14px",
+                  borderRadius: "10px",
+                  border: "1px solid #cbd5e1",
+                  fontSize: "1rem",
+                  fontWeight: 700,
+                  backgroundColor: "#f8fafc",
+                  color: "#0f172a",
+                }}
+              />
+            </div>
+
+            <div
+              style={{
+                width: "160px",
+                height: "160px",
+                borderRadius: "16px",
+                border: "1px solid #e2e8f0",
+                backgroundColor: "#ffffff",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                boxShadow: "inset 0 2px 6px rgba(0,0,0,0.05)",
+              }}
+            >
+              <canvas ref={stampCanvasRef} style={{ width: "135px", height: "135px" }} />
+            </div>
+            <p style={{ margin: 0, fontSize: "0.75rem", color: "#64748b" }}>
+              * 문서의 <strong>(인)</strong> 글자 위치에 겹쳐서 날인됩니다.
+            </p>
+          </div>
+        )}
+
+        {/* 탭 3: 터치 자필 서명 */}
         {activeTab === "draw" && (
           <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-                <span style={{ fontSize: "0.8rem", color: "var(--color-text-sub)", fontWeight: 600 }}>펜 색상:</span>
+                <span style={{ fontSize: "0.8rem", color: "#475569", fontWeight: 700 }}>펜 색상:</span>
                 {[
                   { color: "#1e293b", label: "블랙" },
                   { color: "#1d4ed8", label: "블루" },
-                  { color: "#dc2626", label: "레드" }
+                  { color: "#dc2626", label: "레드" },
                 ].map((p) => (
                   <button
                     key={p.color}
@@ -321,7 +564,7 @@ export default function DocumentSignatureModal({
                       backgroundColor: p.color,
                       border: penColor === p.color ? "2px solid #ffffff" : "none",
                       outline: penColor === p.color ? "2px solid #2563eb" : "none",
-                      cursor: "pointer"
+                      cursor: "pointer",
                     }}
                   />
                 ))}
@@ -330,30 +573,30 @@ export default function DocumentSignatureModal({
                 type="button"
                 onClick={clearCanvas}
                 style={{
-                  background: "none",
-                  border: "1px solid var(--color-border)",
+                  background: "#f8fafc",
+                  border: "1px solid #cbd5e1",
                   borderRadius: "6px",
-                  padding: "4px 8px",
+                  padding: "4px 10px",
                   fontSize: "0.75rem",
-                  color: "var(--color-text-sub)",
-                  cursor: "pointer"
+                  fontWeight: 700,
+                  color: "#475569",
+                  cursor: "pointer",
                 }}
               >
                 지우기
               </button>
             </div>
 
-            {/* 터치 서명 캔버스 박스 */}
             <div
               style={{
                 width: "100%",
-                height: "200px",
+                height: "180px",
                 border: "2px dashed #94a3b8",
                 borderRadius: "14px",
                 backgroundColor: "#ffffff",
                 position: "relative",
                 overflow: "hidden",
-                touchAction: "none"
+                touchAction: "none",
               }}
             >
               <canvas
@@ -377,69 +620,19 @@ export default function DocumentSignatureModal({
                     color: "#94a3b8",
                     fontSize: "0.9rem",
                     pointerEvents: "none",
-                    fontWeight: 500,
-                    textAlign: "center"
+                    fontWeight: 600,
+                    textAlign: "center",
                   }}
                 >
-                  이곳에 손가락으로 서명해 주세요
+                  이곳에 마우스나 손가락으로 서명해 주세요
                 </div>
               )}
             </div>
           </div>
         )}
 
-        {/* 탭 2: 디지털 인감 도장 */}
-        {activeTab === "stamp" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "12px", alignItems: "center" }}>
-            <div style={{ width: "100%" }}>
-              <label style={{ fontSize: "0.8rem", fontWeight: 700, color: "var(--color-text-main)", marginBottom: "4px", display: "block" }}>
-                도장에 새길 이름 (대표자/성명)
-              </label>
-              <input
-                type="text"
-                value={signerName}
-                onChange={(e) => setSignerName(e.target.value)}
-                placeholder="예: 홍길동"
-                maxLength={4}
-                style={{
-                  width: "100%",
-                  padding: "10px 14px",
-                  borderRadius: "10px",
-                  border: "1px solid var(--color-border)",
-                  fontSize: "1rem",
-                  fontWeight: 700,
-                  backgroundColor: "var(--bg-color-main)",
-                  color: "var(--color-text-main)"
-                }}
-              />
-            </div>
-
-            <div
-              style={{
-                width: "180px",
-                height: "180px",
-                borderRadius: "16px",
-                border: "1px solid var(--color-border)",
-                backgroundColor: "#ffffff",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                boxShadow: "inset 0 2px 6px rgba(0,0,0,0.05)"
-              }}
-            >
-              <canvas
-                ref={stampCanvasRef}
-                style={{ width: "150px", height: "150px" }}
-              />
-            </div>
-            <p style={{ margin: 0, fontSize: "0.75rem", color: "var(--color-text-desc)" }}>
-              * 붉은색 인주 질감의 표준 원형 법인/개인 인감이 생성됩니다.
-            </p>
-          </div>
-        )}
-
         {/* 하단 적용 버튼 */}
-        <div style={{ display: "flex", gap: "8px", marginTop: "8px" }}>
+        <div style={{ display: "flex", gap: "8px", marginTop: "4px" }}>
           <button
             type="button"
             onClick={onClose}
@@ -447,12 +640,12 @@ export default function DocumentSignatureModal({
               flex: 1,
               padding: "12px",
               borderRadius: "10px",
-              border: "1px solid var(--color-border)",
-              backgroundColor: "var(--bg-color-main)",
-              color: "var(--color-text-main)",
+              border: "1px solid #cbd5e1",
+              backgroundColor: "#f8fafc",
+              color: "#334155",
               fontWeight: 700,
               fontSize: "0.92rem",
-              cursor: "pointer"
+              cursor: "pointer",
             }}
           >
             취소
@@ -470,10 +663,10 @@ export default function DocumentSignatureModal({
               fontWeight: 800,
               fontSize: "0.95rem",
               cursor: "pointer",
-              boxShadow: "0 4px 12px rgba(37, 99, 235, 0.3)"
+              boxShadow: "0 4px 12px rgba(37, 99, 235, 0.3)",
             }}
           >
-            문서에 서명/도장 삽입하기
+            문서 (인) 위치에 도장/서명 찍기
           </button>
         </div>
       </div>

@@ -204,7 +204,7 @@ ${createdResult.signUrl}${pinLine}`;
         <div
           onClick={(e) => e.stopPropagation()}
           style={{
-            backgroundColor: "var(--color-card)",
+            backgroundColor: "#ffffff",
             width: "100%",
             maxWidth: "500px",
             borderRadius: "20px",

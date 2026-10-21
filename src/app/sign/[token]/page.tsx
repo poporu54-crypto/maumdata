@@ -456,52 +456,72 @@ export default function SignContractPage({ params }: { params: Promise<{ token: 
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
               {/* 갑 서명 */}
-              <div style={{ border: "1px solid #e2e8f0", borderRadius: "12px", padding: "16px", textAlign: "center", position: "relative" }}>
-                <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "#64748b", marginBottom: "8px" }}>
+              <div style={{ border: "1px solid #e2e8f0", borderRadius: "12px", padding: "22px 16px", textAlign: "center", position: "relative" }}>
+                <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "#64748b", marginBottom: "14px" }}>
                   [갑] 서명 날인
                 </div>
-                <div style={{ height: "60px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  {contract.partyASignature ? (
-                    <img
-                      src={contract.partyASignature}
-                      alt="갑 서명"
-                      style={{ maxHeight: "56px", objectFit: "contain" }}
-                    />
-                  ) : (
-                    <span style={{ color: "#94a3b8", fontSize: "0.85rem" }}>서명 완료</span>
-                  )}
+                <div style={{ minHeight: "52px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem", fontWeight: 800, color: "#0f172a" }}>
+                  <span>{contract.partyACompany} {contract.partyAName}</span>
+                  <span style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", marginLeft: "6px" }}>
+                    <span>(인)</span>
+                    {contract.partyASignature && (
+                      <img
+                        src={contract.partyASignature}
+                        alt="갑 서명"
+                        style={{
+                          position: "absolute",
+                          top: "50%",
+                          left: "50%",
+                          transform: "translate(-50%, -50%)",
+                          width: "58px",
+                          height: "58px",
+                          objectFit: "contain",
+                          pointerEvents: "none",
+                          opacity: 0.92,
+                          mixBlendMode: "multiply",
+                        }}
+                      />
+                    )}
+                  </span>
                 </div>
-                <div style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "4px" }}>
-                  {contract.partyACompany} {contract.partyAName} (인)
-                </div>
-                <div style={{ fontSize: "0.7rem", color: "#94a3b8" }}>
+                <div style={{ fontSize: "0.72rem", color: "#94a3b8", marginTop: "10px" }}>
                   서명일시: {contract.partyASignedAt ? new Date(contract.partyASignedAt).toLocaleString("ko-KR") : "-"}
                 </div>
               </div>
 
               {/* 을 서명 */}
-              <div style={{ border: "1px solid #e2e8f0", borderRadius: "12px", padding: "16px", textAlign: "center", position: "relative" }}>
-                <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "#64748b", marginBottom: "8px" }}>
+              <div style={{ border: "1px solid #e2e8f0", borderRadius: "12px", padding: "22px 16px", textAlign: "center", position: "relative" }}>
+                <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "#64748b", marginBottom: "14px" }}>
                   [을] 서명 날인
                 </div>
-                <div style={{ height: "60px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  {partyBSignature ? (
-                    <img
-                      src={partyBSignature}
-                      alt="을 서명"
-                      style={{ maxHeight: "56px", objectFit: "contain" }}
-                    />
-                  ) : (
-                    <span style={{ color: "#ef4444", fontWeight: 700, fontSize: "0.9rem" }}>
-                      ⚠️ 서명 대기 중
-                    </span>
-                  )}
+                <div style={{ minHeight: "52px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1rem", fontWeight: 800, color: "#0f172a" }}>
+                  <span>{contract.partyBCompany || ""} {contract.partyBName || ""}</span>
+                  <span style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", marginLeft: "6px" }}>
+                    <span>(인)</span>
+                    {partyBSignature && (
+                      <img
+                        src={partyBSignature}
+                        alt="을 서명"
+                        style={{
+                          position: "absolute",
+                          top: "50%",
+                          left: "50%",
+                          transform: "translate(-50%, -50%)",
+                          width: "58px",
+                          height: "58px",
+                          objectFit: "contain",
+                          pointerEvents: "none",
+                          opacity: 0.92,
+                          mixBlendMode: "multiply",
+                        }}
+                      />
+                    )}
+                  </span>
                 </div>
-                <div style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "4px" }}>
-                  {contract.partyBCompany || ""} {contract.partyBName || ""} (인)
-                </div>
-                <div style={{ fontSize: "0.7rem", color: "#94a3b8" }}>
-                  {contract.partyBSignedAt ? `서명일시: ${new Date(contract.partyBSignedAt).toLocaleString("ko-KR")}` : "서명 시 자동 기록"}
+                <div style={{ fontSize: "0.72rem", color: partyBSignature ? "#94a3b8" : "#ef4444", fontWeight: partyBSignature ? 400 : 700, marginTop: "10px" }}>
+                  {partyBSignature
+                    ? `서명일시: ${contract.partyBSignedAt ? new Date(contract.partyBSignedAt).toLocaleString("ko-KR") : new Date().toLocaleString("ko-KR")}`
+                    : "⚠️ 서명 대기 중 (하단 버튼을 눌러 날인해 주세요)"}
                 </div>
               </div>
             </div>

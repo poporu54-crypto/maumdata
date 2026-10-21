@@ -99,7 +99,7 @@ export default function ContractAuthModal({
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          backgroundColor: "var(--color-card)",
+          backgroundColor: "#ffffff",
           width: "100%",
           maxWidth: "440px",
           borderRadius: "22px",
