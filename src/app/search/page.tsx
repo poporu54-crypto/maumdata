@@ -14,9 +14,13 @@ interface SearchPageProps {
 export async function generateMetadata({ searchParams }: SearchPageProps): Promise<Metadata> {
   const { query } = await searchParams;
   const decodedQuery = query ? decodeURIComponent(query) : "";
+  const canonicalPath = decodedQuery ? `/search?query=${encodeURIComponent(decodedQuery)}` : "/search";
   return {
     title: `"${decodedQuery}" 검색 결과 | 마음데이타 기업 검색`,
     description: `마음데이타 포털에서 "${decodedQuery}"에 부합하는 실시간 기업 상태 및 3개년 종합 재무 분석 이력을 조회해보세요.`,
+    alternates: {
+      canonical: canonicalPath,
+    },
   };
 }
 

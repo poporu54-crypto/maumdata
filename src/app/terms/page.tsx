@@ -4,6 +4,15 @@ import { Metadata } from "next";
 export const metadata: Metadata = {
   title: "이용약관 | 마음데이타",
   description: "지윤 주식회사가 제공하는 마음데이타(MaumData) 서비스 이용약관입니다.",
+  alternates: {
+    canonical: "/terms",
+  },
+  openGraph: {
+    title: "이용약관 | 마음데이타",
+    description: "지윤 주식회사가 제공하는 마음데이타(MaumData) 서비스 이용약관입니다.",
+    url: "https://www.maumdata.com/terms",
+    type: "website",
+  },
 };
 
 export default function TermsPage() {

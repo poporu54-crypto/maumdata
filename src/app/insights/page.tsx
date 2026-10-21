@@ -177,146 +177,158 @@ export default function InsightsPage() {
 
         <AdBanner />
 
-        {/* 컨텐츠 영역 */}
-        {activeTab === "industry" && (
-          <div className="card animate-fade-in" style={{ padding: "32px" }}>
-            <h3 style={{ fontSize: "1.25rem", fontWeight: 800, color: "var(--color-text-main)", marginBottom: "8px" }}>
-              산업 분야별 사업자 분포 및 시장 상태
-            </h3>
-            <p style={{ fontSize: "0.85rem", color: "var(--color-text-desc)", marginBottom: "24px" }}>
-              대분류 기준 가동 중인 전국 개인 및 법인 사업자 수 기준 통계 정보입니다.
-            </p>
+        {/* 컨텐츠 영역 (구글봇 SSR 크롤링을 위해 모든 탭을 DOM에 렌더링하고 display로 전환) */}
+        <div
+          className="card animate-fade-in"
+          style={{
+            padding: "32px",
+            display: activeTab === "industry" ? "block" : "none"
+          }}
+        >
+          <h3 style={{ fontSize: "1.25rem", fontWeight: 800, color: "var(--color-text-main)", marginBottom: "8px" }}>
+            산업 분야별 사업자 분포 및 시장 상태
+          </h3>
+          <p style={{ fontSize: "0.85rem", color: "var(--color-text-desc)", marginBottom: "24px" }}>
+            대분류 기준 가동 중인 전국 개인 및 법인 사업자 수 기준 통계 정보입니다.
+          </p>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-              {industryData.map((item, index) => (
-                <div key={index} style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  padding: "18px 20px",
-                  borderRadius: "14px",
-                  backgroundColor: "var(--bg-color-main)",
-                  border: "1px solid var(--color-border)",
-                  transition: "var(--transition-smooth)"
-                }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                    <span style={{
-                      width: "12px",
-                      height: "12px",
-                      borderRadius: "50%",
-                      backgroundColor: item.color
-                    }} />
-                    <span style={{ fontWeight: 700, color: "var(--color-text-main)" }}>{item.name}</span>
-                  </div>
-                  
-                  <div style={{ display: "flex", gap: "24px", alignItems: "center" }}>
-                    <span style={{ fontSize: "0.95rem", color: "var(--color-text-sub)", fontWeight: 500 }}>
-                      {item.count}개 ({item.ratio})
-                    </span>
-                    <span style={{
-                      backgroundColor: item.status === "급성장" || item.status === "안정" ? "rgba(45, 202, 115, 0.1)" : "rgba(240, 68, 56, 0.1)",
-                      color: item.status === "급성장" || item.status === "안정" ? "var(--color-success)" : "var(--color-danger)",
-                      padding: "4px 8px",
-                      borderRadius: "6px",
-                      fontSize: "0.75rem",
-                      fontWeight: 700
-                    }}>
-                      {item.status}
-                    </span>
-                  </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            {industryData.map((item, index) => (
+              <div key={index} style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "18px 20px",
+                borderRadius: "14px",
+                backgroundColor: "var(--bg-color-main)",
+                border: "1px solid var(--color-border)",
+                transition: "var(--transition-smooth)"
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <span style={{
+                    width: "12px",
+                    height: "12px",
+                    borderRadius: "50%",
+                    backgroundColor: item.color
+                  }} />
+                  <span style={{ fontWeight: 700, color: "var(--color-text-main)" }}>{item.name}</span>
                 </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {activeTab === "region" && (
-          <div className="card animate-fade-in" style={{ padding: "32px" }}>
-            <h3 style={{ fontSize: "1.25rem", fontWeight: 800, color: "var(--color-text-main)", marginBottom: "8px" }}>
-              시·도 광역 지자체별 사업자 통계
-            </h3>
-            <p style={{ fontSize: "0.85rem", color: "var(--color-text-desc)", marginBottom: "24px" }}>
-              지역에 등록된 활성 기업 수 및 금월 신규 추가 사업자 분포입니다.
-            </p>
-
-            <div style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-              gap: "16px"
-            }}>
-              {regionData.map((item, index) => (
-                <div key={index} style={{
-                  padding: "20px",
-                  borderRadius: "14px",
-                  backgroundColor: "var(--bg-color-main)",
-                  border: "1px solid var(--color-border)",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "8px"
-                }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ fontWeight: 800, color: "var(--color-text-main)" }}>{item.name}</span>
-                    <span style={{
-                      backgroundColor: "var(--color-primary-light)",
-                      color: "var(--color-primary)",
-                      padding: "2px 6px",
-                      borderRadius: "4px",
-                      fontSize: "0.75rem",
-                      fontWeight: 700
-                    }}>
-                      비중 {item.rate}
-                    </span>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: "4px" }}>
-                    <span style={{ fontSize: "1.3rem", fontWeight: 800, color: "var(--color-text-main)" }}>
-                      {item.active}개
-                    </span>
-                    <span style={{ fontSize: "0.85rem", color: "var(--color-success)", fontWeight: 700 }}>
-                      {item.new} 신규
-                    </span>
-                  </div>
+                
+                <div style={{ display: "flex", gap: "24px", alignItems: "center" }}>
+                  <span style={{ fontSize: "0.95rem", color: "var(--color-text-sub)", fontWeight: 500 }}>
+                    {item.count}개 ({item.ratio})
+                  </span>
+                  <span style={{
+                    backgroundColor: item.status === "급성장" || item.status === "안정" ? "rgba(45, 202, 115, 0.1)" : "rgba(240, 68, 56, 0.1)",
+                    color: item.status === "급성장" || item.status === "안정" ? "var(--color-success)" : "var(--color-danger)",
+                    padding: "4px 8px",
+                    borderRadius: "6px",
+                    fontSize: "0.75rem",
+                    fontWeight: 700
+                  }}>
+                    {item.status}
+                  </span>
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
-        )}
+        </div>
 
-        {activeTab === "trend" && (
-          <div className="card animate-fade-in" style={{ padding: "32px" }}>
-            <h3 style={{ fontSize: "1.25rem", fontWeight: 800, color: "var(--color-text-main)", marginBottom: "8px" }}>
-              연도별 가동 사업자 성장 추이
-            </h3>
-            <p style={{ fontSize: "0.85rem", color: "var(--color-text-desc)", marginBottom: "24px" }}>
-              대한민국 전체 등록 사업자 수의 가파른 누적 상승 곡선 분석 (단위: 만 개)
-            </p>
+        <div
+          className="card animate-fade-in"
+          style={{
+            padding: "32px",
+            display: activeTab === "region" ? "block" : "none"
+          }}
+        >
+          <h3 style={{ fontSize: "1.25rem", fontWeight: 800, color: "var(--color-text-main)", marginBottom: "8px" }}>
+            시·도 광역 지자체별 사업자 통계
+          </h3>
+          <p style={{ fontSize: "0.85rem", color: "var(--color-text-desc)", marginBottom: "24px" }}>
+            지역에 등록된 활성 기업 수 및 금월 신규 추가 사업자 분포입니다.
+          </p>
 
-            <div style={{
-              height: "260px",
-              backgroundColor: "var(--bg-color-main)",
-              borderRadius: "16px",
-              padding: "20px 10px 10px 10px",
-              border: "1px solid var(--color-border)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              marginBottom: "24px"
-            }}>
-              {renderTrendChart()}
-            </div>
-
-            <div style={{
-              backgroundColor: "var(--color-primary-light)",
-              padding: "16px 20px",
-              borderRadius: "14px",
-              color: "var(--color-text-sub)",
-              fontSize: "0.9rem",
-              lineHeight: 1.5,
-              fontWeight: 500
-            }}>
-              💡 <strong>최근 분석:</strong> 2021년 코로나 팬데믹 시점 이후 1인 크리에이터, 통신판매업 등 비대면 창업 수요가 급증함에 따라 가동 사업자 수의 누적 그래프가 15% 이상 가파른 성장을 기록하고 있습니다.
-            </div>
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+            gap: "16px"
+          }}>
+            {regionData.map((item, index) => (
+              <div key={index} style={{
+                padding: "20px",
+                borderRadius: "14px",
+                backgroundColor: "var(--bg-color-main)",
+                border: "1px solid var(--color-border)",
+                display: "flex",
+                flexDirection: "column",
+                gap: "8px"
+              }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontWeight: 800, color: "var(--color-text-main)" }}>{item.name}</span>
+                  <span style={{
+                    backgroundColor: "var(--color-primary-light)",
+                    color: "var(--color-primary)",
+                    padding: "2px 6px",
+                    borderRadius: "4px",
+                    fontSize: "0.75rem",
+                    fontWeight: 700
+                  }}>
+                    비중 {item.rate}
+                  </span>
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: "4px" }}>
+                  <span style={{ fontSize: "1.3rem", fontWeight: 800, color: "var(--color-text-main)" }}>
+                    {item.active}개
+                  </span>
+                  <span style={{ fontSize: "0.85rem", color: "var(--color-success)", fontWeight: 700 }}>
+                    {item.new} 신규
+                  </span>
+                </div>
+              </div>
+            ))}
           </div>
-        )}
+        </div>
+
+        <div
+          className="card animate-fade-in"
+          style={{
+            padding: "32px",
+            display: activeTab === "trend" ? "block" : "none"
+          }}
+        >
+          <h3 style={{ fontSize: "1.25rem", fontWeight: 800, color: "var(--color-text-main)", marginBottom: "8px" }}>
+            연도별 가동 사업자 성장 추이
+          </h3>
+          <p style={{ fontSize: "0.85rem", color: "var(--color-text-desc)", marginBottom: "24px" }}>
+            대한민국 전체 등록 사업자 수의 가파른 누적 상승 곡선 분석 (단위: 만 개)
+          </p>
+
+          <div style={{
+            height: "260px",
+            backgroundColor: "var(--bg-color-main)",
+            borderRadius: "16px",
+            padding: "20px 10px 10px 10px",
+            border: "1px solid var(--color-border)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            marginBottom: "24px"
+          }}>
+            {renderTrendChart()}
+          </div>
+
+          <div style={{
+            backgroundColor: "var(--color-primary-light)",
+            padding: "16px 20px",
+            borderRadius: "14px",
+            color: "var(--color-text-sub)",
+            fontSize: "0.9rem",
+            lineHeight: 1.5,
+            fontWeight: 500
+          }}>
+            💡 <strong>최근 분석:</strong> 2021년 코로나 팬데믹 시점 이후 1인 크리에이터, 통신판매업 등 비대면 창업 수요가 급증함에 따라 가동 사업자 수의 누적 그래프가 15% 이상 가파른 성장을 기록하고 있습니다.
+          </div>
+        </div>
 
       </div>
     </div>

@@ -15,7 +15,7 @@ export default function EmploymentHealthSection({ business }: EmploymentHealthSe
           국민연금 고용 지표 미연동
         </h4>
         <p style={{ fontSize: "0.88rem", margin: 0 }}>
-          이 기업은 국민연금 사업장 정보가 연동되어 있지 않거나, 임시 가상 프로필 상태입니다.
+          이 기업은 국민연금 사업장 정보가 연동되어 있지 않거나 실시간 조회 대기 중입니다.
         </p>
       </div>
     );

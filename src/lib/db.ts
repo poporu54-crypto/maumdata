@@ -1,5 +1,5 @@
 import { Pool } from "pg";
-import { getKsicName } from "./ksicMap";
+import { getKsicName, getPeerSectorGroup } from "./ksicMap";
 
 
 declare global {
@@ -139,12 +139,12 @@ export async function getBusinessByBNo(bNo: string) {
     })),
     history: histResult.rows.map((r: any) => ({
       year: r.year,
-      revenue: parseInt(r.revenue || "0", 10),
-      operatingIncome: parseInt(r.operatingIncome || "0", 10),
-      netIncome: parseInt(r.netIncome || "0", 10),
-      totalAssets: parseInt(r.totalAssets || "0", 10),
-      totalLiabilities: parseInt(r.totalLiabilities || "0", 10),
-      totalEquity: parseInt(r.totalEquity || "0", 10),
+      revenue: parseFloat(r.revenue || "0"),
+      operatingIncome: parseFloat(r.operatingIncome || "0"),
+      netIncome: parseFloat(r.netIncome || "0"),
+      totalAssets: parseFloat(r.totalAssets || "0"),
+      totalLiabilities: parseFloat(r.totalLiabilities || "0"),
+      totalEquity: parseFloat(r.totalEquity || "0"),
       employees: parseInt(r.employees || "0", 10),
     }))
   };
@@ -303,10 +303,35 @@ export async function upsertBusiness(biz: any) {
     `, [clean, biz.start_dt, "법인 설립", `${biz.b_nm} 설립 및 개업`]);
   }
 
-  // 1.2. 국민연금 월별 고용 이력 적재
-  if (biz.npsLinked && biz.npsSbscrbNmps > 0) {
+  // 1.2. 국민연금 월별 고용 이력 적재 (API에서 최근 월별 리스트가 넘어온 경우 전체 적재, 아니면 당월 1건 적재)
+  if (biz.employmentHistory && Array.isArray(biz.employmentHistory) && biz.employmentHistory.length > 0) {
+    for (const eh of biz.employmentHistory) {
+      if (!eh.recordMonth) continue;
+      try {
+        await query(`
+          INSERT INTO business_employment_history (
+            b_no, record_month, employees, new_acquisitions, losses, nps_charge_amount
+          ) VALUES ($1, $2, $3, $4, $5, $6)
+          ON CONFLICT (b_no, record_month) DO UPDATE SET
+            employees = EXCLUDED.employees,
+            new_acquisitions = EXCLUDED.new_acquisitions,
+            losses = EXCLUDED.losses,
+            nps_charge_amount = EXCLUDED.nps_charge_amount
+        `, [
+          clean,
+          eh.recordMonth,
+          eh.employees || 0,
+          eh.newAcquisitions || 0,
+          eh.losses || 0,
+          eh.npsChargeAmount || 0
+        ]);
+      } catch (e) {
+        console.error("Failed to upsert employmentHistory item:", e);
+      }
+    }
+  } else if (biz.npsLinked && biz.npsSbscrbNmps > 0) {
     let recordMonth = "";
-    const cleanBasDt = (biz.basDt || "").replace(/[^0-9]/g, "");
+    const cleanBasDt = (biz.npsDataCrtYm || biz.basDt || "").replace(/[^0-9]/g, "");
     if (cleanBasDt.length >= 6) {
       recordMonth = `${cleanBasDt.substring(0, 4)}-${cleanBasDt.substring(4, 6)}`;
     } else {
@@ -339,9 +364,8 @@ export async function upsertBusiness(biz: any) {
     }
   }
 
-  // 2. 재무이력 갱신 (ON CONFLICT 방식으로 동시성 레이스 컨디션 해결 및 연도 중복 방어)
+  // 2. 재무이력 갱신 (기존 구버전 추정 데이터를 정리하고 실제 수집된 재무 데이터로 교체)
   if (biz.history && Array.isArray(biz.history)) {
-    // 연도별 중복 제거 (동일 연도가 여러 개 존재할 경우, 마지막 항목을 사용하여 중복 방어)
     const uniqueHistoryMap = new Map<number, any>();
     for (const h of biz.history) {
       if (h && typeof h.year === "number") {
@@ -349,23 +373,26 @@ export async function upsertBusiness(biz: any) {
       }
     }
 
-    for (const h of uniqueHistoryMap.values()) {
-      await query(`
-        INSERT INTO business_history (
-          b_no, year, revenue, operating_income, net_income, total_assets, total_liabilities, total_equity, employees
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-        ON CONFLICT (b_no, year) DO UPDATE SET
-          revenue = EXCLUDED.revenue,
-          operating_income = EXCLUDED.operating_income,
-          net_income = EXCLUDED.net_income,
-          total_assets = EXCLUDED.total_assets,
-          total_liabilities = EXCLUDED.total_liabilities,
-          total_equity = EXCLUDED.total_equity,
-          employees = EXCLUDED.employees
-      `, [
-        clean, h.year, h.revenue || 0, h.operatingIncome || 0, h.netIncome || 0,
-        h.totalAssets || 0, h.totalLiabilities || 0, h.totalEquity || 0, h.employees || 0
-      ]);
+    if (uniqueHistoryMap.size > 0) {
+      await query(`DELETE FROM business_history WHERE b_no = $1`, [clean]);
+      for (const h of uniqueHistoryMap.values()) {
+        await query(`
+          INSERT INTO business_history (
+            b_no, year, revenue, operating_income, net_income, total_assets, total_liabilities, total_equity, employees
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+          ON CONFLICT (b_no, year) DO UPDATE SET
+            revenue = EXCLUDED.revenue,
+            operating_income = EXCLUDED.operating_income,
+            net_income = EXCLUDED.net_income,
+            total_assets = EXCLUDED.total_assets,
+            total_liabilities = EXCLUDED.total_liabilities,
+            total_equity = EXCLUDED.total_equity,
+            employees = EXCLUDED.employees
+        `, [
+          clean, h.year, h.revenue || 0, h.operatingIncome || 0, h.netIncome || 0,
+          h.totalAssets || 0, h.totalLiabilities || 0, h.totalEquity || 0, h.employees || 0
+        ]);
+      }
     }
   }
 }
@@ -723,10 +750,11 @@ export async function saveDisclosures(bNo: string, disclosures: any[]) {
 // 22. 동일 업종 내 통계 및 상대적 위치 연산
 export async function getIndustryAnalysis(bSector: string, bNo: string) {
   const cleanBNo = bNo.replace(/[^0-9]/g, "");
-  const uselessSectors = ["미등록 업종", "상장 법인", "상장법인", "대기업", "중소기업", "일반기업", "중견기업", "기타 서비스업", "기타서비스업", "-", ""];
+  const uselessSectors = ["미등록 업종", "상장 법인", "상장법인", "대기업", "중소기업", "일반기업", "중견기업", "기타 서비스업", "기타서비스업", "기타 제조업/금융업", "기타 산업", "-", ""];
   
   if (!bSector || uselessSectors.includes(bSector.trim())) {
     return {
+      groupTitle: bSector || "미분류 업종",
       totalCompanies: 0,
       closeRate: 0,
       avgRevenue: 0,
@@ -738,12 +766,15 @@ export async function getIndustryAnalysis(bSector: string, bNo: string) {
         debtRatioPercentile: 50,
         employeePercentile: 50
       },
-      leaders: []
+      leaders: [],
+      myRankItem: null
     };
   }
 
+  const peerGroup = getPeerSectorGroup(bSector);
+
   try {
-    // 1. 업종 내 기본 통계 조회 (전체 기업 수, 평균 폐업률, 평균 매출액 등)
+    // 1. 업종(동종 산업군) 내 기본 통계 조회 (전체 기업 수, 평균 폐업률, 평균 매출액 등)
     const statsResult = await query(`
       WITH latest_history AS (
         SELECT DISTINCT ON (b_no) b_no, revenue, operating_income, total_liabilities, total_equity, employees
@@ -753,13 +784,13 @@ export async function getIndustryAnalysis(bSector: string, bNo: string) {
       SELECT 
         COUNT(*) as total_companies,
         COALESCE(SUM(CASE WHEN b_stt_cd = '03' THEN 1 ELSE 0 END)::float / NULLIF(COUNT(*), 0)::float * 100, 0) as close_rate,
-        COALESCE(AVG(h.revenue), 0) as avg_revenue,
+        COALESCE(AVG(CASE WHEN h.revenue > 0 THEN h.revenue ELSE NULL END), 0) as avg_revenue,
         COALESCE(AVG(CASE WHEN h.total_equity > 0 THEN (h.total_liabilities::float / h.total_equity::float)*100 ELSE NULL END), 0) as avg_debt_ratio,
         COALESCE(AVG(CASE WHEN h.revenue > 0 THEN (h.operating_income::float / h.revenue::float)*100 ELSE NULL END), 0) as avg_operating_margin
       FROM businesses b
       LEFT JOIN latest_history h ON b.b_no = h.b_no
-      WHERE b.b_sector = $1 AND b.b_nm != '상호 정보 없음'
-    `, [bSector]);
+      WHERE ${peerGroup.sqlCondition} AND b.b_nm != '상호 정보 없음'
+    `, peerGroup.params);
 
     const stats = statsResult.rows[0] || {
       total_companies: 0,
@@ -769,78 +800,100 @@ export async function getIndustryAnalysis(bSector: string, bNo: string) {
       avg_operating_margin: 0
     };
 
-    // 2. 현재 기업의 업종 내 상대적 백분위 위치 연산
-    const rankingResult = await query(`
+    // 2. 현재 기업의 동종 산업군 내 상대적 백분위 위치 연산 (실제 재무/고용 보유 기업 간 비교)
+    const finRankResult = await query(`
       WITH latest_history AS (
-        SELECT DISTINCT ON (b_no) b_no, revenue, operating_income, total_liabilities, total_equity, employees
+        SELECT DISTINCT ON (b_no) b_no, revenue, operating_income, total_liabilities, total_equity
         FROM business_history
+        WHERE revenue > 0
         ORDER BY b_no, year DESC
       ),
-      percentiles AS (
+      fin_peers AS (
         SELECT 
           b.b_no,
-          percent_rank() OVER (ORDER BY COALESCE(h.revenue, 0) ASC) as rev_pct,
-          percent_rank() OVER (ORDER BY COALESCE(CASE WHEN h.revenue > 0 THEN (h.operating_income::float / h.revenue::float)*100 ELSE NULL END, -999) ASC) as margin_pct,
-          percent_rank() OVER (ORDER BY COALESCE(CASE WHEN h.total_equity > 0 THEN (h.total_liabilities::float / h.total_equity::float)*100 ELSE NULL END, 9999) DESC) as debt_pct,
-          percent_rank() OVER (ORDER BY COALESCE(b.nps_sbscrb_nmps, 0) ASC) as emp_pct
+          h.revenue,
+          RANK() OVER (ORDER BY h.revenue DESC) as rev_rank,
+          cume_dist() OVER (ORDER BY h.revenue ASC) as rev_pct,
+          cume_dist() OVER (ORDER BY (h.operating_income::float / NULLIF(h.revenue::float, 0)) ASC) as margin_pct,
+          cume_dist() OVER (ORDER BY CASE WHEN h.total_equity > 0 THEN (h.total_liabilities::float / h.total_equity::float) ELSE 9999 END DESC) as debt_pct
         FROM businesses b
-        LEFT JOIN latest_history h ON b.b_no = h.b_no
-        WHERE b.b_sector = $1 AND b.b_nm != '상호 정보 없음'
+        JOIN latest_history h ON b.b_no = h.b_no
+        WHERE ${peerGroup.sqlCondition} AND b.b_nm != '상호 정보 없음'
       )
-      SELECT * FROM percentiles WHERE b_no = $2
-    `, [bSector, cleanBNo]);
+      SELECT * FROM fin_peers WHERE b_no = $2
+    `, [...peerGroup.params, cleanBNo]);
 
-    let rankings = {
-      revenuePercentile: 50,
-      operatingMarginPercentile: 50,
-      debtRatioPercentile: 50,
-      employeePercentile: 50
+    const empRankResult = await query(`
+      WITH emp_peers AS (
+        SELECT 
+          b.b_no,
+          cume_dist() OVER (ORDER BY b.nps_sbscrb_nmps ASC) as emp_pct
+        FROM businesses b
+        WHERE ${peerGroup.sqlCondition} AND b.b_nm != '상호 정보 없음' AND b.nps_sbscrb_nmps > 0
+      )
+      SELECT * FROM emp_peers WHERE b_no = $2
+    `, [...peerGroup.params, cleanBNo]);
+
+    const clampPct = (v: number) => Math.min(99, Math.max(1, Math.round(v * 100)));
+
+    const rankings = {
+      revenuePercentile: finRankResult.rows[0] ? clampPct(finRankResult.rows[0].rev_pct) : 50,
+      operatingMarginPercentile: finRankResult.rows[0] ? clampPct(finRankResult.rows[0].margin_pct) : 50,
+      debtRatioPercentile: finRankResult.rows[0] ? clampPct(finRankResult.rows[0].debt_pct) : 50,
+      employeePercentile: empRankResult.rows[0] ? clampPct(empRankResult.rows[0].emp_pct) : 50
     };
-
-    if (rankingResult.rows.length > 0) {
-      const row = rankingResult.rows[0];
-      rankings = {
-        revenuePercentile: Math.round(row.rev_pct * 100),
-        operatingMarginPercentile: Math.round(row.margin_pct * 100),
-        debtRatioPercentile: Math.round(row.debt_pct * 100),
-        employeePercentile: Math.round(row.emp_pct * 100)
-      };
-    }
 
     // 3. 업종 내 순위 리스트 (매출액 기준 상위 3개 업체)
     const leadersResult = await query(`
       WITH latest_history AS (
         SELECT DISTINCT ON (b_no) b_no, revenue, year
         FROM business_history
+        WHERE revenue > 0
         ORDER BY b_no, year DESC
       )
       SELECT b.b_no, b.b_nm, COALESCE(h.revenue, 0) as revenue
       FROM businesses b
       JOIN latest_history h ON b.b_no = h.b_no
-      WHERE b.b_sector = $1 AND b.b_nm != '상호 정보 없음' AND b.b_stt_cd = '01'
-      ORDER BY revenue DESC
+      WHERE ${peerGroup.sqlCondition} AND b.b_nm != '상호 정보 없음' AND b.b_stt_cd = '01'
+      ORDER BY h.revenue DESC
       LIMIT 3
-    `, [bSector]);
+    `, peerGroup.params);
 
     const leaders = leadersResult.rows.map(r => ({
       b_no: r.b_no,
       b_nm: r.b_nm,
-      revenue: parseInt(r.revenue, 10)
+      revenue: Math.round(parseFloat(r.revenue) * 10) / 10
     }));
 
+    let myRankItem: { rank: number; b_no: string; b_nm: string; revenue: number } | null = null;
+    if (finRankResult.rows[0] && !leaders.some(l => l.b_no === cleanBNo)) {
+      const meRes = await query("SELECT b_nm FROM businesses WHERE b_no = $1 LIMIT 1", [cleanBNo]);
+      if (meRes.rows[0]) {
+        myRankItem = {
+          rank: parseInt(finRankResult.rows[0].rev_rank, 10),
+          b_no: cleanBNo,
+          b_nm: meRes.rows[0].b_nm,
+          revenue: Math.round(parseFloat(finRankResult.rows[0].revenue) * 10) / 10
+        };
+      }
+    }
+
     return {
+      groupTitle: peerGroup.groupTitle,
       totalCompanies: parseInt(stats.total_companies || "0", 10),
       closeRate: parseFloat(parseFloat(stats.close_rate || "0").toFixed(2)),
       avgRevenue: Math.round(parseFloat(stats.avg_revenue || "0")),
       avgDebtRatio: Math.round(parseFloat(stats.avg_debt_ratio || "0")),
       avgOperatingMargin: parseFloat(parseFloat(stats.avg_operating_margin || "0").toFixed(2)),
       rankings,
-      leaders
+      leaders,
+      myRankItem
     };
 
   } catch (err) {
     console.error("Failed to compute industry analysis:", err);
     return {
+      groupTitle: bSector || "미분류 업종",
       totalCompanies: 0,
       closeRate: 0,
       avgRevenue: 0,
@@ -852,7 +905,8 @@ export async function getIndustryAnalysis(bSector: string, bNo: string) {
         debtRatioPercentile: 50,
         employeePercentile: 50
       },
-      leaders: []
+      leaders: [],
+      myRankItem: null
     };
   }
 }

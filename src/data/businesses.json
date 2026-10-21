@@ -7,12 +7,12 @@
     "b_adr": "인천광역시 서구 원창동 393번지 73호",
     "b_sector": "IT 솔루션, 사이트 개발, E커머스",
     "b_type": "정보통신업",
-    "corp_no": "",
+    "corp_no": "1201110741274",
     "dart_code": "",
     "description": "웹 사이트 개발, E커머스 플랫폼 구축 및 맞춤형 IT 솔루션을 전문적으로 공급하는 혁신 IT 기업입니다.",
     "credit_rating": "-",
     "industry_rank": "-",
-    "is_sme": "중소기업 (소기업)",
+    "is_sme": "중소기업",
     "listing_status": "비상장",
     "homepage": "https://jiyoon.co.kr",
     "main_biz": "IT 솔루션, 사이트 개발, E커머스 유통",
@@ -20,17 +20,32 @@
     "history": [
       {
         "year": 2023,
-        "revenue": 1,
-        "employees": 2
+        "revenue": 56.4,
+        "operatingIncome": 1.1,
+        "netIncome": 1.0,
+        "totalAssets": 12.6,
+        "totalLiabilities": 6.8,
+        "totalEquity": 5.8,
+        "employees": 9
       },
       {
         "year": 2024,
-        "revenue": 2,
-        "employees": 3
+        "revenue": 59.5,
+        "operatingIncome": 1.0,
+        "netIncome": 0.8,
+        "totalAssets": 13.7,
+        "totalLiabilities": 7.2,
+        "totalEquity": 6.5,
+        "employees": 9
       },
       {
         "year": 2025,
-        "revenue": 3,
+        "revenue": 60.7,
+        "operatingIncome": 0.8,
+        "netIncome": 0.6,
+        "totalAssets": 13.6,
+        "totalLiabilities": 6.4,
+        "totalEquity": 7.2,
         "employees": 9
       }
     ],

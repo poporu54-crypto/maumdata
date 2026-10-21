@@ -373,14 +373,16 @@ export default function DocsPage() {
                   </span>
                 </div>
 
-                {/* 하부 소분류 태그 리스트 */}
+                {/* 하부 소분류 태그 리스트 (표준 <a href>로 구글봇 크롤링을 지원하며 클릭 시 즉시 필터링) */}
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "4px" }}>
                   {cat.subcategories.map((sub, idx) => {
                     const isActive = selectedTag === sub.tag;
                     return (
-                      <button
+                      <Link
                         key={idx}
+                        href={`/form/tag/${encodeURIComponent(sub.tag)}`}
                         onClick={(e) => {
+                          e.preventDefault();
                           e.stopPropagation();
                           handleSelectTag(sub.tag, cat.key);
                         }}
@@ -393,6 +395,7 @@ export default function DocsPage() {
                           fontSize: "0.8rem",
                           fontWeight: 600,
                           cursor: "pointer",
+                          textDecoration: "none",
                           transition: "var(--transition-smooth)",
                           boxShadow: "var(--shadow-sm)"
                         }}
@@ -410,7 +413,7 @@ export default function DocsPage() {
                         }}
                       >
                         {sub.name}
-                      </button>
+                      </Link>
                     );
                   })}
                 </div>
@@ -514,7 +517,13 @@ export default function DocsPage() {
                       {categoryBadge}
                     </span>
 
-                    <div className="doc-card-title" style={{ fontSize: "1.1rem" }}>{tpl.title}</div>
+                    <Link
+                      href={`/form/${tpl.id}`}
+                      className="doc-card-title"
+                      style={{ fontSize: "1.1rem", textDecoration: "none", display: "block", color: "var(--color-text-main)" }}
+                    >
+                      {tpl.title}
+                    </Link>
                     <div className="doc-card-desc" style={{ minHeight: "60px", marginBottom: "16px" }}>{tpl.desc}</div>
                     
                     <div style={{ marginBottom: "20px" }}>

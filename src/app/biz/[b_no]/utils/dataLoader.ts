@@ -113,92 +113,28 @@ export async function getLocalBusiness(bNo: string): Promise<BusinessData | null
   }
 }
 
-// 로컬 DB에 없는 새로운 사업자를 위한 결정론적 가상 프로필 생성 (Fallbacks)
+// 로컬 DB에 없는 새로운 사업자 최초 조회 시 실시간 연동 완료 전까지 표시할 로딩 플레이스홀더
 export function generateVirtualBusiness(bNo: string): BusinessData {
   const cleanBNo = bNo.replace(/[^0-9]/g, "");
-  
-  let seed = 0;
-  for (let i = 0; i < cleanBNo.length; i++) {
-    seed += parseInt(cleanBNo[i]) * (i + 1);
-  }
-
-  const hashRange = (min: number, max: number, offset = 0) => {
-    const calculated = (seed * 9301 + 49297) % 233280;
-    const norm = calculated / 233280;
-    return Math.floor(min + norm * (max - min)) + offset;
-  };
-
-  const companyPrefixes = ["미래", "제이", "에스", "한양", "세움", "도은", "바른", "가람", "태양", "나은"];
-  const companySuffixes = ["네트웍스", "이앤씨", "솔루션", "푸드", "상사", "개발", "홀딩스", "테크", "코퍼레이션", "인베스트"];
-  const pNames = ["김철수", "이영희", "박민수", "최지안", "정우성", "이지은", "강동원", "송혜교"];
-  const sectors = ["도매 및 소매업", "제조업", "서비스업", "건설업", "음식점업", "부동산업"];
-  const types = ["소프트웨어 유통 및 자문", "종합 건축 자재 유통", "경영 컨설팅", "식자재 및 가공식품 도소매", "부동산 개발업"];
-  const addresses = [
-    "서울특별시 마포구 마포대로 14",
-    "경기도 수원시 영통구 광교로 156",
-    "인천광역시 연수구 송도과학로 32",
-    "부산광역시 해운대구 센텀서로 30",
-    "대구광역시 수성구 달구벌대로 2350",
-    "광주광역시 서구 상무중앙로 80"
-  ];
-  const ratings = ["BBB-", "BBB", "BBB+", "A-", "A", "A+", "AA-", "AA", "AA+", "AAA"];
-
-  const bNm = `${companyPrefixes[seed % companyPrefixes.length]}${companySuffixes[(seed + 3) % companySuffixes.length]} (가상 등록 기업)`;
-  const pNm = pNames[seed % pNames.length];
-  
-  const startYear = hashRange(2010, 2022);
-  const startMonth = String(hashRange(1, 12)).padStart(2, "0");
-  const startDay = String(hashRange(1, 28)).padStart(2, "0");
-  const startDt = `${startYear}${startMonth}${startDay}`;
-
-  const bAdr = `${addresses[seed % addresses.length]} ${hashRange(10, 300)}번길 ${hashRange(1, 99)}`;
-  const bSector = sectors[seed % sectors.length];
-  const bType = types[(seed + 2) % types.length];
-  const rating = ratings[seed % ratings.length];
-  const rank = `상위 ${hashRange(5, 45)}%`;
-
-  const history = [2023, 2024, 2025].map((year, idx) => {
-    const rev = hashRange(10, 80) + (idx * 8);
-    const emp = hashRange(5, 15) + (idx * 2);
-    const operatingIncome = Math.round(rev * hashRange(8, 15) / 100);
-    const netIncome = Math.round(operatingIncome * 0.78);
-    const totalAssets = Math.round(rev * 1.2);
-    const totalLiabilities = Math.round(totalAssets * hashRange(30, 60) / 100);
-    const totalEquity = totalAssets - totalLiabilities;
-
-    return {
-      year,
-      revenue: rev,
-      employees: emp,
-      operatingIncome,
-      netIncome,
-      totalAssets,
-      totalLiabilities,
-      totalEquity
-    };
-  });
-
-  const is_sme = seed % 3 === 0 ? "중소기업 (소기업)" : (seed % 3 === 1 ? "중소기업 (중기업)" : "소상공인");
-  const homepage = `https://www.${companyPrefixes[seed % companyPrefixes.length].toLowerCase()}${seed}.co.kr`;
 
   return {
     b_no: cleanBNo,
-    b_nm: bNm,
-    p_nm: pNm,
-    start_dt: startDt,
-    b_adr: bAdr,
-    b_sector: bSector,
-    b_type: bType,
-    description: `국세청 실시간 연동을 통하여 계속영업이 확인된 ${bSector} 전문 소상공인/개인 기업입니다.`,
-    credit_rating: rating,
-    industry_rank: rank,
-    dataSource: "estimated",
-    is_sme,
-    listing_status: "비상장",
-    homepage,
-    main_biz: bType,
+    b_nm: "불러오는 중...",
+    p_nm: "불러오는 중...",
+    start_dt: "불러오는 중...",
+    b_adr: "불러오는 중...",
+    b_sector: "불러오는 중...",
+    b_type: "불러오는 중...",
+    description: "국세청 및 공공기관 데이터베이스에서 실시간 기업 정보를 불러오는 중입니다. 잠시만 기다려 주세요.",
+    credit_rating: "-",
+    industry_rank: "-",
+    dataSource: "public",
+    is_sme: "불러오는 중...",
+    listing_status: "불러오는 중...",
+    homepage: "-",
+    main_biz: "불러오는 중...",
     is_audited: false,
-    history,
+    history: [],
     brand_name: "",
     historyTimeline: [],
     employmentHistory: []
@@ -242,8 +178,23 @@ export async function getUnifiedBusinessData(bNo: string): Promise<{
   // 1. 로컬 DB 선조회
   const localBiz = await getLocalBusiness(cleanBNo);
   
-  // DB 캐시가 이미 존재하고 유효한 기업명이 있는 경우 ➔ 실시간 외부 API 동기화 없이 즉시 DB 캐시 서빙
-  if (localBiz && localBiz.b_nm !== "상호 정보 없음") {
+  // DB 캐시가 이미 존재하는 경우 ➔ 구버전 불완전 캐시(국민연금 고지액/월별이력 누락 등)는 즉시 최신 API로 자가 치유(Self-Healing) 수행
+  if (localBiz) {
+    const needsImmediateHeal = Boolean(
+      (localBiz.npsLinked && (!localBiz.npsChrgAmt || !localBiz.employmentHistory || localBiz.employmentHistory.length <= 1))
+    );
+    if (needsImmediateHeal) {
+      try {
+        console.log(`[Self-Healing Sync] Refreshing outdated/incomplete cache for ${localBiz.b_nm} (${cleanBNo})`);
+        const healed = await syncAndCacheBusinessData(cleanBNo);
+        if (healed.business) {
+          Object.assign(localBiz, healed.business);
+        }
+      } catch (healErr) {
+        console.error("[Self-Healing Sync Failed]", healErr);
+      }
+    }
+
     let dartCode = (localBiz as any).dart_code || "";
     let dartLastSync = (localBiz as any).dart_last_sync_at;
     const patentsLastSync = (localBiz as any).patents_last_sync_at;
@@ -256,10 +207,17 @@ export async function getUnifiedBusinessData(bNo: string): Promise<{
       stockCode = stockMatch[1];
     }
 
+    const hasValidCompanyName = Boolean(
+      localBiz.b_nm &&
+      localBiz.b_nm !== "상호 정보 없음" &&
+      localBiz.b_nm !== "불러오는 중..." &&
+      localBiz.b_nm !== "정보 조회 중..."
+    );
+
     // 개인사업자(법인번호 corp_no가 없거나 유효하지 않음)는 DART 매핑 대상에서 완전히 제외
     const hasCorpNo = localBiz.corp_no && localBiz.corp_no.replace(/[^0-9]/g, "").length === 13;
 
-    if (hasCorpNo || stockCode) {
+    if (hasValidCompanyName && (hasCorpNo || stockCode)) {
       findDartCode(localBiz.b_nm, stockCode)
         .then(async (correctDartCode) => {
           if (correctDartCode && correctDartCode !== dartCode) {
@@ -283,7 +241,7 @@ export async function getUnifiedBusinessData(bNo: string): Promise<{
           }
         })
         .catch(err => console.error("[DART Self-Healing Check failed]", err));
-    } else {
+    } else if (!hasCorpNo && !stockCode) {
       // 법인번호가 없는 개인사업자의 경우, 혹시 DART 코드가 잘못 들어가 있다면 NULL로 제거 (자가 치유 보완)
       if (dartCode) {
         console.log(`[DART Self-Healing] Removing invalid DART code for individual business ${localBiz.b_nm}: ${dartCode}`);
@@ -292,7 +250,7 @@ export async function getUnifiedBusinessData(bNo: string): Promise<{
       }
     }
 
-    if (!bidsLastSync) {
+    if (hasValidCompanyName && !bidsLastSync) {
       console.log(`[Background Detail Sync] Syncing recent bids for ${localBiz.b_nm} (${cleanBNo})`);
       syncRecentBidsByCompany(localBiz.b_nm, cleanBNo)
         .then(() => {
@@ -302,7 +260,7 @@ export async function getUnifiedBusinessData(bNo: string): Promise<{
         .catch(err => console.error("Background Bids sync failed:", err));
     }
 
-    if (!patentsLastSync) {
+    if (hasValidCompanyName && !patentsLastSync) {
       console.log(`[Background Detail Sync] Syncing patents for ${localBiz.b_nm} (${cleanBNo})`);
       syncPatentsByCompany(localBiz.b_nm, localBiz.p_nm || "")
         .then(() => {
@@ -316,7 +274,7 @@ export async function getUnifiedBusinessData(bNo: string): Promise<{
     
     // 관련 사업자 조회 (동일 대표자 및 상호명 유사 매칭)
     let relatedBusinesses: any[] = [];
-    if (localBiz && localBiz.p_nm && localBiz.p_nm !== "-" && localBiz.b_nm) {
+    if (hasValidCompanyName && localBiz.p_nm && localBiz.p_nm !== "-") {
       try {
         const cleanName = localBiz.b_nm.replace(/\(.*?\)/g, "").replace(/주식회사/g, "").replace(/\(주\)/g, "").trim();
         if (cleanName.length >= 2) {
@@ -351,8 +309,8 @@ export async function getUnifiedBusinessData(bNo: string): Promise<{
     return { apiStatus: mockApiStatus, business: localBiz, isInvalid: false, isNew: false, relatedBusinesses };
   }
 
-  // 2. DB 캐시가 없거나 "상호 정보 없음" 상태인 경우 ➔ [최초 등록 시점]으로 식별하되, 가상 데이터를 초고속 반환 (Non-blocking)
-  console.log(`[Non-blocking SSR Serving] Unregistered or partial business detected: ${cleanBNo}`);
+  // 2. DB 캐시가 없는 경우 ➔ [최초 등록 시점]으로 식별하고 "불러오는 중..." 로딩 플레이스홀더 반환 (Non-blocking)
+  console.log(`[Non-blocking SSR Serving] Unregistered business detected: ${cleanBNo}`);
 
   // 2.1. 미등록 블랙리스트 캐시 검사
   let invalidList: string[] = [];
@@ -382,27 +340,25 @@ export async function getUnifiedBusinessData(bNo: string): Promise<{
     };
   }
 
-  const virtualBiz = generateVirtualBusiness(cleanBNo);
-  virtualBiz.b_nm = "정보 조회 중...";
-  virtualBiz.description = "실시간 기업 정보를 연동하는 중입니다. 잠시만 대기해 주세요.";
+  const loadingBiz = generateVirtualBusiness(cleanBNo);
   
   const tempApiStatus: NtsCompanyStatus = {
     b_no: cleanBNo,
-    b_stt: "조회 중",
+    b_stt: "불러오는 중...",
     b_stt_cd: "01",
-    tax_type: "실시간 정보 연동 중...",
+    tax_type: "불러오는 중...",
     tax_type_cd: "01",
     end_dt: "",
     utcc_yn: "N",
     tax_type_change_dt: "",
     invoice_apply_dt: "",
-    rbf_tax_type: "",
+    rbf_tax_type: "불러오는 중...",
     rbf_tax_type_cd: ""
   };
 
   return {
     apiStatus: tempApiStatus,
-    business: virtualBiz,
+    business: loadingBiz,
     isInvalid: false,
     isNew: true,
     relatedBusinesses: []
@@ -467,27 +423,10 @@ export async function syncAndCacheBusinessData(bNo: string): Promise<{
     }
     
     const scale = basicInfo.enpEntprScaleNm || "일반기업";
-    const isAudited = !!dartCode;
-    let credit_rating = "-";
-    let industry_rank = "-";
-    
-    if (isAudited) {
-      credit_rating = "BBB+";
-      industry_rank = "상위 25%";
-      if (scale.includes("대기업")) {
-        credit_rating = "AA+";
-        industry_rank = "상위 1%";
-      } else if (scale.includes("중견기업")) {
-        credit_rating = "A+";
-        industry_rank = "상위 7%";
-      } else if (scale.includes("중소기업")) {
-        credit_rating = "A-";
-        industry_rank = "상위 18%";
-      }
-    }
+    const credit_rating = localBizVal?.credit_rating || "-";
+    const industry_rank = localBizVal?.industry_rank || "-";
 
     let history: BusinessData["history"] = [];
-    let isEstimated = false;
     if (financeDetail && financeDetail.length > 0) {
       history = financeDetail.map((fd) => ({
         year: fd.year,
@@ -499,65 +438,65 @@ export async function syncAndCacheBusinessData(bNo: string): Promise<{
         totalLiabilities: fd.totalLiabilities,
         totalEquity: fd.totalEquity
       }));
-    } else if (npsInfo && npsInfo.npsSbscrbNmps > 0) {
-      const empCount = npsInfo.npsSbscrbNmps;
-      const baseRevenuePerEmp = 2.5;
-      const estRev = Math.round(empCount * baseRevenuePerEmp);
-      
-      history = [2023, 2024, 2025].map((year) => {
-        const rev = estRev;
-        const operatingIncome = Math.round(rev * 0.06);
-        const netIncome = Math.round(operatingIncome * 0.8);
-        const totalAssets = Math.round(rev * 1.2);
-        const totalLiabilities = Math.round(totalAssets * 0.5);
-        const totalEquity = totalAssets - totalLiabilities;
-        return {
-          year,
-          revenue: rev,
-          employees: empCount,
-          operatingIncome,
-          netIncome,
-          totalAssets,
-          totalLiabilities,
-          totalEquity
-        };
-      });
-      isEstimated = true;
     }
+
+    const resolvedCorpName =
+      (ftcInfo?.cmpNm && ftcInfo.cmpNm.includes(basicInfo.corpNm) && ftcInfo.cmpNm.length > basicInfo.corpNm.length)
+        ? ftcInfo.cmpNm
+        : (basicInfo.corpNm && !basicInfo.corpNm.includes("SAMPO FUND")
+            ? (basicInfo.enpDivNm === "주식회사" && !basicInfo.corpNm.includes("주식회사") && !basicInfo.corpNm.includes("(주)")
+                ? `${basicInfo.corpNm} 주식회사`
+                : basicInfo.corpNm)
+            : (localBizVal?.b_nm || basicInfo.corpNm));
+
+    const validExistingSector =
+      localBizVal?.b_sector &&
+      !["기타 서비스업", "기타 제조업/금융업", "상장 법인", "미등록 업종", "-", ""].includes(localBizVal.b_sector)
+        ? localBizVal.b_sector
+        : "";
 
     business = {
       b_no: cleanBNo,
-      b_nm: basicInfo.corpNm && !basicInfo.corpNm.includes("SAMPO FUND") ? basicInfo.corpNm : (localBizVal?.b_nm || basicInfo.corpNm),
-      p_nm: basicInfo.enpRprFnm,
-      start_dt: basicInfo.enpEstbDt,
-      b_adr: basicInfo.enpBsadr,
-      b_sector: basicInfo.enpIndyNm || "기타 서비스업",
-      b_type: scale,
+      b_nm: resolvedCorpName,
+      p_nm: basicInfo.enpRprFnm || ftcInfo?.rprsNm || "-",
+      start_dt: basicInfo.enpEstbDt || ftcInfo?.rcptDt || "-",
+      b_adr: basicInfo.enpBsadr || ftcInfo?.repAddr || "-",
+      b_sector: basicInfo.enpIndyNm || validExistingSector || (ftcInfo ? "전자상거래 소매업 (통신판매업)" : "기타 서비스업"),
+      b_type: basicInfo.enpDivNm || scale,
       corp_no: basicInfo.crno,
       dart_code: dartCode,
-      description: localBizVal?.description || `${basicInfo.corpNm}${getJosa(basicInfo.corpNm, "은는")} 금융위원회 공시 정보가 등록된 대한민국 공식 ${scale}입니다.`,
-      credit_rating: localBizVal?.credit_rating || credit_rating,
-      industry_rank: localBizVal?.industry_rank || industry_rank,
-      dataSource: isEstimated ? "estimated" : "public",
+      description: `${resolvedCorpName}${getJosa(resolvedCorpName, "은는")} 금융위원회 공시 정보가 등록된 대한민국 공식 ${scale}입니다.`,
+      credit_rating,
+      industry_rank,
+      dataSource: "public",
       is_sme: scale,
       listing_status: localBizVal?.listing_status || (scale.includes("대기업") ? "코스피 상장" : "비상장"),
-      homepage: localBizVal?.homepage && localBizVal.homepage !== "-" ? localBizVal.homepage : (basicInfo.enpHpaddr || "-"),
-      main_biz: basicInfo.enpMainBizNm || basicInfo.enpIndyNm || "기타 서비스업",
+      homepage: basicInfo.enpHpaddr || ftcInfo?.wbsitAddr || localBizVal?.homepage || "-",
+      main_biz: basicInfo.enpMainBizNm || basicInfo.enpIndyNm || (ftcInfo?.goodsType ? `전자상거래 (${ftcInfo.goodsType})` : "기타 서비스업"),
       is_audited: !!dartCode,
       
-      corpEnm: basicInfo.corpEnm,
+      corpEnm: basicInfo.corpEnm || localBizVal?.corpEnm || "",
       crno: basicInfo.crno,
-      basDt: basicInfo.basDt,
+      basDt: npsInfo?.dataCrtYm || basicInfo.basDt,
       enpPbncYn: basicInfo.enpPbncYn,
       enpDivNm: basicInfo.enpDivNm,
-      enpTlno: basicInfo.enpTlno,
-      enpFxno: basicInfo.enpFxno,
-      enpPncd: basicInfo.enpPncd,
-      enpStacNm: basicInfo.enpStacNm,
-      enpMainBizNm: basicInfo.enpMainBizNm,
+      enpTlno: basicInfo.enpTlno || ftcInfo?.telNo || "",
+      enpFxno: basicInfo.enpFxno && basicInfo.enpFxno !== "N/A" ? basicInfo.enpFxno : "",
+      enpPncd: basicInfo.enpPncd || ftcInfo?.zipCd || "",
+      enpStacNm: basicInfo.enpStacNm || "",
+      enpMainBizNm: basicInfo.enpMainBizNm || "",
       enpKosdaqYn: basicInfo.enpKosdaqYn,
       enpKoseYn: basicInfo.enpKoseYn,
       enpKonexYn: basicInfo.enpKonexYn,
+
+      mailOrderNo: ftcInfo?.mailOrderNo || localBizVal?.mailOrderNo || "",
+      declareOrg: ftcInfo?.declareOrg || localBizVal?.declareOrg || "",
+      goodsType: ftcInfo?.goodsType || localBizVal?.goodsType || "",
+      sellType: ftcInfo?.sellType || localBizVal?.sellType || "",
+      closeDate: ftcInfo?.closeDate || localBizVal?.closeDate || "",
+      repEmail: ftcInfo?.repEmail || localBizVal?.repEmail || "",
+      telNo: ftcInfo?.telNo || basicInfo.enpTlno || "",
+      zipCd: ftcInfo?.zipCd || basicInfo.enpPncd || "",
       
       history,
       taxType: apiStatus?.tax_type || "부가가치세 일반과세자",
@@ -570,8 +509,11 @@ export async function syncAndCacheBusinessData(bNo: string): Promise<{
       business.newAcqsNmps = npsInfo.newAcqsNmps;
       business.lossSbscrbNmps = npsInfo.lossSbscrbNmps;
       business.npsChrgAmt = npsInfo.npsChrgAmt;
+      if (npsInfo.monthlyHistory && npsInfo.monthlyHistory.length > 0) {
+        business.employmentHistory = npsInfo.monthlyHistory;
+      }
       
-      const uselessSectors = ["상장 법인", "상장법인", "대기업", "중소기업", "일반기업", "중견기업", "기타 서비스업", "기타서비스업", "미등록 업종", "미등록업종", "-", ""];
+      const uselessSectors = ["상장 법인", "상장법인", "대기업", "중소기업", "일반기업", "중견기업", "기타 서비스업", "기타서비스업", "미등록 업종", "미등록업종", "전자상거래 소매업 (통신판매업)", "-", ""];
       const currentSector = (business.b_sector || "").trim();
       
       if (npsInfo.npsSector && (!currentSector || uselessSectors.includes(currentSector))) {
@@ -603,6 +545,7 @@ export async function syncAndCacheBusinessData(bNo: string): Promise<{
       homepage: ftcInfo.wbsitAddr && ftcInfo.wbsitAddr !== "-" ? ftcInfo.wbsitAddr : "-",
       main_biz: "전자상거래업",
       is_audited: false,
+      basDt: npsInfo?.dataCrtYm || "",
       
       enpTlno: ftcInfo.telNo,
       enpPncd: ftcInfo.zipCd,
@@ -626,6 +569,12 @@ export async function syncAndCacheBusinessData(bNo: string): Promise<{
       business.newAcqsNmps = npsInfo.newAcqsNmps;
       business.lossSbscrbNmps = npsInfo.lossSbscrbNmps;
       business.npsChrgAmt = npsInfo.npsChrgAmt;
+      if (npsInfo.monthlyHistory && npsInfo.monthlyHistory.length > 0) {
+        business.employmentHistory = npsInfo.monthlyHistory;
+      }
+      if (npsInfo.npsSector) {
+        business.b_sector = npsInfo.npsSector;
+      }
     }
   } else if (localBizVal) {
     const npsInfo = await getNpsBplcInfo(cleanBNo, localBizVal.b_nm);

@@ -12,7 +12,7 @@ import MaumDataLogo from "@/components/MaumDataLogo";
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.maumdata.com"),
   alternates: {
-    canonical: "./",
+    canonical: "/",
   },
   title: {
     template: "%s | 마음데이타",

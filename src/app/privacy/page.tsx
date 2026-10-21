@@ -4,6 +4,15 @@ import { Metadata } from "next";
 export const metadata: Metadata = {
   title: "개인정보처리방침 | 마음데이타",
   description: "지윤 주식회사가 운영하는 마음데이타(MaumData) 서비스의 개인정보처리방침입니다.",
+  alternates: {
+    canonical: "/privacy",
+  },
+  openGraph: {
+    title: "개인정보처리방침 | 마음데이타",
+    description: "지윤 주식회사가 운영하는 마음데이타(MaumData) 서비스의 개인정보처리방침입니다.",
+    url: "https://www.maumdata.com/privacy",
+    type: "website",
+  },
 };
 
 export default function PrivacyPage() {

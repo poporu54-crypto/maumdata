@@ -213,7 +213,7 @@ export default function SyncTrigger({ bNo, isNew }: SyncTriggerProps) {
               marginTop: "4px",
               fontWeight: 500
             }}>
-              * 이 페이지는 국세청 검증 전 가상 프로필을 먼저 보여주고 있습니다.
+              * 국세청 및 공공기관 API로부터 실시간 기업 정보를 불러오고 있습니다. 완료 즉시 화면이 자동으로 갱신됩니다.
             </div>
           )}
         </div>

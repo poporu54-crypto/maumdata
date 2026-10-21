@@ -205,7 +205,7 @@ export default async function MainPage() {
                 <Link href="/stats/market-area/1159062000" className="btn-secondary" style={{ padding: "6px 12px", fontSize: "0.8rem", borderRadius: "8px" }}>
                   서울 사당동
                 </Link>
-                <Link href="/stats/market-area/2635010500" className="btn-secondary" style={{ padding: "6px 12px", fontSize: "0.8rem", borderRadius: "8px" }}>
+                <Link href="/stats/market-area/2635051000" className="btn-secondary" style={{ padding: "6px 12px", fontSize: "0.8rem", borderRadius: "8px" }}>
                   부산 우동
                 </Link>
                 <Link href="/stats/market-area/2726051000" className="btn-secondary" style={{ padding: "6px 12px", fontSize: "0.8rem", borderRadius: "8px" }}>

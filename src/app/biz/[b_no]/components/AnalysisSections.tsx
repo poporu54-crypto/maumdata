@@ -194,7 +194,7 @@ export async function IndustrySection({ bSector, bNo }: { bSector: string; bNo: 
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.82rem", fontWeight: 700 }}>
                   <span style={{ color: "var(--color-text-sub)" }}>{m.name}</span>
                   <span style={{ color: getBarColor(m.val) }}>
-                    {getPositionText(m.val)} (상위 {100 - m.val}%)
+                    {getPositionText(m.val)} (상위 {Math.max(1, 100 - m.val)}%)
                   </span>
                 </div>
                 <div style={{
@@ -221,7 +221,7 @@ export async function IndustrySection({ bSector, bNo }: { bSector: string; bNo: 
           {analysis.leaders.length > 0 && (
             <div>
               <h5 style={{ fontSize: "0.95rem", fontWeight: 800, color: "var(--color-text-sub)", margin: "0 0 14px 0" }}>
-                🏆 {bSector.substring(0, 15)}... 매출액 순위
+                🏆 {analysis.groupTitle || bSector} 매출액 순위
               </h5>
               <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                 {analysis.leaders.map((l, index) => (
@@ -255,10 +255,39 @@ export async function IndustrySection({ bSector, bNo }: { bSector: string; bNo: 
                     <span style={{ color: "var(--color-text-desc)" }}>
                       {l.revenue >= 10000
                         ? `${(l.revenue / 10000).toFixed(1)}조`
-                        : `${l.revenue}억 원`}
+                        : `${l.revenue.toLocaleString()}억 원`}
                     </span>
                   </Link>
                 ))}
+                {analysis.myRankItem && (
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      padding: "10px 14px",
+                      backgroundColor: "rgba(49, 130, 246, 0.08)",
+                      border: "1px solid rgba(49, 130, 246, 0.35)",
+                      borderRadius: "12px",
+                      fontSize: "0.85rem",
+                      marginTop: "2px"
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                      <span style={{ fontWeight: 900, color: "var(--color-primary)" }}>
+                        {analysis.myRankItem.rank}위
+                      </span>
+                      <strong style={{ color: "var(--color-text-main)", fontWeight: 700 }}>
+                        {analysis.myRankItem.b_nm} (현재 조회 기업)
+                      </strong>
+                    </div>
+                    <span style={{ color: "var(--color-primary)", fontWeight: 700 }}>
+                      {analysis.myRankItem.revenue >= 10000
+                        ? `${(analysis.myRankItem.revenue / 10000).toFixed(1)}조`
+                        : `${analysis.myRankItem.revenue.toLocaleString()}억 원`}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           )}

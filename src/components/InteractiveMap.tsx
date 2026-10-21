@@ -86,13 +86,12 @@ export default function InteractiveMap({
         scrollWheelZoom: true,
       }).setView([defaultLat, defaultLng], zoom);
 
-      // 다크 테마 느낌의 CartoDB Fastly CDN 타일 적용 (API Key 워터마크 없이 무료 제공)
-      const tileUrl = "https://cartodb-basemaps-{s}.global.ssl.fastly.net/dark_all/{z}/{x}/{y}.png";
+      // OpenStreetMap 공식 한글 지도 타일 적용 (별도 유료 API Key 불필요)
+      const tileUrl = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
       
       L.tileLayer(tileUrl, {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        subdomains: 'abcd',
-        maxZoom: 20
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        maxZoom: 19
       }).addTo(mapRef.current);
 
       markersGroupRef.current = L.layerGroup().addTo(mapRef.current);

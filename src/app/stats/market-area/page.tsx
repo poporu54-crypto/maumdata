@@ -40,10 +40,10 @@ const REGIONS: RegionInfo[] = [
     centerLng: 126.9850,
     zoom: 11,
     dongs: [
-      { cd: "1168064000", name: "역삼1동", gu: "강남구", desc: "테헤란로 IT/금융 오피스 밀집 대한민국 최대 상권", stores: 1254, lat: 37.4979, lng: 127.0276 },
-      { cd: "1168065000", name: "역삼2동", gu: "강남구", desc: "역삼역 오피스 배후 고밀도 주상복합 혼합형 상권", stores: 842, lat: 37.5008, lng: 127.0365 },
-      { cd: "1159062000", name: "사당1동", gu: "동작구", desc: "지하철 2·4호선 교통 허브 기반 남부 유동 밀집지", stores: 915, lat: 37.4765, lng: 126.9815 },
-      { cd: "1111061500", name: "종로1.2.3.4가동", gu: "종로구", desc: "대기업 본사 및 역사적 전통 상업지구가 공존하는 핵심 상권", stores: 1420, lat: 37.5704, lng: 126.9922 },
+      { cd: "1168064000", name: "역삼1동", gu: "강남구", desc: "테헤란로 IT/금융 오피스 밀집 대한민국 최대 상권", stores: 14077, lat: 37.4979, lng: 127.0276 },
+      { cd: "1168065000", name: "역삼2동", gu: "강남구", desc: "역삼역 오피스 배후 고밀도 주상복합 혼합형 상권", stores: 3635, lat: 37.5008, lng: 127.0365 },
+      { cd: "1159062000", name: "사당1동", gu: "동작구", desc: "지하철 2·4호선 교통 허브 기반 남부 유동 밀집지", stores: 1524, lat: 37.4765, lng: 126.9815 },
+      { cd: "1111061500", name: "종로1.2.3.4가동", gu: "종로구", desc: "대기업 본사 및 역사적 전통 상업지구가 공존하는 핵심 상권", stores: 8137, lat: 37.5704, lng: 126.9922 },
     ]
   },
   {
@@ -54,8 +54,8 @@ const REGIONS: RegionInfo[] = [
     centerLng: 126.9500,
     zoom: 9,
     dongs: [
-      { cd: "4113510900", name: "삼평동", gu: "성남시 분당구", desc: "판교테크노밸리 심장부, 국내 IT 인재들이 집결하는 상권", stores: 642, lat: 37.4021, lng: 127.1105 },
-      { cd: "2820054000", name: "구월1동", gu: "인천 남동구", desc: "인천광역시청 중심의 행정·대규모 백화점 연동 상권", stores: 789, lat: 37.4475, lng: 126.7006 },
+      { cd: "4113565500", name: "삼평동", gu: "성남시 분당구", desc: "판교테크노밸리 심장부, 국내 IT 인재들이 집결하는 상권", stores: 2036, lat: 37.4021, lng: 127.1105 },
+      { cd: "2820051000", name: "구월1동", gu: "인천 남동구", desc: "인천광역시청 중심의 행정·대규모 백화점 연동 상권", stores: 1819, lat: 37.4475, lng: 126.7006 },
     ]
   },
   {
@@ -66,7 +66,7 @@ const REGIONS: RegionInfo[] = [
     centerLng: 128.1555,
     zoom: 8,
     dongs: [
-      { cd: "5111059000", name: "퇴계동", gu: "춘천시", desc: "남춘천역세권 기반 춘천 남부 핵심 신흥 주거/상업 복합지", stores: 485, lat: 37.8596, lng: 127.7285 },
+      { cd: "5111066000", name: "퇴계동", gu: "춘천시", desc: "남춘천역세권 기반 춘천 남부 핵심 신흥 주거/상업 복합지", stores: 2180, lat: 37.8596, lng: 127.7285 },
     ]
   },
   {
@@ -77,10 +77,10 @@ const REGIONS: RegionInfo[] = [
     centerLng: 127.2341,
     zoom: 9,
     dongs: [
-      { cd: "3017056000", name: "둔산2동", gu: "대전 서구", desc: "정부대전청사 및 행정·학원·금융가가 집약된 대전 대표 상권", stores: 924, lat: 36.3551, lng: 127.3838 },
-      { cd: "3611055000", name: "보람동", gu: "세종특별자치시", desc: "세종시청 인근 금강 보행교 연동 중심상가 및 행정지구", stores: 310, lat: 36.4795, lng: 127.2885 },
-      { cd: "4413310700", name: "불당동", gu: "천안시 서북구", desc: "KTX 천안아산역 중심 불당신도시 명품 신흥 아파트 배후 상권", stores: 733, lat: 36.8095, lng: 127.1075 },
-      { cd: "4311151000", name: "성안동", gu: "청주시 상당구", desc: "청주 성안길 중심 청주 전통 최대 패션 및 뷰티 번화가", stores: 580, lat: 36.6325, lng: 127.4895 },
+      { cd: "3017064000", name: "둔산2동", gu: "대전 서구", desc: "정부대전청사 및 행정·학원·금융가가 집약된 대전 대표 상권", stores: 3070, lat: 36.3551, lng: 127.3838 },
+      { cd: "3611056000", name: "보람동", gu: "세종특별자치시", desc: "세종시청 인근 금강 보행교 연동 중심상가 및 행정지구", stores: 1050, lat: 36.4795, lng: 127.2885 },
+      { cd: "4413356600", name: "불당1동", gu: "천안시 서북구", desc: "KTX 천안아산역 중심 불당신도시 명품 신흥 아파트 배후 상권", stores: 2041, lat: 36.8095, lng: 127.1075 },
+      { cd: "4311154500", name: "성안동", gu: "청주시 상당구", desc: "청주 성안길 중심 청주 전통 최대 패션 및 뷰티 번화가", stores: 2108, lat: 36.6325, lng: 127.4895 },
     ]
   },
   {
@@ -91,11 +91,11 @@ const REGIONS: RegionInfo[] = [
     centerLng: 128.6000,
     zoom: 8,
     dongs: [
-      { cd: "2635010500", name: "우제1동", gu: "부산 해운대구", desc: "해운대 벡스코, 센텀·마린시티 초고층 랜드마크 부촌 상권", stores: 890, lat: 35.1631, lng: 129.1635 },
-      { cd: "2726051000", name: "범어1동", gu: "대구 수성구", desc: "대구 최고의 명문 학군 및 수성구 금융·법조 오피스 중심가", stores: 512, lat: 35.8585, lng: 128.6285 },
-      { cd: "4812355000", name: "상남동", gu: "창원시 성산구", desc: "창원 최고 밀집도를 지닌 대규모 엔터테인먼트 상업 타운", stores: 985, lat: 35.2215, lng: 128.6875 },
-      { cd: "3114059000", name: "삼산동", gu: "울산 남구", desc: "백화점 2곳 및 아울렛이 인접한 울산 최대 교통·패션 중심지", stores: 1040, lat: 35.5395, lng: 129.3395 },
-      { cd: "4711163000", name: "제철동", gu: "포항시 남구", desc: "포스코 포항제철소 배후 대규모 근로자 복합 생활 상권", stores: 233, lat: 35.9895, lng: 129.3885 },
+      { cd: "2635051000", name: "우1동", gu: "부산 해운대구", desc: "해운대 벡스코, 센텀·마린시티 초고층 랜드마크 부촌 상권", stores: 1753, lat: 35.1631, lng: 129.1635 },
+      { cd: "2726051000", name: "범어1동", gu: "대구 수성구", desc: "대구 최고의 명문 학군 및 수성구 금융·법조 오피스 중심가", stores: 988, lat: 35.8585, lng: 128.6285 },
+      { cd: "4812353000", name: "상남동", gu: "창원시 성산구", desc: "창원 최고 밀집도를 지닌 대규모 엔터테인먼트 상업 타운", stores: 3102, lat: 35.2215, lng: 128.6875 },
+      { cd: "3114057000", name: "삼산동", gu: "울산 남구", desc: "백화점 2곳 및 아울렛이 인접한 울산 최대 교통·패션 중심지", stores: 6509, lat: 35.5395, lng: 129.3395 },
+      { cd: "4711157000", name: "제철동", gu: "포항시 남구", desc: "포스코 포항제철소 배후 대규모 근로자 복합 생활 상권", stores: 275, lat: 35.9895, lng: 129.3885 },
     ]
   },
   {
@@ -106,9 +106,9 @@ const REGIONS: RegionInfo[] = [
     centerLng: 126.8533,
     zoom: 8,
     dongs: [
-      { cd: "2914074000", name: "치평동", gu: "광주 서구", desc: "광주시청 및 상무지구 중심의 광주광역시 핵심 비즈니스 벨트", stores: 754, lat: 35.1537, lng: 126.8485 },
-      { cd: "4511160500", name: "효자5동", gu: "전주시 완산구", desc: "전북도청 신시가지 인근 먹거리 쇼핑 타운 및 트렌디 소비 중심", stores: 620, lat: 35.8155, lng: 127.1085 },
-      { cd: "4613063000", name: "여천동", gu: "여수시", desc: "여천역 배후 석유화학단지 초입 주거/행정 믹스 상권", stores: 290, lat: 34.7705, lng: 127.6885 },
+      { cd: "1224074500", name: "치평동", gu: "광주 서구", desc: "광주시청 및 상무지구 중심의 광주광역시 핵심 비즈니스 벨트", stores: 3433, lat: 35.1537, lng: 126.8485 },
+      { cd: "5211173000", name: "효자5동", gu: "전주시 완산구", desc: "전북도청 신시가지 인근 먹거리 쇼핑 타운 및 트렌디 소비 중심", stores: 3508, lat: 35.8155, lng: 127.1085 },
+      { cd: "1213080000", name: "여천동", gu: "여수시", desc: "여천역 배후 석유화학단지 초입 주거/행정 믹스 상권", stores: 1434, lat: 34.7705, lng: 127.6885 },
     ]
   },
   {
@@ -119,7 +119,7 @@ const REGIONS: RegionInfo[] = [
     centerLng: 126.5583,
     zoom: 10,
     dongs: [
-      { cd: "5011066000", name: "노형동", gu: "제주시", desc: "제주 드림타워 신흥 번화가 및 노형오거리 중심 생활 밀접 상권", stores: 815, lat: 33.4839, lng: 126.4781 },
+      { cd: "5011066000", name: "노형동", gu: "제주시", desc: "제주 드림타워 신흥 번화가 및 노형오거리 중심 생활 밀접 상권", stores: 4309, lat: 33.4839, lng: 126.4781 },
     ]
   }
 ];
@@ -306,12 +306,12 @@ export default function MarketAreaHub() {
             flexWrap: "wrap"
           }}>
             <span style={{ fontSize: "0.85rem", color: "var(--color-text-desc)", fontWeight: 600 }}>인기 검색:</span>
-            {["역삼1동", "삼평동", "우제1동", "사당1동", "범어1동", "노형동"].map((tagName) => {
+            {["역삼1동", "삼평동", "우1동", "사당1동", "범어1동", "노형동"].map((tagName) => {
               const matched = allDongs.find(d => d.name.includes(tagName));
               return (
-                <button
+                <Link
                   key={tagName}
-                  onClick={() => router.push(`/stats/market-area/${matched?.cd || "1168064000"}`)}
+                  href={`/stats/market-area/${matched?.cd || "1168064000"}`}
                   style={{
                     backgroundColor: "rgba(255, 255, 255, 0.04)",
                     border: "1px solid var(--color-border)",
@@ -321,6 +321,7 @@ export default function MarketAreaHub() {
                     color: "var(--color-text-sub)",
                     cursor: "pointer",
                     fontWeight: 600,
+                    textDecoration: "none",
                     transition: "var(--transition-smooth)"
                   }}
                   onMouseOver={(e) => {
@@ -333,7 +334,7 @@ export default function MarketAreaHub() {
                   }}
                 >
                   #{tagName}
-                </button>
+                </Link>
               );
             })}
           </div>
@@ -470,57 +471,70 @@ export default function MarketAreaHub() {
                 </span>
               </div>
 
-              {/* 리스트 목록 */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "12px", flex: 1, overflowY: "auto", paddingRight: "4px" }}>
-                {activeRegion.dongs.map((dong) => (
-                  <div
-                    key={dong.cd}
-                    onClick={() => router.push(`/stats/market-area/${dong.cd}`)}
-                    style={{
-                      border: "1px solid var(--color-border)",
-                      borderRadius: "14px",
-                      padding: "16px 20px",
-                      cursor: "pointer",
-                      backgroundColor: "rgba(255, 255, 255, 0.005)",
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: "6px",
-                      transition: "var(--transition-smooth)"
-                    }}
-                    onMouseOver={(e) => {
-                      e.currentTarget.style.borderColor = "var(--color-primary)";
-                      e.currentTarget.style.transform = "translateY(-1px)";
-                      e.currentTarget.style.boxShadow = "var(--shadow-sm)";
-                    }}
-                    onMouseOut={(e) => {
-                      e.currentTarget.style.borderColor = "var(--color-border)";
-                      e.currentTarget.style.transform = "translateY(0)";
-                      e.currentTarget.style.boxShadow = "none";
-                    }}
-                  >
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <span style={{ fontSize: "1.05rem", fontWeight: 750, color: "var(--color-text-main)" }}>
-                        {activeRegion.name} {dong.gu} <span style={{ color: "var(--color-primary)" }}>{dong.name}</span>
-                      </span>
-                      <span style={{
-                        fontSize: "0.78rem",
-                        color: "var(--color-text-desc)",
-                        fontWeight: 600
+              {/* 리스트 목록 (구글봇이 전국 모든 대표 행정동의 표준 <a href>를 크롤링할 수 있도록 전 권역 렌더링 후 display 전환) */}
+              {REGIONS.map((region) => (
+                <div
+                  key={region.id}
+                  style={{
+                    display: region.id === activeRegion.id ? "flex" : "none",
+                    flexDirection: "column",
+                    gap: "12px",
+                    flex: 1,
+                    overflowY: "auto",
+                    paddingRight: "4px"
+                  }}
+                >
+                  {region.dongs.map((dong) => (
+                    <Link
+                      key={dong.cd}
+                      href={`/stats/market-area/${dong.cd}`}
+                      style={{
+                        border: "1px solid var(--color-border)",
+                        borderRadius: "14px",
+                        padding: "16px 20px",
+                        cursor: "pointer",
+                        backgroundColor: "rgba(255, 255, 255, 0.005)",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "6px",
+                        textDecoration: "none",
+                        transition: "var(--transition-smooth)"
+                      }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.borderColor = "var(--color-primary)";
+                        e.currentTarget.style.transform = "translateY(-1px)";
+                        e.currentTarget.style.boxShadow = "var(--shadow-sm)";
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.borderColor = "var(--color-border)";
+                        e.currentTarget.style.transform = "translateY(0)";
+                        e.currentTarget.style.boxShadow = "none";
+                      }}
+                    >
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <span style={{ fontSize: "1.05rem", fontWeight: 750, color: "var(--color-text-main)" }}>
+                          {region.name} {dong.gu} <span style={{ color: "var(--color-primary)" }}>{dong.name}</span>
+                        </span>
+                        <span style={{
+                          fontSize: "0.78rem",
+                          color: "var(--color-text-desc)",
+                          fontWeight: 600
+                        }}>
+                          실시간 점포 {dong.stores.toLocaleString()}개소
+                        </span>
+                      </div>
+                      <p style={{
+                        fontSize: "0.85rem",
+                        color: "var(--color-text-sub)",
+                        lineHeight: 1.4,
+                        margin: 0
                       }}>
-                        실시간 점포 {dong.stores.toLocaleString()}개소
-                      </span>
-                    </div>
-                    <p style={{
-                      fontSize: "0.85rem",
-                      color: "var(--color-text-sub)",
-                      lineHeight: 1.4,
-                      margin: 0
-                    }}>
-                      {dong.desc}
-                    </p>
-                  </div>
-                ))}
-              </div>
+                        {dong.desc}
+                      </p>
+                    </Link>
+                  ))}
+                </div>
+              ))}
             </div>
 
           </div>
@@ -542,15 +556,15 @@ export default function MarketAreaHub() {
             gap: "20px"
           }}>
             {[
-              { cd: "1168064000", name: "역삼1동", gu: "서울 강남구", tag: "금융/오피스 1위", count: 1254, bgGrad: "linear-gradient(135deg, #3182f6 0%, #1c52b5 100%)" },
-              { cd: "2635010500", name: "우제1동 (우동)", gu: "부산 해운대구", tag: "해양관광/레저 1위", count: 890, bgGrad: "linear-gradient(135deg, #10b981 0%, #065f46 100%)" },
-              { cd: "4113510900", name: "삼평동 (판교)", gu: "경기 성남시 분당구", tag: "IT테크밸리 1위", count: 642, bgGrad: "linear-gradient(135deg, #a855f7 0%, #581c87 100%)" },
-              { cd: "2726051000", name: "범어1동", gu: "대구 수성구", tag: "명문교육/금융 1위", count: 512, bgGrad: "linear-gradient(135deg, #fbbf24 0%, #b45309 100%)" },
-              { cd: "5011066000", name: "노형동", gu: "제주특별자치도", tag: "제주 랜드마크 1위", count: 815, bgGrad: "linear-gradient(135deg, #ec4899 0%, #9d174d 100%)" }
+              { cd: "1168064000", name: "역삼1동", gu: "서울 강남구", tag: "금융/오피스 1위", count: 14077, bgGrad: "linear-gradient(135deg, #3182f6 0%, #1c52b5 100%)" },
+              { cd: "2635051000", name: "우1동 (우동)", gu: "부산 해운대구", tag: "해양관광/레저 1위", count: 1753, bgGrad: "linear-gradient(135deg, #10b981 0%, #065f46 100%)" },
+              { cd: "4113565500", name: "삼평동 (판교)", gu: "경기 성남시 분당구", tag: "IT테크밸리 1위", count: 2036, bgGrad: "linear-gradient(135deg, #a855f7 0%, #581c87 100%)" },
+              { cd: "2726051000", name: "범어1동", gu: "대구 수성구", tag: "명문교육/금융 1위", count: 988, bgGrad: "linear-gradient(135deg, #fbbf24 0%, #b45309 100%)" },
+              { cd: "5011066000", name: "노형동", gu: "제주특별자치도", tag: "제주 랜드마크 1위", count: 4309, bgGrad: "linear-gradient(135deg, #ec4899 0%, #9d174d 100%)" }
             ].map((hot) => (
-              <div
+              <Link
                 key={hot.cd}
-                onClick={() => router.push(`/stats/market-area/${hot.cd}`)}
+                href={`/stats/market-area/${hot.cd}`}
                 style={{
                   padding: "24px",
                   borderRadius: "18px",
@@ -562,6 +576,7 @@ export default function MarketAreaHub() {
                   flexDirection: "column",
                   justifyContent: "space-between",
                   minHeight: "150px",
+                  textDecoration: "none",
                   transition: "var(--transition-smooth)"
                 }}
                 onMouseOver={(e) => {
@@ -593,7 +608,7 @@ export default function MarketAreaHub() {
                   <span style={{ fontSize: "0.78rem", opacity: 0.85 }}>가동 상가 목록 조회</span>
                   <span style={{ fontSize: "0.92rem", fontWeight: 800 }}>{hot.count.toLocaleString()}개소 →</span>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         </div>

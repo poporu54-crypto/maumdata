@@ -1,7 +1,7 @@
 import React from "react";
 import { Metadata } from "next";
 import Link from "next/link";
-import { getStoreListInDong, getDongName } from "@/lib/marketApi";
+import { getStoreDataInDong, getDongName } from "@/lib/marketApi";
 import ClientMapWrapper from "@/components/ClientMapWrapper";
 
 export const dynamic = "force-dynamic";
@@ -13,10 +13,20 @@ interface PageProps {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const resolvedParams = await params;
   const dongInfo = getDongName(resolvedParams.dongCd);
+  const canonicalPath = `/stats/market-area/${resolvedParams.dongCd}`;
   
   return {
     title: `${dongInfo.fullName} 업종별 실시간 상권 분석 리포트 | 마음데이타`,
     description: `${dongInfo.fullName} 지역의 실시간 상가 점포 현황, 업종별 점유 비율, 대표 카페 및 한식집 분포 빅데이터 리포트입니다.`,
+    alternates: {
+      canonical: canonicalPath,
+    },
+    openGraph: {
+      title: `${dongInfo.fullName} 업종별 실시간 상권 분석 리포트 | 마음데이타`,
+      description: `${dongInfo.fullName} 지역의 실시간 상가 점포 현황, 업종별 점유 비율, 대표 카페 및 한식집 분포 빅데이터 리포트입니다.`,
+      url: `https://www.maumdata.com${canonicalPath}`,
+      type: "website",
+    },
   };
 }
 
@@ -26,8 +36,8 @@ export default async function MarketAreaPage({ params }: PageProps) {
   const dongInfo = getDongName(dongCd);
 
   // 1. 실시간 동별 상가 정보 수집
-  const storeList = await getStoreListInDong(dongCd);
-  const totalCount = storeList.length;
+  const { stores: storeList, totalCount } = await getStoreDataInDong(dongCd);
+  const sampleCount = storeList.length;
 
   // 2. 지도 마커용 데이터 매핑
   const mapMarkers = storeList.map((store) => ({
@@ -65,7 +75,7 @@ export default async function MarketAreaPage({ params }: PageProps) {
   const chartData = Object.values(counts)
     .map((item) => ({
       ...item,
-      pct: totalCount > 0 ? parseFloat(((item.count / totalCount) * 100).toFixed(1)) : 0,
+      pct: sampleCount > 0 ? parseFloat(((item.count / sampleCount) * 100).toFixed(1)) : 0,
     }))
     .sort((a, b) => b.count - a.count);
 
@@ -127,17 +137,17 @@ export default async function MarketAreaPage({ params }: PageProps) {
           </div>
           <div style={{ display: "flex", alignItems: "baseline", gap: "12px" }}>
             <span style={{ fontSize: "2.8rem", fontWeight: 800, color: "var(--color-text-main)" }}>
-              {totalCount.toLocaleString()}개소
+              {totalCount > 0 ? `${totalCount.toLocaleString()}개소` : "-"}
             </span>
             <span style={{
-              backgroundColor: "rgba(16, 185, 129, 0.1)",
-              color: "#10b981",
+              backgroundColor: totalCount > 0 ? "rgba(16, 185, 129, 0.1)" : "rgba(148, 163, 184, 0.1)",
+              color: totalCount > 0 ? "#10b981" : "var(--color-text-desc)",
               fontSize: "0.85rem",
               fontWeight: 700,
               padding: "6px 14px",
               borderRadius: "30px"
             }}>
-              상권 활성화 지수 우수
+              {totalCount > 0 ? "상권 데이터 연동 완료" : "조회된 점포 데이터 없음"}
             </span>
           </div>
           <p style={{ fontSize: "0.9rem", color: "var(--color-text-sub)", lineHeight: 1.5 }}>
@@ -216,7 +226,7 @@ export default async function MarketAreaPage({ params }: PageProps) {
                 transform: "translate(-50%, -50%)",
                 textAlign: "center"
               }}>
-                <div style={{ fontSize: "1.3rem", fontWeight: 850, color: "var(--color-text-main)", lineHeight: 1 }}>{totalCount}개</div>
+                <div style={{ fontSize: "1.15rem", fontWeight: 850, color: "var(--color-text-main)", lineHeight: 1 }}>{totalCount.toLocaleString()}개</div>
                 <div style={{ fontSize: "0.68rem", color: "var(--color-text-desc)", fontWeight: 700, marginTop: "4px" }}>총 상업시설</div>
               </div>
             </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 interface B2BColorStatusProps {
@@ -10,6 +10,7 @@ interface B2BColorStatusProps {
   initialBStt: string;
   initialBSttCd: string;
   ntsLastSyncAt: any;
+  isLoading?: boolean;
 }
 
 export default function B2BColorStatus({
@@ -18,7 +19,8 @@ export default function B2BColorStatus({
   initialTaxTypeCd,
   initialBStt,
   initialBSttCd,
-  ntsLastSyncAt
+  ntsLastSyncAt,
+  isLoading = false
 }: B2BColorStatusProps) {
   const router = useRouter();
   const [bStt, setBStt] = useState(initialBStt || "계속사업자");
@@ -27,7 +29,16 @@ export default function B2BColorStatus({
   const [taxTypeCd, setTaxTypeCd] = useState(initialTaxTypeCd || "01");
   const [syncTime, setSyncTime] = useState<any>(ntsLastSyncAt);
   const [loading, setLoading] = useState(false);
-  const [animateSignal, setAnimateSignal] = useState(false);
+  const [animateSignal, setAnimateSignal] = useState(isLoading);
+
+  useEffect(() => {
+    setBStt(initialBStt || "계속사업자");
+    setBSttCd(initialBSttCd || "01");
+    setTaxType(initialTaxType || "부가가치세 일반과세자");
+    setTaxTypeCd(initialTaxTypeCd || "01");
+    setSyncTime(ntsLastSyncAt);
+    setAnimateSignal(Boolean(isLoading));
+  }, [initialBStt, initialBSttCd, initialTaxType, initialTaxTypeCd, ntsLastSyncAt, isLoading]);
 
   // 🟢🟡🔴 신호등 판정 함수
   // 🟢 초록: 계속사업자 (01) & 정상 과세
@@ -178,7 +189,7 @@ export default function B2BColorStatus({
           </span>
         </div>
         <div style={{ fontSize: "0.8rem", color: "#718096" }}>
-          최근 검증: {formatSyncTime(syncTime)}
+          최근 검증: {isLoading ? "불러오는 중..." : formatSyncTime(syncTime)}
         </div>
       </div>
 
@@ -244,17 +255,25 @@ export default function B2BColorStatus({
             <span style={{
               fontSize: "1.1rem",
               fontWeight: 800,
-              color: riskLevel === "GREEN" 
-                ? "#10b981" 
-                : riskLevel === "YELLOW"
-                  ? "#f59e0b"
-                  : "#ef4444"
+              color: isLoading
+                ? "#f59e0b"
+                : riskLevel === "GREEN" 
+                  ? "#10b981" 
+                  : riskLevel === "YELLOW"
+                    ? "#f59e0b"
+                    : "#ef4444"
             }}>
-              {riskLevel === "GREEN" ? "안전 (🟢 정상 거래처)" : riskLevel === "YELLOW" ? "주의 (🟡 모니터링 필요)" : "위험 (🔴 거래 제한)"}
+              {isLoading
+                ? "불러오는 중... (국세청 실시간 검증 중)"
+                : riskLevel === "GREEN"
+                  ? "안전 (🟢 정상 거래처)"
+                  : riskLevel === "YELLOW"
+                    ? "주의 (🟡 모니터링 필요)"
+                    : "위험 (🔴 거래 제한)"}
             </span>
           </div>
           <div style={{ fontSize: "0.85rem", color: "#cbd5e0", fontWeight: 500 }}>
-            {bStt} | {taxType}
+            {isLoading ? "국세청 납세자 상태 및 과세 유형을 실시간으로 조회하고 있습니다." : `${bStt} | ${taxType}`}
           </div>
         </div>
 

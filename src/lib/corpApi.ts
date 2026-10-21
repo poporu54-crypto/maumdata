@@ -41,7 +41,8 @@ const SERVICE_KEY = process.env.DATA_PORTAL_SERVICE_KEY || "";
  */
 export async function getCorpBasicOutline(bizrNo: string, crno?: string): Promise<CorpBasicOutline | null> {
   const cleanBNo = bizrNo.replace(/[^0-9]/g, "");
-  const cleanCrno = crno ? crno.replace(/[^0-9]/g, "") : "";
+  const rawCrno = crno ? crno.replace(/[^0-9]/g, "") : "";
+  const cleanCrno = /^0+$/.test(rawCrno) ? "" : rawCrno;
   
   if (cleanBNo.length !== 10 && cleanCrno.length !== 13) return null;
 
@@ -85,17 +86,22 @@ export async function getCorpBasicOutline(bizrNo: string, crno?: string): Promis
     const items = json?.response?.body?.items?.item;
     if (items && items.length > 0) {
       const item = items[0];
+      const baseAddr = (item.enpBsadr || "").trim();
+      const dtlAddr = (item.enpDtadr || "").trim();
+      const fullAddr = dtlAddr && !baseAddr.includes(dtlAddr) ? `${baseAddr} ${dtlAddr}`.trim() : baseAddr;
+      const validCrno = item.crno && !/^0+$/.test(String(item.crno).replace(/[^0-9]/g, "")) ? item.crno : "";
       return {
-        crno: item.crno || "",
-        corpNm: item.corpNm || "",
+        crno: validCrno,
+        corpNm: item.enpPbanCmpyNm || item.corpNm || "",
         corpEnm: item.corpEnsnNm || item.corpEnm || "",
         bizrNo: item.bzno || item.bizrNo || cleanBNo,
         enpRprFnm: item.enpRprFnm || "",
-        enpBsadr: item.enpBsadr || "",
+        enpBsadr: fullAddr,
         enpEstbDt: item.enpEstbDt || "",
         enpIndyNm: item.sicNm || item.enpIndyNm || "",
         enpEntprScaleNm: item.smenpYn === "Y" ? "중소기업" : "일반기업",
         basDt: item.basDt || "",
+        enpDivNm: item.corpDcdNm || item.enpDivNm || "",
         enpHpaddr: item.enpHmpgUrl || "",
         enpTlno: item.enpTlno || "",
         enpFxno: item.enpFxno || "",
@@ -117,7 +123,7 @@ export async function getCorpBasicOutline(bizrNo: string, crno?: string): Promis
  */
 export async function getCorpFinanceInfo(crno: string): Promise<CorpFinanceDetail[]> {
   const cleanCrno = crno.replace(/[^0-9]/g, "");
-  if (cleanCrno.length !== 13) return [];
+  if (cleanCrno.length !== 13 || /^0+$/.test(cleanCrno)) return [];
 
   // 요약재무제표조회 API 활용 (V2)
   const url = `https://apis.data.go.kr/1160100/service/GetFinaStatInfoService_V2/getSummFinaStat_V2?serviceKey=${SERVICE_KEY}&pageNo=1&numOfRows=50&resultType=json&crno=${cleanCrno}`;
@@ -173,7 +179,7 @@ export async function getCorpFinanceInfo(crno: string): Promise<CorpFinanceDetai
     yearMap.forEach((item, year) => {
       const to100M = (valStr: string) => {
         const val = parseFloat(valStr || "0");
-        return Math.round(val / 100000000);
+        return Math.round((val / 100000000) * 10) / 10;
       };
 
       const revenue = to100M(item.enpSaleAmt); // 매출액

@@ -17,6 +17,15 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   return {
     title: `실시간 개업 현황 상세 분석 ${targetDate ? `(${targetDate})` : ""} | 마음데이타`,
     description: `${targetDate ? `${targetDate} 기준 ` : ""}대한민국 국세청 100대 생활업종 신규 개업 추세 분석 데이터입니다.`,
+    alternates: {
+      canonical: "/stats/new-biz",
+    },
+    openGraph: {
+      title: `실시간 개업 현황 상세 분석 ${targetDate ? `(${targetDate})` : ""} | 마음데이타`,
+      description: `${targetDate ? `${targetDate} 기준 ` : ""}대한민국 국세청 100대 생활업종 신규 개업 추세 분석 데이터입니다.`,
+      url: "https://www.maumdata.com/stats/new-biz",
+      type: "website",
+    },
   };
 }
 

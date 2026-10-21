@@ -52,13 +52,18 @@ export async function generateMetadata({ params }: { params: any }): Promise<Met
   const resolvedParams = await params;
   const bNo = resolvedParams.b_no;
   
+  const cleanBNo = bNo.replace(/[^0-9]/g, "");
   const { apiStatus, business, isInvalid } = await getUnifiedBusinessData(bNo);
-  const formattedBNo = bNo.replace(/[^0-9]/g, "").replace(/(\d{3})(\d{2})(\d{5})/, "$1-$2-$3");
+  const formattedBNo = cleanBNo.replace(/(\d{3})(\d{2})(\d{5})/, "$1-$2-$3");
+  const canonicalPath = `/biz/${cleanBNo || bNo}`;
 
   if (isInvalid || !business) {
     return {
       title: `미등록 사업자번호 ${formattedBNo} 조회 결과`,
       description: `사업자등록번호 ${formattedBNo}는 현재 국세청에 등록되지 않았거나 삭제된 유효하지 않은 사업자 번호입니다.`,
+      alternates: {
+        canonical: canonicalPath,
+      },
     };
   }
 
@@ -69,9 +74,13 @@ export async function generateMetadata({ params }: { params: any }): Promise<Met
   return {
     title: `${name} | 사업자등록번호 ${formattedBNo} 실시간 상태 및 기업정보`,
     description: `${name}(사업자번호 ${formattedBNo})의 현재 상태는 [${status} (${taxType})] 입니다. 주소: ${business.b_adr}. 업종: ${business.b_sector} | 마음데이타 민간 기업 정보 포털`,
+    alternates: {
+      canonical: canonicalPath,
+    },
     openGraph: {
       title: `${name} (${formattedBNo}) 실시간 사업자 조회`,
       description: `${name}의 국세청 실시간 납세자 상태(${status}), 주소, 매출 추이 및 기업 분석 정보를 제공합니다.`,
+      url: `https://www.maumdata.com${canonicalPath}`,
       type: "website",
     },
   };
@@ -210,7 +219,7 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                         fontWeight: 700,
                         animation: "pulse 1.5s infinite"
                       }}>
-                        ⚡ 실시간 검증 진행 중
+                        ⚡ 실시간 정보 불러오는 중
                       </span>
                     ) : (
                       <span style={{
@@ -224,11 +233,11 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                         ✓ 실시간 검증 완료
                       </span>
                     )}
-                    {renderSourceBadge()}
+                    {!isNew && renderSourceBadge()}
                   </div>
                   <h1 style={{ fontSize: "2.2rem", fontWeight: 800, color: "var(--color-text-main)", letterSpacing: "-0.02em" }}>
-                    {business?.b_nm}
-                    {(() => {
+                    {isNew ? "불러오는 중..." : business?.b_nm}
+                    {!isNew && (() => {
                       const brandPrefix = business?.brand_name?.split(",")[0].trim() || "";
                       const hasValidBrand = brandPrefix && 
                                             brandPrefix !== business?.b_nm && 
@@ -267,7 +276,7 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                       : (apiStatus?.b_stt_cd === "01" ? "var(--color-success)" : "var(--color-danger)"),
                     display: "inline-block"
                   }}></span>
-                  <span>{isNew ? "조회 중" : (apiStatus?.b_stt || "계속사업자")}</span>
+                  <span>{isNew ? "불러오는 중..." : (apiStatus?.b_stt || "계속사업자")}</span>
                 </div>
               </div>
 
@@ -283,7 +292,7 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                 {formatJosa(business?.description)}
               </p>
 
-              {business?.b_nm === "상호 정보 없음" && (
+              {!isNew && business?.b_nm === "상호 정보 없음" && (
                 <div style={{ borderTop: "1px solid var(--color-border)", paddingTop: "12px", marginTop: "12px" }}>
                   <EditRequestTrigger
                     bNo={cleanBNo}
@@ -304,10 +313,11 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
               initialBStt={apiStatus?.b_stt || "계속사업자"}
               initialBSttCd={apiStatus?.b_stt_cd || "01"}
               ntsLastSyncAt={business?.ntsLastSyncAt}
+              isLoading={isNew}
             />
 
             {/* 기업 맞춤 서식 1초 생성 모달 */}
-            {business && (
+            {!isNew && business && (
               <QuickContractModal
                 business={{
                   b_no: cleanBNo,
@@ -334,22 +344,22 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                   <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--color-border)", paddingBottom: "10px" }}>
                     <span style={{ color: "var(--color-text-sub)", fontWeight: 500 }}>현재 사업자 상태</span>
                     <span style={{ fontWeight: 700, color: "var(--color-text-main)" }}>
-                      {apiStatus?.b_stt || "계속사업자"}
+                      {isNew ? "불러오는 중..." : (apiStatus?.b_stt || "계속사업자")}
                     </span>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--color-border)", paddingBottom: "10px" }}>
                     <span style={{ color: "var(--color-text-sub)", fontWeight: 500 }}>현재 과세 유형</span>
                     <span style={{ fontWeight: 700, color: "var(--color-text-main)", textAlign: "right" }}>
-                      {apiStatus?.tax_type || "일반과세자"}
+                      {isNew ? "불러오는 중..." : (apiStatus?.tax_type || "일반과세자")}
                     </span>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--color-border)", paddingBottom: "10px" }}>
                     <span style={{ color: "var(--color-text-sub)", fontWeight: 500 }}>직전 과세 유형</span>
                     <span style={{ fontWeight: 700, color: "var(--color-text-main)", textAlign: "right" }}>
-                      {apiStatus?.rbf_tax_type || "해당없음"}
+                      {isNew ? "불러오는 중..." : (apiStatus?.rbf_tax_type || "해당없음")}
                     </span>
                   </div>
-                  {apiStatus?.tax_type_change_dt && (
+                  {!isNew && apiStatus?.tax_type_change_dt && (
                     <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--color-border)", paddingBottom: "10px" }}>
                       <span style={{ color: "var(--color-text-sub)", fontWeight: 500 }}>최근 과세유형 전환일</span>
                       <span style={{ fontWeight: 700, color: "var(--color-text-main)" }}>
@@ -360,7 +370,7 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                   <div style={{ display: "flex", justifyContent: "space-between", paddingBottom: "2px" }}>
                     <span style={{ color: "var(--color-text-sub)", fontWeight: 500 }}>검증 시각</span>
                     <span style={{ fontWeight: 600, color: "var(--color-text-desc)" }}>
-                      {business ? formatSyncTime(business.ntsLastSyncAt) : "방금 전 (실시간)"}
+                      {isNew ? "불러오는 중..." : (business ? formatSyncTime(business.ntsLastSyncAt) : "방금 전 (실시간)")}
                     </span>
                   </div>
                 </div>
@@ -374,54 +384,56 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                   <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--color-border)", paddingBottom: "10px" }}>
                     <span style={{ color: "var(--color-text-sub)", fontWeight: 500 }}>상호명</span>
                     <span style={{ fontWeight: 700, color: "var(--color-text-main)", textAlign: "right" }}>
-                      {business?.b_nm} {business?.corpEnm ? `(${business.corpEnm})` : ""}
+                      {isNew ? "불러오는 중..." : `${business?.b_nm || "-"} ${business?.corpEnm ? `(${business.corpEnm})` : ""}`}
                     </span>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--color-border)", paddingBottom: "10px" }}>
                     <span style={{ color: "var(--color-text-sub)", fontWeight: 500 }}>대표자 성명</span>
                     <span style={{ fontWeight: 700, color: "var(--color-text-main)" }}>
-                      {business?.p_nm}
+                      {isNew ? "불러오는 중..." : (business?.p_nm || "-")}
                     </span>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--color-border)", paddingBottom: "10px" }}>
                     <span style={{ color: "var(--color-text-sub)", fontWeight: 500 }}>개업/설립 연월일</span>
                     <span style={{ fontWeight: 700, color: "var(--color-text-main)" }}>
-                      {formatDate(business?.start_dt || "")}
+                      {isNew ? "불러오는 중..." : formatDate(business?.start_dt || "")}
                     </span>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--color-border)", paddingBottom: "10px" }}>
                     <span style={{ color: "var(--color-text-sub)", fontWeight: 500 }}>법인등록번호</span>
                     <span style={{ fontWeight: 700, color: "var(--color-text-main)" }}>
-                      {formatCrno(business?.corp_no || business?.crno || "")}
+                      {isNew ? "불러오는 중..." : formatCrno(business?.corp_no || business?.crno || "")}
                     </span>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--color-border)", paddingBottom: "10px" }}>
                     <span style={{ color: "var(--color-text-sub)", fontWeight: 500 }}>기업구분</span>
                     <span style={{ fontWeight: 700, color: "var(--color-text-main)" }}>
-                      {business?.enpDivNm || business?.b_type || "-"}
+                      {isNew ? "불러오는 중..." : (business?.enpDivNm || business?.b_type || "-")}
                     </span>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--color-border)", paddingBottom: "10px" }}>
                     <span style={{ color: "var(--color-text-sub)", fontWeight: 500 }}>중소기업 여부</span>
                     <span style={{ fontWeight: 700, color: "var(--color-text-main)" }}>
-                      {business?.is_sme || "-"}
+                      {isNew ? "불러오는 중..." : (business?.is_sme || "-")}
                     </span>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--color-border)", paddingBottom: "10px" }}>
                     <span style={{ color: "var(--color-text-sub)", fontWeight: 500 }}>국내 증시 상장 여부</span>
                     <span style={{ fontWeight: 700, color: "var(--color-text-main)" }}>
-                      {business?.listing_status || (business?.enpPbncYn === "Y" ? "상장" : "국내 비상장")}
+                      {isNew ? "불러오는 중..." : (business?.listing_status || (business?.enpPbncYn === "Y" ? "상장" : "국내 비상장"))}
                     </span>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--color-border)", paddingBottom: "10px" }}>
                     <span style={{ color: "var(--color-text-sub)", fontWeight: 500 }}>주업종</span>
                     <span style={{ fontWeight: 700, color: "var(--color-text-main)", textAlign: "right" }}>
-                      {business?.main_biz || (business?.goodsType ? `전자상거래 (${business.goodsType})` : business?.b_sector) || "-"}
+                      {isNew ? "불러오는 중..." : (business?.main_biz || (business?.goodsType ? `전자상거래 (${business.goodsType})` : business?.b_sector) || "-")}
                     </span>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", paddingBottom: "2px" }}>
                     <span style={{ color: "var(--color-text-sub)", fontWeight: 500 }}>홈페이지</span>
-                    {business?.homepage && business.homepage !== "-" ? (
+                    {isNew ? (
+                      <span style={{ fontWeight: 700, color: "var(--color-text-main)" }}>불러오는 중...</span>
+                    ) : business?.homepage && business.homepage !== "-" ? (
                       <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", justifyContent: "flex-end", maxWidth: "250px", textAlign: "right" }}>
                         {business.homepage.split(",").map((url, idx, arr) => {
                           const cleanUrl = url.trim();
@@ -460,28 +472,28 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                   <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--color-border)", paddingBottom: "10px" }}>
                     <span style={{ color: "var(--color-text-sub)", fontWeight: 500 }}>결산월</span>
                     <span style={{ fontWeight: 700, color: "var(--color-text-main)" }}>
-                      {business?.enpStacNm || "12월 결산"}
+                      {isNew ? "불러오는 중..." : (business?.enpStacNm || "-")}
                     </span>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--color-border)", paddingBottom: "10px" }}>
                     <span style={{ color: "var(--color-text-sub)", fontWeight: 500 }}>대표 전화번호</span>
                     <span style={{ fontWeight: 700, color: "var(--color-text-main)" }}>
-                      {business?.enpTlno || business?.telNo || "-"}
+                      {isNew ? "불러오는 중..." : (business?.enpTlno || business?.telNo || "-")}
                     </span>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--color-border)", paddingBottom: "10px" }}>
                     <span style={{ color: "var(--color-text-sub)", fontWeight: 500 }}>팩스 번호</span>
                     <span style={{ fontWeight: 700, color: "var(--color-text-main)" }}>
-                      {business?.enpFxno || "-"}
+                      {isNew ? "불러오는 중..." : (business?.enpFxno || "-")}
                     </span>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--color-border)", paddingBottom: "10px" }}>
                     <span style={{ color: "var(--color-text-sub)", fontWeight: 500 }}>우편번호</span>
                     <span style={{ fontWeight: 700, color: "var(--color-text-main)" }}>
-                      {business?.enpPncd || business?.zipCd || "-"}
+                      {isNew ? "불러오는 중..." : (business?.enpPncd || business?.zipCd || "-")}
                     </span>
                   </div>
-                  {business?.enpMainBizNm && (
+                  {!isNew && business?.enpMainBizNm && (
                     <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--color-border)", paddingBottom: "10px" }}>
                       <span style={{ color: "var(--color-text-sub)", fontWeight: 500 }}>주요 사업 내용</span>
                       <span style={{ fontWeight: 600, color: "var(--color-text-main)", textAlign: "right", maxWidth: "250px", wordBreak: "break-all" }}>
@@ -493,9 +505,9 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                     <span style={{ color: "var(--color-text-sub)", fontWeight: 500 }}>종업원 수</span>
                     <div style={{ display: "flex", alignItems: "center", gap: "6px", whiteSpace: "nowrap", flexShrink: 0 }}>
                       <span style={{ fontWeight: 700, color: "var(--color-primary)", whiteSpace: "nowrap" }}>
-                        {latestEmployees > 0 ? `${latestEmployees.toLocaleString()}명` : "-"}
+                        {isNew ? "불러오는 중..." : (latestEmployees > 0 ? `${latestEmployees.toLocaleString()}명` : "-")}
                       </span>
-                      {business?.npsLinked && (
+                      {!isNew && business?.npsLinked && (
                         <span style={{
                           backgroundColor: "rgba(45, 202, 115, 0.1)",
                           color: "var(--color-success)",
@@ -511,7 +523,7 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                       )}
                     </div>
                   </div>
-                  {business?.npsLinked && (
+                  {!isNew && business?.npsLinked && (
                     <>
                       <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--color-border)", paddingBottom: "10px" }}>
                         <span style={{ color: "var(--color-text-sub)", fontWeight: 500 }}>당월 국민연금 신규 취득</span>
@@ -527,7 +539,7 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                       </div>
                     </>
                   )}
-                  {business?.basDt && (
+                  {!isNew && business?.basDt && (
                     <div style={{ display: "flex", justifyContent: "space-between", paddingBottom: "2px" }}>
                       <span style={{ color: "var(--color-text-sub)", fontWeight: 500 }}>공공 데이터 기준일자</span>
                       <span style={{ fontWeight: 600, color: "var(--color-text-desc)" }}>
@@ -539,7 +551,7 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
               </div>
 
               {/* 통신판매업자 신고 정보 또는 기업 평가 및 신용 지표 */}
-              {business?.mailOrderNo ? (
+              {!isNew && business?.mailOrderNo ? (
                 <div className="card" style={{ padding: "28px" }}>
                   <h3 style={{ fontSize: "1.15rem", fontWeight: 800, color: "var(--color-text-main)", marginBottom: "20px" }}>
                     🛍️ 통신판매업 신고 상세 정보
@@ -597,40 +609,40 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                       <span style={{ color: "var(--color-text-sub)", fontWeight: 500 }}>기업 신용등급</span>
                       <span style={{
                         fontWeight: 700,
-                        color: business?.credit_rating && business.credit_rating !== "-" ? "var(--color-primary)" : "var(--color-text-desc)"
+                        color: !isNew && business?.credit_rating && business.credit_rating !== "-" ? "var(--color-primary)" : "var(--color-text-desc)"
                       }}>
-                        {business?.credit_rating && business.credit_rating !== "-" ? business.credit_rating : "평가 보류/일반 관리"}
+                        {isNew ? "불러오는 중..." : (business?.credit_rating && business.credit_rating !== "-" ? business.credit_rating : "평가 보류/일반 관리")}
                       </span>
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--color-border)", paddingBottom: "10px" }}>
                       <span style={{ color: "var(--color-text-sub)", fontWeight: 500 }}>업계 시장 점유율</span>
                       <span style={{ fontWeight: 700, color: "var(--color-text-main)" }}>
-                        {business?.industry_rank && business.industry_rank !== "-" ? business.industry_rank : "순위 정보 없음"}
+                        {isNew ? "불러오는 중..." : (business?.industry_rank && business.industry_rank !== "-" ? business.industry_rank : "순위 정보 없음")}
                       </span>
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--color-border)", paddingBottom: "10px" }}>
                       <span style={{ color: "var(--color-text-sub)", fontWeight: 500 }}>외부 감사 여부</span>
                       <span style={{ fontWeight: 700, color: "var(--color-text-main)" }}>
-                        {business?.is_audited ? "외부감사 대상 법인 (외감)" : "일반 관리 대상"}
+                        {isNew ? "불러오는 중..." : (business?.is_audited ? "외부감사 대상 법인 (외감)" : "일반 관리 대상")}
                       </span>
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--color-border)", paddingBottom: "10px" }}>
                       <span style={{ color: "var(--color-text-sub)", fontWeight: 500 }}>국내 증시 상장 구분</span>
                       <span style={{ fontWeight: 700, color: "var(--color-text-main)" }}>
-                        {business?.listing_status || (business?.enpPbncYn === "Y" ? "상장" : "국내 비상장")}
+                        {isNew ? "불러오는 중..." : (business?.listing_status || (business?.enpPbncYn === "Y" ? "상장" : "국내 비상장"))}
                       </span>
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between", paddingBottom: "2px" }}>
                       <span style={{ color: "var(--color-text-sub)", fontWeight: 500 }}>정합성 상태</span>
                       <span style={{
                         fontWeight: 700,
-                        color: "var(--color-success)",
-                        backgroundColor: "rgba(45, 202, 115, 0.1)",
+                        color: isNew ? "rgb(245, 158, 11)" : "var(--color-success)",
+                        backgroundColor: isNew ? "rgba(245, 158, 11, 0.1)" : "rgba(45, 202, 115, 0.1)",
                         padding: "2px 6px",
                         borderRadius: "4px",
                         fontSize: "0.78rem"
                       }}>
-                        실시간 검증 완료
+                        {isNew ? "실시간 연동 중..." : "실시간 검증 완료"}
                       </span>
                     </div>
                   </div>
@@ -658,221 +670,230 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                 borderRadius: "12px",
                 border: "1px solid var(--color-border)"
               }}>
-                {business?.b_adr}
+                {isNew ? "불러오는 중..." : (business?.b_adr || "-")}
               </p>
             </div>
 
-            {/* 예상 평균 연봉/HR 지표 및 동종 업종/업계 순위 분석 대시보드 */}
-            {business && (
-              <SalarySection business={business} />
-            )}
-
-            {/* 실시간 조직 건강도 대시보드 (국민연금 분석 및 퇴사율 차트) */}
-            {business && (
-              <div id="section-employment" style={{ scrollMarginTop: "120px" }}>
-                <EmploymentHealthSection business={business} />
+            {isNew ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+                <SectionSkeleton />
+                <TableSkeleton />
               </div>
-            )}
+            ) : (
+              <>
+                {/* 예상 평균 연봉/HR 지표 및 동종 업종/업계 순위 분석 대시보드 */}
+                {business && (
+                  <SalarySection business={business} />
+                )}
 
-            {business && business.b_sector && (
-              <Suspense fallback={<SectionSkeleton />}>
-                <IndustrySection bSector={business.b_sector} bNo={cleanBNo} />
-              </Suspense>
-            )}
-
-            {/* 재무/고용 요약 대시보드 및 3개년 공식 재무제표 요약 테이블 */}
-            {business && (
-              <div id="section-finance" style={{ scrollMarginTop: "120px", display: "flex", flexDirection: "column", gap: "24px" }}>
-                <InsightSection business={business} />
-                <FinancialTableSection business={business} />
-              </div>
-            )}
-
-            {/* 3. 실시간 공공 입찰공고 및 계약 현황 */}
-            <div id="section-bids" style={{ marginTop: "32px", scrollMarginTop: "120px" }}>
-              <h4 style={{ fontSize: "1.2rem", fontWeight: 800, color: "var(--color-text-main)", marginBottom: "12px" }}>
-                🏛️ 조달청 나라장터 입찰공고 매칭 내역
-              </h4>
-              <Suspense fallback={<SectionSkeleton />}>
-                <BidsSection companyNm={business?.b_nm || ""} bNo={cleanBNo} />
-              </Suspense>
-            </div>
-
-            {/* 4. 지식재산권 (특허/상표) 포트폴리오 */}
-            <div id="section-ip" style={{ marginTop: "32px", marginBottom: "16px", scrollMarginTop: "120px" }}>
-              <h4 style={{ fontSize: "1.2rem", fontWeight: 800, color: "var(--color-text-main)", marginBottom: "12px" }}>
-                💡 보유 특허 및 지식재산권(IP) 포트폴리오
-              </h4>
-              <Suspense fallback={<TableSkeleton />}>
-                <PatentsSection companyNm={business?.b_nm || ""} pNm={business?.p_nm || ""} />
-              </Suspense>
-            </div>
-
-
-            {/* 5. 금융감독원 DART 실시간 공시 목록 */}
-            {(business?.is_audited || dartCodeToUse) && (
-              <div id="dart-disclosures-section" style={{ marginTop: "32px", marginBottom: "16px", scrollMarginTop: "24px" }}>
-                <h4 style={{ fontSize: "1.2rem", fontWeight: 800, color: "var(--color-text-main)", marginBottom: "12px" }}>
-                  🏛️ 금융감독원 DART 실시간 공시 내역
-                  {relatedDartBizName && (
-                    <span style={{ fontSize: "0.85rem", fontWeight: 500, color: "var(--color-text-desc)", marginLeft: "8px" }}>
-                      - 관련사업자 ({relatedDartBizName}) 기준
-                    </span>
-                  )}
-                </h4>
-                {dartCodeToUse ? (
-                  <Suspense fallback={<TableSkeleton />}>
-                    <DartDisclosuresSection dartCode={dartCodeToUse} />
-                  </Suspense>
-                ) : (
-                  <div style={{
-                    padding: "24px",
-                    borderRadius: "14px",
-                    border: "1px solid var(--color-border)",
-                    backgroundColor: "var(--bg-color-main)",
-                    textAlign: "center",
-                    fontSize: "0.88rem",
-                    color: "var(--color-text-desc)"
-                  }}>
-                    DART 고유번호 매핑 정보가 등록되지 않아 공시 내역을 연동할 수 없습니다.
+                {/* 실시간 조직 건강도 대시보드 (국민연금 분석 및 퇴사율 차트) */}
+                {business && (
+                  <div id="section-employment" style={{ scrollMarginTop: "120px" }}>
+                    <EmploymentHealthSection business={business} />
                   </div>
                 )}
-              </div>
-            )}
 
-            {/* 6. 금융감독원 DART 주요 실적/정기 보고서 */}
-            {(business?.is_audited || dartCodeToUse) && (
-              <div style={{ marginTop: "32px", marginBottom: "16px" }}>
-                <h4 style={{ fontSize: "1.2rem", fontWeight: 800, color: "var(--color-text-main)", marginBottom: "12px" }}>
-                  📊 금융감독원 DART 분기별 실적/정기 보고서
-                  {relatedDartBizName && (
-                    <span style={{ fontSize: "0.85rem", fontWeight: 500, color: "var(--color-text-desc)", marginLeft: "8px" }}>
-                      - 관련사업자 ({relatedDartBizName}) 기준
-                    </span>
-                  )}
-                </h4>
-                {dartCodeToUse ? (
-                  <Suspense fallback={<TableSkeleton />}>
-                    <DartKeyDisclosuresSection dartCode={dartCodeToUse} />
+                {business && business.b_sector && (
+                  <Suspense fallback={<SectionSkeleton />}>
+                    <IndustrySection bSector={business.b_sector} bNo={cleanBNo} />
                   </Suspense>
-                ) : (
-                  <div style={{
-                    padding: "24px",
-                    borderRadius: "14px",
-                    border: "1px solid var(--color-border)",
-                    backgroundColor: "var(--bg-color-main)",
-                    textAlign: "center",
-                    fontSize: "0.88rem",
-                    color: "var(--color-text-desc)"
-                  }}>
-                    최근 3년 간의 사업/반기/분기보고서 공시 내역이 존재하지 않습니다.
+                )}
+
+                {/* 재무/고용 요약 대시보드 및 3개년 공식 재무제표 요약 테이블 */}
+                {business && (
+                  <div id="section-finance" style={{ scrollMarginTop: "120px", display: "flex", flexDirection: "column", gap: "24px" }}>
+                    <InsightSection business={business} />
+                    <FinancialTableSection business={business} />
                   </div>
                 )}
-              </div>
-            )}
 
-            {/* 기업 연혁 및 상호 변경 히스토리 */}
-            {(() => {
-              const timelineData = (business?.historyTimeline && business.historyTimeline.length > 0)
-                ? business.historyTimeline
-                : (business?.start_dt && business.start_dt !== "-" && business.start_dt.replace(/[^0-9]/g, "").length === 8
-                  ? [{ eventDate: business.start_dt, eventTitle: "법인 설립", eventDescription: `${business.b_nm} 설립 및 개업` }]
-                  : []);
-              return (
-                <TimelineSection
-                  timeline={timelineData}
-                  bNo={cleanBNo}
-                  brandName={business?.brand_name || ""}
-                  homepage={business?.homepage || ""}
-                  description={business?.description || ""}
-                />
-              );
-            })()}
-
-            {/* 동일 대표자 관련 사업자 */}
-            {relatedBusinesses && relatedBusinesses.length > 0 && (
-              <div style={{ marginTop: "32px" }}>
-                <h4 style={{ fontSize: "1.2rem", fontWeight: 800, color: "var(--color-text-main)", marginBottom: "12px" }}>
-                  🔗 동일 대표자 관련 사업자
-                </h4>
-                <div style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-                  gap: "16px"
-                }}>
-                  {relatedBusinesses.map((rb: any) => (
-                    <Link href={`/biz/${rb.b_no}`} key={rb.b_no} className="related-card" style={{ textDecoration: "none" }}>
-                      <div style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "8px"
-                      }}>
-                        <div style={{ fontWeight: 700, fontSize: "1.05rem", color: "var(--color-text-main)" }}>
-                          {rb.b_nm}
-                        </div>
-                        <div style={{ fontSize: "0.85rem", color: "var(--color-text-desc)" }}>
-                          대표자: {rb.p_nm}
-                        </div>
-                        <div style={{ fontSize: "0.85rem", color: "var(--color-text-desc)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          소재지: {rb.b_adr}
-                        </div>
-                        <div style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                          marginTop: "8px",
-                          fontSize: "0.8rem"
-                        }}>
-                          <span style={{
-                            backgroundColor: "var(--color-primary-light)",
-                            color: "var(--color-primary)",
-                            padding: "2px 6px",
-                            borderRadius: "4px",
-                            fontWeight: 600
-                          }}>
-                            {rb.b_sector || "업종 미등록"}
-                          </span>
-                          {rb.dart_code && (
-                            <span style={{
-                              backgroundColor: "rgba(49, 130, 246, 0.1)",
-                              color: "#3182f6",
-                              padding: "2px 6px",
-                              borderRadius: "4px",
-                              fontWeight: 600
-                            }}>
-                              DART 연동
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
+                {/* 3. 실시간 공공 입찰공고 및 계약 현황 */}
+                <div id="section-bids" style={{ marginTop: "32px", scrollMarginTop: "120px" }}>
+                  <h4 style={{ fontSize: "1.2rem", fontWeight: 800, color: "var(--color-text-main)", marginBottom: "12px" }}>
+                    🏛️ 조달청 나라장터 입찰공고 매칭 내역
+                  </h4>
+                  <Suspense fallback={<SectionSkeleton />}>
+                    <BidsSection companyNm={business?.b_nm || ""} bNo={cleanBNo} />
+                  </Suspense>
                 </div>
-              </div>
-            )}
 
-            {/* 연관 사업자 추천 */}
-            <div style={{ marginTop: "16px" }}>
-              <h3 style={{
-                fontSize: "0.95rem",
-                color: "var(--color-text-desc)",
-                fontWeight: 700,
-                textTransform: "uppercase",
-                letterSpacing: "0.05em",
-                marginBottom: "14px",
-                paddingLeft: "4px"
-              }}>
-                주변 기업 및 추천 관련 사업자
-              </h3>
-              <Suspense fallback={<RecommendedSkeleton />}>
-                <RecommendedSection
-                  cleanBNo={cleanBNo}
-                  bAdr={business?.b_adr || ""}
-                  bSector={business?.b_sector || ""}
-                  isSme={business?.is_sme || ""}
-                />
-              </Suspense>
-            </div>
+                {/* 4. 지식재산권 (특허/상표) 포트폴리오 */}
+                <div id="section-ip" style={{ marginTop: "32px", marginBottom: "16px", scrollMarginTop: "120px" }}>
+                  <h4 style={{ fontSize: "1.2rem", fontWeight: 800, color: "var(--color-text-main)", marginBottom: "12px" }}>
+                    💡 보유 특허 및 지식재산권(IP) 포트폴리오
+                  </h4>
+                  <Suspense fallback={<TableSkeleton />}>
+                    <PatentsSection companyNm={business?.b_nm || ""} pNm={business?.p_nm || ""} />
+                  </Suspense>
+                </div>
+
+
+                {/* 5. 금융감독원 DART 실시간 공시 목록 */}
+                {(business?.is_audited || dartCodeToUse) && (
+                  <div id="dart-disclosures-section" style={{ marginTop: "32px", marginBottom: "16px", scrollMarginTop: "24px" }}>
+                    <h4 style={{ fontSize: "1.2rem", fontWeight: 800, color: "var(--color-text-main)", marginBottom: "12px" }}>
+                      🏛️ 금융감독원 DART 실시간 공시 내역
+                      {relatedDartBizName && (
+                        <span style={{ fontSize: "0.85rem", fontWeight: 500, color: "var(--color-text-desc)", marginLeft: "8px" }}>
+                          - 관련사업자 ({relatedDartBizName}) 기준
+                        </span>
+                      )}
+                    </h4>
+                    {dartCodeToUse ? (
+                      <Suspense fallback={<TableSkeleton />}>
+                        <DartDisclosuresSection dartCode={dartCodeToUse} />
+                      </Suspense>
+                    ) : (
+                      <div style={{
+                        padding: "24px",
+                        borderRadius: "14px",
+                        border: "1px solid var(--color-border)",
+                        backgroundColor: "var(--bg-color-main)",
+                        textAlign: "center",
+                        fontSize: "0.88rem",
+                        color: "var(--color-text-desc)"
+                      }}>
+                        DART 고유번호 매핑 정보가 등록되지 않아 공시 내역을 연동할 수 없습니다.
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* 6. 금융감독원 DART 주요 실적/정기 보고서 */}
+                {(business?.is_audited || dartCodeToUse) && (
+                  <div style={{ marginTop: "32px", marginBottom: "16px" }}>
+                    <h4 style={{ fontSize: "1.2rem", fontWeight: 800, color: "var(--color-text-main)", marginBottom: "12px" }}>
+                      📊 금융감독원 DART 분기별 실적/정기 보고서
+                      {relatedDartBizName && (
+                        <span style={{ fontSize: "0.85rem", fontWeight: 500, color: "var(--color-text-desc)", marginLeft: "8px" }}>
+                          - 관련사업자 ({relatedDartBizName}) 기준
+                        </span>
+                      )}
+                    </h4>
+                    {dartCodeToUse ? (
+                      <Suspense fallback={<TableSkeleton />}>
+                        <DartKeyDisclosuresSection dartCode={dartCodeToUse} />
+                      </Suspense>
+                    ) : (
+                      <div style={{
+                        padding: "24px",
+                        borderRadius: "14px",
+                        border: "1px solid var(--color-border)",
+                        backgroundColor: "var(--bg-color-main)",
+                        textAlign: "center",
+                        fontSize: "0.88rem",
+                        color: "var(--color-text-desc)"
+                      }}>
+                        최근 3년 간의 사업/반기/분기보고서 공시 내역이 존재하지 않습니다.
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* 기업 연혁 및 상호 변경 히스토리 */}
+                {(() => {
+                  const timelineData = (business?.historyTimeline && business.historyTimeline.length > 0)
+                    ? business.historyTimeline
+                    : (business?.start_dt && business.start_dt !== "-" && business.start_dt.replace(/[^0-9]/g, "").length === 8
+                      ? [{ eventDate: business.start_dt, eventTitle: "법인 설립", eventDescription: `${business.b_nm} 설립 및 개업` }]
+                      : []);
+                  return (
+                    <TimelineSection
+                      timeline={timelineData}
+                      bNo={cleanBNo}
+                      brandName={business?.brand_name || ""}
+                      homepage={business?.homepage || ""}
+                      description={business?.description || ""}
+                    />
+                  );
+                })()}
+
+                {/* 동일 대표자 관련 사업자 */}
+                {relatedBusinesses && relatedBusinesses.length > 0 && (
+                  <div style={{ marginTop: "32px" }}>
+                    <h4 style={{ fontSize: "1.2rem", fontWeight: 800, color: "var(--color-text-main)", marginBottom: "12px" }}>
+                      🔗 동일 대표자 관련 사업자
+                    </h4>
+                    <div style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+                      gap: "16px"
+                    }}>
+                      {relatedBusinesses.map((rb: any) => (
+                        <Link href={`/biz/${rb.b_no}`} key={rb.b_no} className="related-card" style={{ textDecoration: "none" }}>
+                          <div style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: "8px"
+                          }}>
+                            <div style={{ fontWeight: 700, fontSize: "1.05rem", color: "var(--color-text-main)" }}>
+                              {rb.b_nm}
+                            </div>
+                            <div style={{ fontSize: "0.85rem", color: "var(--color-text-desc)" }}>
+                              대표자: {rb.p_nm}
+                            </div>
+                            <div style={{ fontSize: "0.85rem", color: "var(--color-text-desc)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                              소재지: {rb.b_adr}
+                            </div>
+                            <div style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                              marginTop: "8px",
+                              fontSize: "0.8rem"
+                            }}>
+                              <span style={{
+                                backgroundColor: "var(--color-primary-light)",
+                                color: "var(--color-primary)",
+                                padding: "2px 6px",
+                                borderRadius: "4px",
+                                fontWeight: 600
+                              }}>
+                                {rb.b_sector || "업종 미등록"}
+                              </span>
+                              {rb.dart_code && (
+                                <span style={{
+                                  backgroundColor: "rgba(49, 130, 246, 0.1)",
+                                  color: "#3182f6",
+                                  padding: "2px 6px",
+                                  borderRadius: "4px",
+                                  fontWeight: 600
+                                }}>
+                                  DART 연동
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 연관 사업자 추천 */}
+                <div style={{ marginTop: "16px" }}>
+                  <h3 style={{
+                    fontSize: "0.95rem",
+                    color: "var(--color-text-desc)",
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
+                    marginBottom: "14px",
+                    paddingLeft: "4px"
+                  }}>
+                    주변 기업 및 추천 관련 사업자
+                  </h3>
+                  <Suspense fallback={<RecommendedSkeleton />}>
+                    <RecommendedSection
+                      cleanBNo={cleanBNo}
+                      bAdr={business?.b_adr || ""}
+                      bSector={business?.b_sector || ""}
+                      isSme={business?.is_sme || ""}
+                    />
+                  </Suspense>
+                </div>
+              </>
+            )}
 
           </div>
         )}
