@@ -15,7 +15,9 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const clientId = process.env.GOOGLE_CLIENT_ID || "";
+    const clientId =
+      process.env.GOOGLE_CLIENT_ID ||
+      "370947680580-jhif5cev0i9h7fd6do2gijcev3tsjfm3.apps.googleusercontent.com";
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET || "";
 
     const tokenRes = await fetch("https://oauth2.googleapis.com/token", {

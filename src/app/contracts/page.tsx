@@ -80,7 +80,10 @@ export default function ContractsDashboardPage() {
 
       if (oauthSession) {
         try {
-          const parsed = JSON.parse(oauthSession) as ContractUser;
+          const decoded = oauthSession.trim().startsWith("{")
+            ? oauthSession
+            : decodeURIComponent(escape(window.atob(oauthSession)));
+          const parsed = JSON.parse(decoded) as ContractUser;
           if (parsed && parsed.id) {
             setLoggedInUser(parsed);
             activeUser = parsed;
@@ -161,16 +164,15 @@ export default function ContractsDashboardPage() {
         {/* 상단 헤더 */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px", flexWrap: "wrap", gap: "12px" }}>
           <div>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
-              <MaumDataLogo size="sm" />
-              <span style={{ fontSize: "0.78rem", fontWeight: 700, backgroundColor: "#2563eb", color: "#fff", padding: "2px 8px", borderRadius: "6px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+              <h1 style={{ margin: 0, fontSize: "1.6rem", fontWeight: 800, color: "var(--color-text-main)" }}>
+                📁 내 계약서 영구 보관함
+              </h1>
+              <span style={{ fontSize: "0.78rem", fontWeight: 700, backgroundColor: "#2563eb", color: "#fff", padding: "3px 10px", borderRadius: "6px" }}>
                 Cloudflare R2 영구 보관소
               </span>
             </div>
-            <h1 style={{ margin: "4px 0 0 0", fontSize: "1.6rem", fontWeight: 800, color: "var(--color-text-main)" }}>
-              📁 내 계약서 영구 보관함
-            </h1>
-            <p style={{ margin: "4px 0 0 0", fontSize: "0.85rem", color: "var(--color-text-sub)" }}>
+            <p style={{ margin: "6px 0 0 0", fontSize: "0.85rem", color: "var(--color-text-sub)" }}>
               계약서 파일을 일일이 다운받지 않아도, 내가 직접 지우기 전까지 보낸 계약과 받은 계약이 안전하게 영구 보관됩니다.
             </p>
           </div>

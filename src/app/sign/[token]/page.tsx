@@ -255,7 +255,6 @@ export default function SignContractPage({ params }: { params: Promise<{ token: 
         {/* 상단 브랜드 헤더 */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", flexWrap: "wrap", gap: "8px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <MaumDataLogo size="sm" />
             <span style={{ fontSize: "0.8rem", color: "#2563eb", fontWeight: 700, backgroundColor: "rgba(37, 99, 235, 0.08)", padding: "3px 10px", borderRadius: "6px" }}>
               안전한 단일 링크 전자계약
             </span>

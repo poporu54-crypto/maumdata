@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const clientId = process.env.KAKAO_CLIENT_ID || "";
+    const clientId = process.env.KAKAO_CLIENT_ID || "83c099e699aebea20f572b85a32bfab5";
     const clientSecret = process.env.KAKAO_CLIENT_SECRET || "";
 
     const tokenParams = new URLSearchParams({
