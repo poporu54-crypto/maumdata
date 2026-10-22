@@ -1,61 +1,201 @@
+/* 마음데이타 인페이지 플로팅 버튼 & 레이어 팝업 모달 스타일 */
+
 #maumdata-floating-btn {
   position: absolute;
-  z-index: 2147483647 !important;
-  display: flex;
+  z-index: 2147483646;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: linear-gradient(135deg, #7c3aed 0%, #3182f6 100%) !important;
-  color: #ffffff !important;
-  padding: 8px 14px !important;
-  border-radius: 30px !important;
-  box-shadow: 0 4px 18px rgba(124, 58, 237, 0.35), 0 2px 4px rgba(0, 0, 0, 0.1) !important;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
-  font-size: 13px !important;
-  font-weight: 700 !important;
-  cursor: pointer !important;
-  user-select: none !important;
-  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.15s ease-out !important;
-  border: 1px solid rgba(255, 255, 255, 0.15) !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
-  transform: scale(0.8) translateY(10px) !important;
+  padding: 7px 13px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  border: 1px solid rgba(56, 189, 248, 0.55);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), 0 0 12px rgba(49, 130, 246, 0.35);
+  color: #f8fafc;
+  font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Segoe UI", sans-serif;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(6px) scale(0.95);
+  pointer-events: none;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
 }
 
 #maumdata-floating-btn.visible {
-  opacity: 1 !important;
-  pointer-events: auto !important;
-  transform: scale(1) translateY(0) !important;
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
 }
 
 #maumdata-floating-btn:hover {
-  transform: scale(1.05) translateY(-2px) !important;
-  box-shadow: 0 6px 22px rgba(124, 58, 237, 0.45), 0 4px 8px rgba(0, 0, 0, 0.1) !important;
+  border-color: #22d3ee;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.55), 0 0 16px rgba(34, 211, 238, 0.45);
+  transform: translateY(-2px) scale(1.02);
 }
 
-#maumdata-floating-btn:active {
-  transform: scale(0.95) !important;
+.md-float-pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22d3ee;
+  box-shadow: 0 0 8px #22d3ee;
 }
 
-#maumdata-floating-btn .maumdata-btn-icon {
-  font-size: 14px !important;
+/* 인페이지 레이어 팝업 모달 */
+#maumdata-layer-modal {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  width: 360px;
+  z-index: 2147483647;
+  background: rgba(11, 15, 25, 0.96);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  border-radius: 18px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.65), 0 0 25px rgba(49, 130, 246, 0.22);
+  color: #f8fafc;
+  font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Segoe UI", sans-serif;
+  padding: 16px;
+  box-sizing: border-box;
+  animation: mdModalIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  text-align: left;
+  line-height: 1.4;
+}
+
+@keyframes mdModalIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.md-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 10px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.md-modal-brand {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  font-weight: 900;
+  color: #38bdf8;
+}
+
+.md-modal-close {
+  background: rgba(255, 255, 255, 0.06);
+  border: none;
+  color: #94a3b8;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  font-size: 15px;
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  animation: pulse-icon 1.5s infinite ease-in-out;
+}
+.md-modal-close:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
 }
 
-#maumdata-floating-btn .maumdata-btn-label {
-  letter-spacing: -0.02em !important;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1) !important;
+.md-modal-title {
+  font-size: 15px;
+  font-weight: 900;
+  color: #ffffff;
+  margin-bottom: 3px;
 }
 
-@keyframes pulse-icon {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  50% {
-    transform: scale(1.2);
-    opacity: 0.8;
-  }
+.md-modal-brn {
+  font-size: 11.5px;
+  color: #94a3b8;
+  margin-bottom: 10px;
+}
+
+.md-modal-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 11px;
+  border-radius: 10px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  margin-bottom: 10px;
+  font-size: 12px;
+  font-weight: 800;
+  color: #34d399;
+}
+
+.md-modal-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.md-modal-cell {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 9px;
+  padding: 7px 9px;
+}
+.md-modal-cell.full {
+  grid-column: span 2;
+}
+.md-modal-k {
+  display: block;
+  font-size: 10px;
+  color: #64748b;
+  margin-bottom: 2px;
+}
+.md-modal-v {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: #f1f5f9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.md-modal-actions {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 7px;
+}
+
+.md-btn-sub, .md-btn-main {
+  text-align: center;
+  padding: 9px;
+  border-radius: 9px;
+  font-size: 11.5px;
+  font-weight: 800;
+  text-decoration: none !important;
+  cursor: pointer;
+  display: block;
+}
+
+.md-btn-sub {
+  background: rgba(129, 140, 248, 0.16);
+  border: 1px solid rgba(129, 140, 248, 0.4);
+  color: #c7d2fe !important;
+}
+
+.md-btn-main {
+  background: linear-gradient(135deg, #3182f6, #6366f1);
+  color: #ffffff !important;
+  border: none;
 }

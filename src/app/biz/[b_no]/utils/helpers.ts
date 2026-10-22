@@ -70,10 +70,10 @@ export const formatCrno = (crnoStr: string) => {
 };
 
 export const formatSyncTime = (syncAt: any) => {
-  if (!syncAt) return "방금 전 (실시간)";
+  if (!syncAt) return "공공데이터 공시 기준";
   try {
     const d = new Date(syncAt);
-    if (isNaN(d.getTime())) return "방금 전 (실시간)";
+    if (isNaN(d.getTime())) return "공공데이터 공시 기준";
     
     // UTC+9(한국 표준시) 강제 적용을 위한 오프셋 연산
     const kstTime = d.getTime() + (9 * 60 * 60 * 1000);
@@ -81,18 +81,16 @@ export const formatSyncTime = (syncAt: any) => {
     
     // 1970년 등 미동기화 초기값의 경우 처리
     if (kstDate.getUTCFullYear() <= 1970) {
-      return "미동기화 (대기 중)";
+      return "공공데이터 공시 기준";
     }
     
     const year = kstDate.getUTCFullYear();
     const month = String(kstDate.getUTCMonth() + 1).padStart(2, "0");
     const date = String(kstDate.getUTCDate()).padStart(2, "0");
-    const hours = String(kstDate.getUTCHours()).padStart(2, "0");
-    const minutes = String(kstDate.getUTCMinutes()).padStart(2, "0");
     
-    return `${year}.${month}.${date} ${hours}:${minutes}`;
+    return `${year}.${month}.${date} 기준`;
   } catch (e) {
-    return "방금 전 (실시간)";
+    return "공공데이터 공시 기준";
   }
 };
 

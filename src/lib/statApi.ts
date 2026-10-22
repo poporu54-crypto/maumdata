@@ -128,15 +128,10 @@ export async function fetchPortalStatsFromAPI(): Promise<PortalStats> {
         if (prevSum > 0) {
           // 표본 데이터의 전월 대비 신규 개업 증가율 계산
           const monthlyRate = newCount / prevSum;
-          // 전국 사업체 수(약 6,000,000개)에 적용하여 월간 신규 사업체 수 추정 후 일일 평균 환산
           const estimatedMonthlyNew = 6000000 * monthlyRate;
           const estimatedDailyNew = estimatedMonthlyNew / 30;
 
-          // 오늘의 요일/날짜 기준 역동성 시뮬레이션
-          const todayDate = new Date().getDate();
-          const randomFactor = 1 + (Math.sin(todayDate) * 0.1); // -10% ~ +10%
-
-          newBizToday = Math.max(1000, Math.round(estimatedDailyNew * randomFactor));
+          newBizToday = Math.max(1000, Math.round(estimatedDailyNew));
           newBizTodayDelta = Math.max(30, Math.round(newBizToday * 0.05));
 
           // 계속사업자 비율: 표본 유지율에 따른 미세 조정

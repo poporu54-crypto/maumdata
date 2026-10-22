@@ -1,4 +1,4 @@
-const API_BASE = "http://localhost:3000";
+const API_BASE = "https://www.maumdata.com";
 const WEB_BASE = "https://www.maumdata.com";
 
 let currentBNo = "";

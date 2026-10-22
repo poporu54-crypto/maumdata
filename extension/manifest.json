@@ -1,26 +1,26 @@
 {
   "manifest_version": 3,
-  "name": "마음데이타 기업 조회 비서",
-  "version": "1.0.0",
-  "description": "웹페이지에서 사업자등록번호나 상호명을 드래그하여 실시간 기업 정보를 간편하게 조회합니다.",
+  "name": "마음데이타 비즈니스 & 기업조회 비서",
+  "version": "1.1.0",
+  "description": "웹페이지 사업자번호 자동 스캔, 실시간 국세청 휴폐업·재무 조회, 부가세/한글금액 계산기 및 비대면 전자계약 퀵 런처",
   "permissions": [
-    "sidePanel",
     "contextMenus",
     "storage",
     "activeTab"
   ],
   "host_permissions": [
-    "<all_urls>"
+    "https://www.maumdata.com/*",
+    "https://maumdata.com/*",
+    "http://localhost:3000/*"
   ],
   "action": {
+    "default_popup": "popup.html",
+    "default_title": "마음데이타 비즈니스 비서 열기",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",
       "128": "icons/icon128.png"
     }
-  },
-  "side_panel": {
-    "default_path": "sidepanel.html"
   },
   "background": {
     "service_worker": "background.js"

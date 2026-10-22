@@ -192,7 +192,6 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
               color: "var(--color-text-desc)"
             }}>
               <div>• 국세청 API 응답 메시지: {apiStatus?.tax_type || "확인 불가"}</div>
-              <div>• 조회 시각: {new Date().toLocaleString("ko-KR")}</div>
             </div>
           </div>
         ) : (
@@ -370,7 +369,7 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                   <div style={{ display: "flex", justifyContent: "space-between", paddingBottom: "2px" }}>
                     <span style={{ color: "var(--color-text-sub)", fontWeight: 500 }}>검증 시각</span>
                     <span style={{ fontWeight: 600, color: "var(--color-text-desc)" }}>
-                      {isNew ? "불러오는 중..." : (business ? formatSyncTime(business.ntsLastSyncAt) : "방금 전 (실시간)")}
+                      {isNew ? "불러오는 중..." : (business ? formatSyncTime(business.ntsLastSyncAt) : "공공데이터 공시 기준")}
                     </span>
                   </div>
                 </div>
