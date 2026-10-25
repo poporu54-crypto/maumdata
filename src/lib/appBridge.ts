@@ -13,16 +13,22 @@ declare global {
       vibrate?: (durationMs: number) => void;
       openCameraScanner?: () => void;
     };
+    MaumDataApp?: {
+      isNativeApp?: () => boolean;
+    };
   }
 }
 
 /**
- * 현재 실행 환경이 마음데이터 안드로이드 앱인지 확인
+ * 현재 실행 환경이 마음데이터 네이티브 앱(안드로이드/iOS WebView)인지 확인
  */
 export function isAppEnvironment(): boolean {
   if (typeof window === "undefined") return false;
   if (window.AndroidBridge && typeof window.AndroidBridge.isNativeApp === "function") {
     return window.AndroidBridge.isNativeApp();
+  }
+  if (window.MaumDataApp && typeof window.MaumDataApp.isNativeApp === "function") {
+    return window.MaumDataApp.isNativeApp();
   }
   return navigator.userAgent.includes("MAUMDATA_APP");
 }

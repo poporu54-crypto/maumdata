@@ -7,6 +7,7 @@ import Script from "next/script";
 import FooterFeedbackButton from "@/components/FooterFeedbackButton";
 import FeedbackFloatingTrigger from "@/components/FeedbackFloatingTrigger";
 import MobileBottomNav from "@/components/MobileBottomNav";
+import AppInstallBanner from "@/components/AppInstallBanner";
 import MaumDataLogo from "@/components/MaumDataLogo";
 
 export const metadata: Metadata = {
@@ -66,6 +67,7 @@ export default function RootLayout({
             {children}
           </main>
           
+          <AppInstallBanner />
           <FeedbackFloatingTrigger />
           <MobileBottomNav />
           
