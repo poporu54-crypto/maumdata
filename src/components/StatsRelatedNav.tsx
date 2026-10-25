@@ -2,18 +2,18 @@ import React from "react";
 import Link from "next/link";
 
 const STATS_LINKS = [
-  { href: "/stats/new-biz", label: "📈 실시간 신규 개업 현황" },
-  { href: "/stats/active-rate", label: "🛡️ 계속사업자 생존 비율" },
-  { href: "/stats/distribution", label: "📊 19대 업종별 사업자 분포" },
+  { href: "/stats/new-biz", label: "📈 신규 채용 · 신설 법인 동향" },
+  { href: "/stats/active-rate", label: "🛡️ 국세청 계속사업자 · 고용 안정성" },
+  { href: "/stats/distribution", label: "📊 업종별 기업 분포 · 통계청 공식 집계" },
+  { href: "/insights", label: "💡 매출 · 고용 리더보드 인사이트" },
   { href: "/stats/market-area", label: "🗺️ 전국 핵심 행정동 상권 분석" },
-  { href: "/insights", label: "💡 사업자 데이터 인사이트" },
   { href: "/form", label: "📑 무료 전자문서 · 표준서식 센터" },
 ];
 
 export default function StatsRelatedNav({ currentPath }: { currentPath?: string }) {
   return (
     <nav
-      aria-label="국가 통계 및 데이터 분석 연관 리포트"
+      aria-label="실데이터 기업 통계 및 상권 분석 연관 리포트"
       className="card no-print"
       style={{
         marginTop: "28px",
@@ -23,7 +23,7 @@ export default function StatsRelatedNav({ currentPath }: { currentPath?: string 
       }}
     >
       <div style={{ fontSize: "0.95rem", fontWeight: 800, color: "var(--color-text-main)", marginBottom: "12px" }}>
-        🔗 함께 살펴볼 국가 사업자 통계 · 상권 리포트
+        🔗 함께 살펴볼 실데이터 기업 통계 · 상권 리포트
       </div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
         {STATS_LINKS.filter((item) => item.href !== currentPath).map((item) => (

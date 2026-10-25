@@ -2,25 +2,30 @@
 
 import React from "react";
 import Link from "next/link";
-import { PortalStats } from "@/lib/statApi";
+import type { RealPortalStats } from "@/lib/statApi";
 
 interface StatsDashboardProps {
-  stats: PortalStats;
+  stats: RealPortalStats;
 }
 
 export default function StatsDashboard({ stats }: StatsDashboardProps) {
-  // 실제 데이터 비중 계산
-  const { retail, ict, manufacturing, others } = stats.industryRatios;
+  const { summary, macroRatios } = stats;
+  const {
+    financeServices,
+    constructionRealEstate,
+    manufacturing,
+    ictCommerce,
+    classifiedTotal,
+  } = macroRatios;
 
-  // 동적 SVG 도넛 차트 세그먼트 계산
-  const retailOffset = 25;
-  const ictOffset = (25 - retail + 100) % 100;
-  const manufacturingOffset = (ictOffset - ict + 100) % 100;
-  const othersOffset = (manufacturingOffset - manufacturing + 100) % 100;
+  // 동적 SVG 도넛 차트 세그먼트 계산 (100% 실제 DB 업종 집계 비율)
+  const seg1Offset = 25;
+  const seg2Offset = (25 - financeServices + 100) % 100;
+  const seg3Offset = (seg2Offset - constructionRealEstate + 100) % 100;
+  const seg4Offset = (seg3Offset - manufacturing + 100) % 100;
 
   return (
     <>
-      {/* 컴포넌트 자체 호버 마이크로 인터랙션용 CSS 주입 */}
       <style>{`
         .stats-dashboard-link {
           text-decoration: none;
@@ -39,175 +44,354 @@ export default function StatsDashboard({ stats }: StatsDashboardProps) {
       `}</style>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-        
         {/* 설명 영역 */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-end",
+            flexWrap: "wrap",
+            gap: "8px",
+          }}
+        >
           <div>
-            <h2 style={{
-              fontSize: "1.45rem",
-              fontWeight: 800,
-              letterSpacing: "-0.02em",
-              color: "var(--color-text-main)",
-              marginBottom: "4px"
-            }}>
-              오늘의 데이터 포털 지표
+            <h2
+              style={{
+                fontSize: "1.45rem",
+                fontWeight: 800,
+                letterSpacing: "-0.02em",
+                color: "var(--color-text-main)",
+                marginBottom: "4px",
+              }}
+            >
+              마음데이타 실데이터 검증 지표
             </h2>
-            <p style={{ fontSize: "0.85rem", color: "var(--color-text-desc)" }}>
-              각 지표 카드를 클릭하면 상세한 실시간 전국 빅데이터 분석과 날짜별 과거 이력 조회가 가능합니다.
+            <p style={{ fontSize: "0.85rem", color: "var(--color-text-desc)", margin: 0 }}>
+              국세청·국민연금·DART 공공데이터와 실제 동기화된 DB 실시간 집계입니다. 카드를 클릭하면 기업별 상세 랭킹으로 이동합니다.
             </p>
           </div>
+          {summary.latestSyncDate && (
+            <span
+              style={{
+                fontSize: "0.75rem",
+                color: "var(--color-text-desc)",
+                backgroundColor: "var(--bg-color-card)",
+                border: "1px solid var(--color-border)",
+                padding: "4px 10px",
+                borderRadius: "20px",
+                fontWeight: 600,
+              }}
+            >
+              최종 DB 동기화: {summary.latestSyncDate}
+            </span>
+          )}
         </div>
 
         {/* 대시보드 그리드 */}
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-          gap: "20px"
-        }}>
-          
-          {/* 카드 1: 실시간 개업 현황 */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+            gap: "20px",
+          }}
+        >
+          {/* 카드 1: 국민연금 신규 채용 및 신설 법인 동향 */}
           <Link href="/stats/new-biz" className="stats-dashboard-link">
-            <div className="card stats-dashboard-card" style={{ padding: "24px", border: "1px solid var(--color-border)", height: "100%" }}>
+            <div
+              className="card stats-dashboard-card"
+              style={{
+                padding: "24px",
+                border: "1px solid var(--color-border)",
+                height: "100%",
+              }}
+            >
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "16px" }}>
-                <span style={{ fontSize: "0.9rem", color: "var(--color-text-sub)", fontWeight: 700 }}>실시간 개업 현황</span>
+                <span style={{ fontSize: "0.9rem", color: "var(--color-text-sub)", fontWeight: 700 }}>
+                  국민연금 신규 채용 현황
+                </span>
                 <span style={{ fontSize: "1.2rem" }}>📈</span>
               </div>
-              <div style={{ display: "flex", alignItems: "baseline", gap: "8px", marginBottom: "8px" }}>
-                <span style={{ fontSize: "2.1rem", fontWeight: 800, letterSpacing: "-0.01em" }}>
-                  {stats.newBizToday.toLocaleString()}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "baseline",
+                  gap: "8px",
+                  marginBottom: "8px",
+                  flexWrap: "wrap",
+                }}
+              >
+                <span style={{ fontSize: "2.05rem", fontWeight: 800, letterSpacing: "-0.01em" }}>
+                  +{summary.monthlyNewHires.toLocaleString("ko-KR")}명
                 </span>
-                <span style={{ color: "var(--color-success)", fontWeight: 700, fontSize: "0.95rem" }}>
-                  +{stats.newBizTodayDelta} 오늘
+                <span style={{ color: "var(--color-success)", fontWeight: 700, fontSize: "0.88rem" }}>
+                  총 재직 {summary.totalTrackedEmployees.toLocaleString("ko-KR")}명
                 </span>
               </div>
-              <p style={{ fontSize: "0.85rem", color: "var(--color-text-desc)", lineHeight: 1.45, marginBottom: "8px" }}>
-                국세청 100대 생활업종 데이터를 분석하여 가동 중인 오늘자 전국 신규 사업자 개설 예측 수치입니다.
+              <p
+                style={{
+                  fontSize: "0.85rem",
+                  color: "var(--color-text-desc)",
+                  lineHeight: 1.45,
+                  marginBottom: "10px",
+                }}
+              >
+                국민연금 가입이 연동된 {summary.npsCompanyCount.toLocaleString("ko-KR")}개 계속사업장의 최근 월 실제 신규 취득(입사) 인원 합계입니다.
               </p>
-              <span style={{ fontSize: "0.75rem", color: "var(--color-primary)", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: "2px" }}>
-                자세히 보기 ➔
+              <span
+                style={{
+                  fontSize: "0.78rem",
+                  color: "var(--color-primary)",
+                  fontWeight: 700,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "2px",
+                }}
+              >
+                신규 채용 상위 기업 랭킹 보기 ➔
               </span>
             </div>
           </Link>
 
-          {/* 카드 2: 계속사업자 비율 */}
+          {/* 카드 2: 국세청 검증 계속사업자 현황 */}
           <Link href="/stats/active-rate" className="stats-dashboard-link">
-            <div className="card stats-dashboard-card" style={{ padding: "24px", border: "1px solid var(--color-border)", height: "100%" }}>
+            <div
+              className="card stats-dashboard-card"
+              style={{
+                padding: "24px",
+                border: "1px solid var(--color-border)",
+                height: "100%",
+              }}
+            >
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "16px" }}>
-                <span style={{ fontSize: "0.9rem", color: "var(--color-text-sub)", fontWeight: 700 }}>계속사업자 비율</span>
+                <span style={{ fontSize: "0.9rem", color: "var(--color-text-sub)", fontWeight: 700 }}>
+                  국세청 검증 계속사업자
+                </span>
                 <span style={{ fontSize: "1.2rem" }}>🛡️</span>
               </div>
-              <div style={{ display: "flex", alignItems: "baseline", gap: "8px", marginBottom: "8px" }}>
-                <span style={{ fontSize: "2.1rem", fontWeight: 800, letterSpacing: "-0.01em" }}>
-                  {stats.activeBizRate}%
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "baseline",
+                  gap: "8px",
+                  marginBottom: "8px",
+                  flexWrap: "wrap",
+                }}
+              >
+                <span style={{ fontSize: "2.05rem", fontWeight: 800, letterSpacing: "-0.01em" }}>
+                  {summary.activeBizCount.toLocaleString("ko-KR")}개사
                 </span>
-                <span style={{ color: "var(--color-primary)", fontWeight: 700, fontSize: "0.95rem" }}>안정권</span>
+                <span style={{ color: "var(--color-primary)", fontWeight: 700, fontSize: "0.88rem" }}>
+                  공시 {summary.totalDisclosuresCount.toLocaleString("ko-KR")}건
+                </span>
               </div>
-              <p style={{ fontSize: "0.85rem", color: "var(--color-text-desc)", lineHeight: 1.45, marginBottom: "8px" }}>
-                공식 통계에 등록된 전체 가동 사업자 중 폐업 상태가 아닌 계속 영업을 유지하고 있는 비율입니다.
+              <p
+                style={{
+                  fontSize: "0.85rem",
+                  color: "var(--color-text-desc)",
+                  lineHeight: 1.45,
+                  marginBottom: "10px",
+                }}
+              >
+                당사 DB에 등록·검증된 {summary.verifiedTotalCount.toLocaleString("ko-KR")}개 법인 및 사업장 중 국세청 계속사업자로 확인된 실제 기업 수입니다.
               </p>
-              <span style={{ fontSize: "0.75rem", color: "var(--color-primary)", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: "2px" }}>
-                자세히 보기 ➔
+              <span
+                style={{
+                  fontSize: "0.78rem",
+                  color: "var(--color-primary)",
+                  fontWeight: 700,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "2px",
+                }}
+              >
+                납세상태 · 고용 안정 기업 보기 ➔
               </span>
             </div>
           </Link>
         </div>
 
-        {/* 카드 3: 업종별 가동 사업자 비율 */}
+        {/* 카드 3: 업종별 검증 기업 실데이터 분포도 */}
         <Link href="/stats/distribution" className="stats-dashboard-link">
-          <div className="card stats-dashboard-card" style={{ padding: "32px", display: "flex", flexDirection: "column", gap: "20px", border: "1px solid var(--color-border)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <div
+            className="card stats-dashboard-card"
+            style={{
+              padding: "32px",
+              display: "flex",
+              flexDirection: "column",
+              gap: "20px",
+              border: "1px solid var(--color-border)",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+                flexWrap: "wrap",
+                gap: "8px",
+              }}
+            >
               <div>
-                <h4 style={{ fontSize: "1.05rem", fontWeight: 800, color: "var(--color-text-main)", marginBottom: "4px" }}>
-                  국내 산업군별 사업자 분포도
+                <h4
+                  style={{
+                    fontSize: "1.05rem",
+                    fontWeight: 800,
+                    color: "var(--color-text-main)",
+                    marginBottom: "4px",
+                  }}
+                >
+                  검증 등록 기업 산업군별 실데이터 분포
                 </h4>
-                <p style={{ fontSize: "0.85rem", color: "var(--color-text-desc)" }}>
-                  통계청 전국사업체조사 공식 API 집계를 실시간 연동하여 파싱한 국내 업종별 총사업체 비중입니다.
+                <p style={{ fontSize: "0.85rem", color: "var(--color-text-desc)", margin: 0 }}>
+                  마음데이타 DB 내 표준 업종이 확인된 {classifiedTotal.toLocaleString("ko-KR")}개 계속사업자의 실제 산업군 비중과 국가데이터처(통계청) 19대 대분류 확정 통계를 함께 제공합니다.
                 </p>
               </div>
-              <span style={{ fontSize: "0.75rem", color: "var(--color-primary)", fontWeight: 700 }}>
-                전체 19개 분류 보기 ➔
+              <span style={{ fontSize: "0.78rem", color: "var(--color-primary)", fontWeight: 700 }}>
+                업종별 대표 기업 · 공식 통계 보기 ➔
               </span>
             </div>
 
-            <div style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-around",
-              flexWrap: "wrap",
-              gap: "32px",
-              marginTop: "8px"
-            }}>
-              {/* SVG 원형 차트 */}
-              <div style={{ position: "relative", width: "150px", height: "150px" }}>
-                <svg width="100%" height="100%" viewBox="0 0 42 42" className="donut">
-                  <circle className="donut-hole" cx="21" cy="21" r="15.91549430918954" fill="transparent"></circle>
-                  <circle className="donut-ring" cx="21" cy="21" r="15.91549430918954" fill="transparent" stroke="var(--color-border)" strokeWidth="4"></circle>
+            {classifiedTotal > 0 && (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-around",
+                  flexWrap: "wrap",
+                  gap: "32px",
+                  marginTop: "8px",
+                }}
+              >
+                {/* SVG 원형 차트 */}
+                <div style={{ position: "relative", width: "150px", height: "150px" }}>
+                  <svg width="100%" height="100%" viewBox="0 0 42 42" className="donut">
+                    <circle
+                      className="donut-hole"
+                      cx="21"
+                      cy="21"
+                      r="15.91549430918954"
+                      fill="transparent"
+                    ></circle>
+                    <circle
+                      className="donut-ring"
+                      cx="21"
+                      cy="21"
+                      r="15.91549430918954"
+                      fill="transparent"
+                      stroke="var(--color-border)"
+                      strokeWidth="4"
+                    ></circle>
 
-                  {/* 세그먼트 1: 도소매 */}
-                  <circle className="donut-segment" cx="21" cy="21" r="15.91549430918954" fill="transparent" 
-                          stroke="var(--color-primary)" strokeWidth="4.2" 
-                          strokeDasharray={`${retail} ${100 - retail}`} strokeDashoffset={retailOffset}
-                          style={{ transition: "stroke-dashoffset 0.8s ease" }}></circle>
-                  
-                  {/* 세그먼트 2: 정보통신 */}
-                  <circle className="donut-segment" cx="21" cy="21" r="15.91549430918954" fill="transparent" 
-                          stroke="#a855f7" strokeWidth="4.2" 
-                          strokeDasharray={`${ict} ${100 - ict}`} strokeDashoffset={ictOffset}
-                          style={{ transition: "stroke-dashoffset 0.8s ease" }}></circle>
-                  
-                  {/* 세그먼트 3: 제조업 */}
-                  <circle className="donut-segment" cx="21" cy="21" r="15.91549430918954" fill="transparent" 
-                          stroke="#fbbf24" strokeWidth="4.2" 
-                          strokeDasharray={`${manufacturing} ${100 - manufacturing}`} strokeDashoffset={manufacturingOffset}
-                          style={{ transition: "stroke-dashoffset 0.8s ease" }}></circle>
-                  
-                  {/* 세그먼트 4: 기타 */}
-                  <circle className="donut-segment" cx="21" cy="21" r="15.91549430918954" fill="transparent" 
-                          stroke="#94a3b8" strokeWidth="4.2" 
-                          strokeDasharray={`${others} ${100 - others}`} strokeDashoffset={othersOffset}
-                          style={{ transition: "stroke-dashoffset 0.8s ease" }}></circle>
-                </svg>
-                <div style={{
-                  position: "absolute",
-                  top: "50%",
-                  left: "50%",
-                  transform: "translate(-50%, -50%)",
-                  textAlign: "center"
-                }}>
-                  <div style={{ fontSize: "1.25rem", fontWeight: 850, color: "var(--color-text-main)", lineHeight: 1 }}>100%</div>
-                  <div style={{ fontSize: "0.68rem", color: "var(--color-text-desc)", fontWeight: 700, marginTop: "4px" }}>전체 비율</div>
+                    <circle
+                      className="donut-segment"
+                      cx="21"
+                      cy="21"
+                      r="15.91549430918954"
+                      fill="transparent"
+                      stroke="var(--color-primary)"
+                      strokeWidth="4.2"
+                      strokeDasharray={`${financeServices} ${100 - financeServices}`}
+                      strokeDashoffset={seg1Offset}
+                    ></circle>
+
+                    <circle
+                      className="donut-segment"
+                      cx="21"
+                      cy="21"
+                      r="15.91549430918954"
+                      fill="transparent"
+                      stroke="#10b981"
+                      strokeWidth="4.2"
+                      strokeDasharray={`${constructionRealEstate} ${100 - constructionRealEstate}`}
+                      strokeDashoffset={seg2Offset}
+                    ></circle>
+
+                    <circle
+                      className="donut-segment"
+                      cx="21"
+                      cy="21"
+                      r="15.91549430918954"
+                      fill="transparent"
+                      stroke="#fbbf24"
+                      strokeWidth="4.2"
+                      strokeDasharray={`${manufacturing} ${100 - manufacturing}`}
+                      strokeDashoffset={seg3Offset}
+                    ></circle>
+
+                    <circle
+                      className="donut-segment"
+                      cx="21"
+                      cy="21"
+                      r="15.91549430918954"
+                      fill="transparent"
+                      stroke="#a855f7"
+                      strokeWidth="4.2"
+                      strokeDasharray={`${ictCommerce} ${100 - ictCommerce}`}
+                      strokeDashoffset={seg4Offset}
+                    ></circle>
+                  </svg>
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "50%",
+                      left: "50%",
+                      transform: "translate(-50%, -50%)",
+                      textAlign: "center",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: "1.08rem",
+                        fontWeight: 850,
+                        color: "var(--color-text-main)",
+                        lineHeight: 1.1,
+                      }}
+                    >
+                      {classifiedTotal.toLocaleString("ko-KR")}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "0.66rem",
+                        color: "var(--color-text-desc)",
+                        fontWeight: 700,
+                        marginTop: "3px",
+                      }}
+                    >
+                      표준분류 법인
+                    </div>
+                  </div>
+                </div>
+
+                {/* 범례 */}
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: "14px 20px",
+                    minWidth: "240px",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.88rem", fontWeight: 600 }}>
+                    <div style={{ width: "12px", height: "12px", borderRadius: "3px", backgroundColor: "var(--color-primary)" }}></div>
+                    <span style={{ color: "var(--color-text-sub)" }}>금융·전문서비스 ({financeServices}%)</span>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.88rem", fontWeight: 600 }}>
+                    <div style={{ width: "12px", height: "12px", borderRadius: "3px", backgroundColor: "#10b981" }}></div>
+                    <span style={{ color: "var(--color-text-sub)" }}>건설·부동산 ({constructionRealEstate}%)</span>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.88rem", fontWeight: 600 }}>
+                    <div style={{ width: "12px", height: "12px", borderRadius: "3px", backgroundColor: "#fbbf24" }}></div>
+                    <span style={{ color: "var(--color-text-sub)" }}>제조·엔지니어링 ({manufacturing}%)</span>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.88rem", fontWeight: 600 }}>
+                    <div style={{ width: "12px", height: "12px", borderRadius: "3px", backgroundColor: "#a855f7" }}></div>
+                    <span style={{ color: "var(--color-text-sub)" }}>IT·유통·물류 ({ictCommerce}%)</span>
+                  </div>
                 </div>
               </div>
-
-              {/* 범례 */}
-              <div style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: "16px 20px",
-                minWidth: "220px"
-              }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.9rem", fontWeight: 600 }}>
-                  <div style={{ width: "12px", height: "12px", borderRadius: "3px", backgroundColor: "var(--color-primary)" }}></div>
-                  <span style={{ color: "var(--color-text-sub)" }}>도소매업 ({retail}%)</span>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.9rem", fontWeight: 600 }}>
-                  <div style={{ width: "12px", height: "12px", borderRadius: "3px", backgroundColor: "#a855f7" }}></div>
-                  <span style={{ color: "var(--color-text-sub)" }}>정보통신업 ({ict}%)</span>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.9rem", fontWeight: 600 }}>
-                  <div style={{ width: "12px", height: "12px", borderRadius: "3px", backgroundColor: "#fbbf24" }}></div>
-                  <span style={{ color: "var(--color-text-sub)" }}>제조업 ({manufacturing}%)</span>
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.9rem", fontWeight: 600 }}>
-                  <div style={{ width: "12px", height: "12px", borderRadius: "3px", backgroundColor: "#94a3b8" }}></div>
-                  <span style={{ color: "var(--color-text-sub)" }}>음식/기타 ({others}%)</span>
-                </div>
-              </div>
-
-            </div>
+            )}
           </div>
         </Link>
-
       </div>
     </>
   );

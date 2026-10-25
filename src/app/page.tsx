@@ -1,9 +1,8 @@
 import React from "react";
 import Link from "next/link";
-import { getPortalStats } from "@/lib/statApi";
+import { getRealPortalStats } from "@/lib/statApi";
 import SearchForm from "@/components/SearchForm";
 import StatsDashboard from "@/components/StatsDashboard";
-import { recordSnapshotIfMissing, startSnapshotScheduler } from "@/lib/statScheduler";
 import { query } from "@/lib/db";
 import DragScrollContainer from "@/components/DragScrollContainer";
 import AdBanner from "@/components/AdBanner";
@@ -12,13 +11,8 @@ import InteractiveDemoShowcase from "@/components/InteractiveDemoShowcase";
 export const dynamic = "force-dynamic";
 
 export default async function MainPage() {
-  // 백그라운드 스케줄러 기동 (서버 기동 최초 1회 가드 처리됨)
-  startSnapshotScheduler();
-  // 오늘 자정 스냅샷 기록 여부 점검 및 자동 보정 (지연 동기화 - 비동기 백그라운드 실행)
-  recordSnapshotIfMissing();
-
-  // 서버 사이드에서 실시간 국가 통계 API(전국사업체조사 & 100대 생활업종) 집계 조회
-  const stats = await getPortalStats();
+  // 서버 사이드에서 마음데이타 실제 검증 기업 DB 통계 조회 (가짜 스케줄러 및 추정 공식 없음)
+  const stats = await getRealPortalStats();
 
   // DB에서 조회수 기준 상위 인기 검색 기업 6개 동적 조회
   let quickLinks: { name: string; no: string }[] = [];
@@ -81,8 +75,8 @@ export default async function MainPage() {
         {/* 토스 스타일 대형 스마트 검색창 */}
         <SearchForm />
 
-        {/* 1초 실시간 인터랙티브 체험 쇼케이스 (검색 전 강력한 기능 가치 전달) */}
-        <InteractiveDemoShowcase />
+        {/* 1초 실데이터 미리보기 쇼케이스 */}
+        <InteractiveDemoShowcase companies={stats.demoShowcaseCompanies} />
 
         {/* 실시간 퀵 링크 */}
         <div style={{ marginBottom: "48px" }}>

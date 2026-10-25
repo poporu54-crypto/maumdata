@@ -178,7 +178,6 @@ export async function getSitemapIndexEntries(): Promise<SitemapEntry[]> {
         SELECT DISTINCT b_no FROM business_disclosures
       )
       SELECT
-        (SELECT MAX(bas_dt) FROM stats_history) AS max_stats_dt,
         (SELECT MAX(created_at) FROM document_templates WHERE created_at >= '2020-01-01'::timestamptz) AS max_tpl_dt,
         (
           SELECT MAX(
@@ -205,9 +204,9 @@ export async function getSitemapIndexEntries(): Promise<SitemapEntry[]> {
 
     const row = res.rows[0];
     if (row) {
-      coreLastmod = toW3CDate(row.max_stats_dt);
       formsLastmod = toW3CDate(row.max_tpl_dt);
       companiesLastmod = toW3CDate(row.max_biz_dt);
+      coreLastmod = companiesLastmod || formsLastmod;
     }
   } catch (err) {
     console.error("[seoFeeds] Failed to query sitemap index timestamps:", err);
@@ -230,12 +229,22 @@ export async function getCoreSitemapEntries(): Promise<SitemapEntry[]> {
   try {
     const res = await query(`
       SELECT
-        (SELECT MAX(bas_dt) FROM stats_history) AS max_stats_dt,
+        (
+          SELECT MAX(
+            GREATEST(
+              CASE WHEN nts_last_sync_at >= '2020-01-01'::timestamptz THEN nts_last_sync_at ELSE NULL END,
+              CASE WHEN nps_last_sync_at >= '2020-01-01'::timestamptz THEN nps_last_sync_at ELSE NULL END,
+              CASE WHEN dart_last_sync_at >= '2020-01-01'::timestamptz THEN dart_last_sync_at ELSE NULL END
+            )
+          )
+          FROM businesses
+          WHERE b_stt_cd = '01'
+        ) AS max_biz_sync_dt,
         (SELECT MAX(created_at) FROM document_templates WHERE created_at >= '2020-01-01'::timestamptz) AS max_tpl_dt
     `);
     const row = res.rows[0];
     if (row) {
-      statsLastmod = toW3CDate(row.max_stats_dt);
+      statsLastmod = toW3CDate(row.max_biz_sync_dt);
       formsLastmod = toW3CDate(row.max_tpl_dt);
     }
   } catch (err) {
@@ -434,11 +443,11 @@ export async function getRssFeedItems(): Promise<RssFeedItem[]> {
       pubDate: new Date("2026-06-11T15:03:25+09:00"),
     },
     {
-      title: "[서비스안내] 대한민국 사업자 생존율·신규 창업 동향 데이터 인사이트",
+      title: "[서비스안내] 대한민국 기업 실데이터 인사이트 및 매출·고용 리더보드",
       link: `${SITE_URL}/insights`,
       guid: `${SITE_URL}/insights#launch-2026-06-11`,
       description:
-        "국세청 및 공공데이터 기반 전국 사업자 분포, 신규 등록 추이, 업종별 영업 생존율 지표를 한눈에 확인하세요.",
+        "국세청 납세상태 검증, 국민연금 가입 임직원 및 DART 재무제표를 실시간 SQL로 집계한 업종·지역별 분포와 상위 기업 리더보드를 확인하세요.",
       category: "데이터인사이트",
       pubDate: new Date("2026-06-11T15:03:25+09:00"),
     },

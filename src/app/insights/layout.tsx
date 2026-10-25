@@ -1,14 +1,16 @@
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "대한민국 사업자 데이터 인사이트 & 산업 통계",
-  description: "국세청 사업자등록 실시간 통계를 가공 및 분류하여 최신 업종별 사업자 분포, 시·도 광역 지역별 활성 기업 수 및 연도별 성장 추이 흐름을 한눈에 제공합니다.",
+  title: "대한민국 기업 실데이터 인사이트 & 매출·고용 리더보드",
+  description:
+    "국세청 사업자 상태 검증, 국민연금 가입 임직원 및 DART 재무제표를 실시간 SQL로 직접 집계한 업종별·지역별 기업 분포 및 매출·고용 상위 기업 리더보드입니다.",
   alternates: {
     canonical: "/insights",
   },
   openGraph: {
-    title: "대한민국 사업자 데이터 인사이트 | 마음데이타",
-    description: "국세청 사업자등록 실시간 통계를 바탕으로 최신 창업 트렌드 및 산업 변화 흐름을 한눈에 확인하세요.",
+    title: "대한민국 기업 실데이터 인사이트 | 마음데이타",
+    description:
+      "추정치 없이 실제 국세청·국민연금·DART 검증 데이터를 집계한 업종·시도별 분포 및 매출·고용 상위 기업 랭킹을 확인하세요.",
     url: "https://www.maumdata.com/insights",
     type: "website",
   },

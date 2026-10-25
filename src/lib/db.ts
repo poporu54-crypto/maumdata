@@ -433,30 +433,6 @@ export async function addInvalidBusiness(bNo: string) {
   await query("INSERT INTO invalid_businesses (b_no) VALUES ($1) ON CONFLICT (b_no) DO NOTHING", [clean]);
 }
 
-// 7. 국가 통계 이력 조회
-export async function getStatsHistory() {
-  const result = await query(`
-    SELECT bas_dt as "basDt", stats_data as "statsData" 
-    FROM stats_history 
-    ORDER BY bas_dt ASC
-  `);
-  return result.rows.map((row) => ({
-    date: row.basDt,
-    ...row.statsData
-  }));
-}
-
-// 8. 국가 통계 이력 등록/갱신
-export async function upsertStatsHistory(stat: any) {
-  const { date, ...statsData } = stat;
-  await query(`
-    INSERT INTO stats_history (bas_dt, stats_data)
-    VALUES ($1, $2)
-    ON CONFLICT (bas_dt) DO UPDATE SET
-      stats_data = EXCLUDED.stats_data
-  `, [date, JSON.stringify(statsData)]);
-}
-
 // 9. 주변 기업 및 유사 사업자 하이브리드 스코어링 추천 조회
 export async function getRecommendedBusinesses(
   bNo: string,
