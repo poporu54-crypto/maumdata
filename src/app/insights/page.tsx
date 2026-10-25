@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import AdBanner from "@/components/AdBanner";
+import StatsRelatedNav from "@/components/StatsRelatedNav";
 
 export default function InsightsPage() {
   const [activeTab, setActiveTab] = useState<"industry" | "region" | "trend">("industry");
@@ -329,6 +330,8 @@ export default function InsightsPage() {
             💡 <strong>최근 분석:</strong> 2021년 코로나 팬데믹 시점 이후 1인 크리에이터, 통신판매업 등 비대면 창업 수요가 급증함에 따라 가동 사업자 수의 누적 그래프가 15% 이상 가파른 성장을 기록하고 있습니다.
           </div>
         </div>
+
+        <StatsRelatedNav currentPath="/insights" />
 
       </div>
     </div>

@@ -786,13 +786,25 @@ export default function DocumentEditor({ templateId, initialTemplate }: { templa
       if (initData.hasOwnProperty("estDate")) {
         initData.estDate = formattedDate;
       }
-      // 기업 상세 또는 스캐너에서 전달된 기업 데이터 자동 주입
+      // 기업 상세 또는 스캐너에서 전달된 기업 데이터 자동 주입 (클린 URL sessionStorage 및 쿼리 파라미터 모두 지원)
       if (typeof window !== "undefined") {
+        let sessionPrefill: Record<string, string> | null = null;
+        try {
+          const rawSession = window.sessionStorage.getItem("maumdata_prefill_partyB");
+          if (rawSession) {
+            window.sessionStorage.removeItem("maumdata_prefill_partyB");
+            const parsed = JSON.parse(rawSession);
+            if (parsed && typeof parsed.ts === "number" && Date.now() - parsed.ts < 60_000) {
+              sessionPrefill = parsed;
+            }
+          }
+        } catch {}
+
         const urlParams = new URLSearchParams(window.location.search);
-        const partyBName = urlParams.get("partyB_name");
-        const partyBBno = urlParams.get("partyB_bno");
-        const partyBOwner = urlParams.get("partyB_owner");
-        const partyBAddress = urlParams.get("partyB_address");
+        const partyBName = urlParams.get("partyB_name") || sessionPrefill?.partyB_name || "";
+        const partyBBno = urlParams.get("partyB_bno") || sessionPrefill?.partyB_bno || "";
+        const partyBOwner = urlParams.get("partyB_owner") || sessionPrefill?.partyB_owner || "";
+        const partyBAddress = urlParams.get("partyB_address") || sessionPrefill?.partyB_address || "";
 
         if (partyBName) {
           ["company", "partyB_name", "client", "client_name", "target_company", "supplier", "receiver", "receiverName", "buyer"].forEach((k) => {

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import Link from "next/link";
 
 // 구글 애드센스 실제 연동 코드 소스화 (중앙 관리)
 export const ADSENSE_CLIENT = "ca-pub-3713361723411048";
@@ -201,31 +202,25 @@ export default function AdSpace({
           </p>
         </div>
 
-        <button 
+        <Link
+          href={activeMock.title.includes("FORM") || activeMock.title.includes("서식") ? "/form" : "/"}
           style={{
             backgroundColor: "#ffffff",
             color: "#111827",
-            border: "none",
             borderRadius: "8px",
             padding: "8px 16px",
             fontWeight: 700,
             fontSize: "0.8rem",
-            cursor: "pointer",
+            textDecoration: "none",
             flexShrink: 0,
-            transition: "all 0.2s ease"
+            transition: "all 0.2s ease",
+            display: "inline-block",
           }}
-          onClick={() => {
-            if (activeMock.title.includes("FORM")) {
-              window.location.href = "/form";
-            } else if (activeMock.title.includes("BIZ")) {
-              window.location.href = "/";
-            }
-          }}
-          onMouseOver={(e) => e.currentTarget.style.transform = "scale(1.03)"}
-          onMouseOut={(e) => e.currentTarget.style.transform = "scale(1)"}
+          onMouseOver={(e) => (e.currentTarget.style.transform = "scale(1.03)")}
+          onMouseOut={(e) => (e.currentTarget.style.transform = "scale(1)")}
         >
           {activeMock.actionText}
-        </button>
+        </Link>
       </div>
     </div>
   );

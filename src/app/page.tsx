@@ -21,7 +21,7 @@ export default async function MainPage() {
   const stats = await getPortalStats();
 
   // DB에서 조회수 기준 상위 인기 검색 기업 6개 동적 조회
-  let quickLinks = [];
+  let quickLinks: { name: string; no: string }[] = [];
   try {
     const popularBizRes = await query(`
       SELECT b.b_no, b.b_nm, b.brand_name, COUNT(l.id) AS recent_views
@@ -45,15 +45,7 @@ export default async function MainPage() {
     });
   } catch (err) {
     console.error("Failed to fetch dynamic quick links:", err);
-    // Fallback static links in case of database errors
-    quickLinks = [
-      { name: "지윤", no: "1378651839" },
-      { name: "토스", no: "1208801280" },
-      { name: "네이버", no: "2208162517" },
-      { name: "카카오", no: "1208147521" },
-      { name: "스타벅스", no: "2018121515" },
-      { name: "삼양식품", no: "1028105450" }
-    ];
+    quickLinks = [];
   }
 
   return (
@@ -94,59 +86,63 @@ export default async function MainPage() {
 
         {/* 실시간 퀵 링크 */}
         <div style={{ marginBottom: "48px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px", padding: "0 4px" }}>
-            <h3 style={{
-              fontSize: "0.85rem",
-              color: "var(--color-text-desc)",
-              fontWeight: 700,
-              textTransform: "uppercase",
-              letterSpacing: "0.05em",
-              margin: 0,
-            }}>
-              🔥 실시간 많이 찾는 기업
-            </h3>
-            <span style={{ fontSize: "0.75rem", color: "var(--color-primary)", fontWeight: 600 }}>실시간 자동 집계</span>
-          </div>
-
-          <DragScrollContainer 
-            className="quick-links-scroll"
-            style={{
-              display: "flex",
-              flexWrap: "nowrap",
-              overflowX: "auto",
-              gap: "10px",
-              paddingBottom: "8px",
-            }}
-          >
-            {quickLinks.map((link) => (
-              <Link
-                key={link.no}
-                href={`/biz/${link.no}`}
-                className="related-card"
-                style={{
-                  backgroundColor: "var(--bg-color-card)",
-                  border: "1px solid var(--color-border)",
-                  borderRadius: "14px",
-                  padding: "10px 18px",
-                  fontSize: "0.88rem",
+          {quickLinks.length > 0 && (
+            <>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px", padding: "0 4px" }}>
+                <h3 style={{
+                  fontSize: "0.85rem",
+                  color: "var(--color-text-desc)",
                   fontWeight: 700,
-                  color: "var(--color-text-main)",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                  margin: 0,
+                }}>
+                  🔥 실시간 많이 찾는 기업
+                </h3>
+                <span style={{ fontSize: "0.75rem", color: "var(--color-primary)", fontWeight: 600 }}>실시간 자동 집계</span>
+              </div>
+
+              <DragScrollContainer 
+                className="quick-links-scroll"
+                style={{
                   display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)",
-                  transition: "var(--transition-smooth)",
-                  whiteSpace: "nowrap",
+                  flexWrap: "nowrap",
+                  overflowX: "auto",
+                  gap: "10px",
+                  paddingBottom: "8px",
                 }}
               >
-                <span style={{ fontSize: "1.1rem" }}>🏢</span>
-                <span>{link.name}</span>
-                <span style={{ fontSize: "0.75rem", color: "var(--color-text-desc)", fontWeight: 500 }}>
-                  ({link.no.slice(0, 3)}-{link.no.slice(3, 5)})
-                </span>
-              </Link>
-            ))}
-          </DragScrollContainer>
+                {quickLinks.map((link) => (
+                  <Link
+                    key={link.no}
+                    href={`/biz/${link.no}`}
+                    className="related-card"
+                    style={{
+                      backgroundColor: "var(--bg-color-card)",
+                      border: "1px solid var(--color-border)",
+                      borderRadius: "14px",
+                      padding: "10px 18px",
+                      fontSize: "0.88rem",
+                      fontWeight: 700,
+                      color: "var(--color-text-main)",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)",
+                      transition: "var(--transition-smooth)",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    <span style={{ fontSize: "1.1rem" }}>🏢</span>
+                    <span>{link.name}</span>
+                    <span style={{ fontSize: "0.75rem", color: "var(--color-text-desc)", fontWeight: 500 }}>
+                      ({link.no.slice(0, 3)}-{link.no.slice(3, 5)})
+                    </span>
+                  </Link>
+                ))}
+              </DragScrollContainer>
+            </>
+          )}
           <AdBanner />
         </div>
 

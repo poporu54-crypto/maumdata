@@ -2,6 +2,7 @@ import React from "react";
 import { Metadata } from "next";
 import Link from "next/link";
 import DateSelector from "@/components/DateSelector";
+import StatsRelatedNav from "@/components/StatsRelatedNav";
 import { HistoryEntry } from "@/lib/statScheduler";
 import { getStatsHistory } from "@/lib/db";
 
@@ -15,7 +16,7 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   const { date } = await searchParams;
   const targetDate = date ? decodeURIComponent(date) : "";
   return {
-    title: `계속사업자 비율 상세 분석 ${targetDate ? `(${targetDate})` : ""} | 마음데이타`,
+    title: `계속사업자 비율 상세 분석${targetDate ? ` (${targetDate})` : ""}`,
     description: `${targetDate ? `${targetDate} 기준 ` : ""}대한민국 업종별 활성(계속)사업자 비율 및 유지 안정성 통계 데이터입니다.`,
     alternates: {
       canonical: "/stats/active-rate",
@@ -43,10 +44,10 @@ export default async function ActiveRateStatsPage({ searchParams }: PageProps) {
 
   // 날짜 오름차순 정렬
   history.sort((a, b) => a.date.localeCompare(b.date));
-  const dates = history.map(h => h.date);
+  const dates = history.map((h) => h.date);
 
   // 대상 날짜의 엔트리 조회
-  let activeEntry = history.find(h => h.date === queryDate);
+  let activeEntry = history.find((h) => h.date === queryDate);
   if (!activeEntry && history.length > 0) {
     activeEntry = history[history.length - 1];
   }
@@ -65,22 +66,21 @@ export default async function ActiveRateStatsPage({ searchParams }: PageProps) {
   const chartWidth = 500;
   const padding = 30;
   const graphHistory = history.slice(-7);
-  const minRate = Math.min(...graphHistory.map(h => h.activeBizRate)) - 0.2;
-  const maxRate = Math.max(...graphHistory.map(h => h.activeBizRate)) + 0.2;
+  const minRate = Math.min(...graphHistory.map((h) => h.activeBizRate)) - 0.2;
+  const maxRate = Math.max(...graphHistory.map((h) => h.activeBizRate)) + 0.2;
   const rateRange = maxRate - minRate || 1;
 
   const points = graphHistory.map((h, i) => {
-    const x = padding + (i * (chartWidth - 2 * padding)) / (graphHistory.length - 1);
+    const x = padding + (i * (chartWidth - 2 * padding)) / Math.max(1, graphHistory.length - 1);
     const y = chartHeight - padding - ((h.activeBizRate - minRate) / rateRange) * (chartHeight - 2 * padding);
     return { x, y, rate: h.activeBizRate, date: h.date.slice(5) }; // MM-DD만 표시
   });
 
-  const linePoints = points.map(p => `${p.x},${p.y}`).join(" ");
+  const linePoints = points.map((p) => `${p.x},${p.y}`).join(" ");
 
   return (
     <div className="animate-fade-in" style={{ padding: "24px 0 80px 0" }}>
       <div className="container" style={{ maxWidth: "720px" }}>
-        
         {/* 헤더 */}
         <div style={{ marginBottom: "32px" }}>
           <h1 style={{ fontSize: "1.85rem", fontWeight: 800, color: "var(--color-text-main)", marginBottom: "8px" }}>
@@ -104,14 +104,16 @@ export default async function ActiveRateStatsPage({ searchParams }: PageProps) {
               <span style={{ fontSize: "2.8rem", fontWeight: 850, color: "var(--color-text-main)", lineHeight: 1 }}>
                 {activeEntry.activeBizRate}%
               </span>
-              <span style={{
-                backgroundColor: "rgba(16, 185, 129, 0.1)",
-                color: "var(--color-success)",
-                fontSize: "0.85rem",
-                fontWeight: 700,
-                padding: "4px 10px",
-                borderRadius: "30px"
-              }}>
+              <span
+                style={{
+                  backgroundColor: "rgba(16, 185, 129, 0.1)",
+                  color: "var(--color-success)",
+                  fontSize: "0.85rem",
+                  fontWeight: 700,
+                  padding: "4px 10px",
+                  borderRadius: "30px",
+                }}
+              >
                 업종 기저 안정성 매우 높음
               </span>
             </div>
@@ -129,13 +131,13 @@ export default async function ActiveRateStatsPage({ searchParams }: PageProps) {
           <p style={{ fontSize: "0.82rem", color: "var(--color-text-desc)", marginBottom: "24px" }}>
             미세한 유입/유출 추세를 민감하게 반영한 7일 이동 평균 흐름입니다.
           </p>
-          
+
           <div style={{ width: "100%", overflowX: "auto" }}>
             <div style={{ minWidth: "500px", position: "relative" }}>
               <svg width="100%" height={chartHeight} viewBox={`0 0 ${chartWidth} ${chartHeight}`} style={{ overflow: "visible" }}>
                 {/* 배경 그리드선 */}
                 <line x1={padding} y1={padding} x2={chartWidth - padding} y2={padding} stroke="var(--color-border)" strokeWidth="0.5" strokeDasharray="3 3" />
-                <line x1={padding} y1={chartHeight/2} x2={chartWidth - padding} y2={chartHeight/2} stroke="var(--color-border)" strokeWidth="0.5" strokeDasharray="3 3" />
+                <line x1={padding} y1={chartHeight / 2} x2={chartWidth - padding} y2={chartHeight / 2} stroke="var(--color-border)" strokeWidth="0.5" strokeDasharray="3 3" />
                 <line x1={padding} y1={chartHeight - padding} x2={chartWidth - padding} y2={chartHeight - padding} stroke="var(--color-border)" strokeWidth="1" />
 
                 {/* 꺾은선 */}
@@ -158,6 +160,7 @@ export default async function ActiveRateStatsPage({ searchParams }: PageProps) {
           </div>
         </div>
 
+        <StatsRelatedNav currentPath="/stats/active-rate" />
       </div>
     </div>
   );

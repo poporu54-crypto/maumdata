@@ -317,15 +317,110 @@ export default async function MarketAreaPage({ params }: PageProps) {
           </div>
         </div>
 
+        {/* 전국 주요 핵심 상권 비교 내부 <a href> 연결망 */}
+        <section
+          aria-label="전국 주요 핵심 상권 비교 리포트"
+          className="card"
+          style={{
+            padding: "28px 24px",
+            border: "1px solid var(--color-border)",
+            backgroundColor: "var(--bg-color-card)",
+            marginBottom: "24px",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "8px",
+              marginBottom: "14px",
+            }}
+          >
+            <h3 style={{ fontSize: "1.05rem", fontWeight: 800, color: "var(--color-text-main)", margin: 0 }}>
+              🗺️ 전국 20대 핵심 상권 비교 리포트 바로가기
+            </h3>
+            <Link
+              href="/stats/market-area"
+              style={{
+                fontSize: "0.84rem",
+                fontWeight: 700,
+                color: "var(--color-primary)",
+                textDecoration: "none",
+              }}
+            >
+              전국 상권 분석 메인 허브 ➔
+            </Link>
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+            {[
+              { cd: "1168064000", label: "서울 강남 역삼1동" },
+              { cd: "1168065000", label: "서울 강남 역삼2동" },
+              { cd: "1159062000", label: "서울 동작 사당1동" },
+              { cd: "1111061500", label: "서울 종로1·2·3·4가동" },
+              { cd: "4113565500", label: "성남 분당 삼평동(판교)" },
+              { cd: "2820051000", label: "인천 남동 구월1동" },
+              { cd: "5111066000", label: "강원 춘천 퇴계동" },
+              { cd: "3017064000", label: "대전 서구 둔산2동" },
+              { cd: "3611056000", label: "세종 보람동" },
+              { cd: "4413356600", label: "천안 불당1동" },
+              { cd: "4311154500", label: "청주 성안동" },
+              { cd: "2635051000", label: "부산 해운대 우1동" },
+              { cd: "2726051000", label: "대구 수성 범어1동" },
+              { cd: "4812353000", label: "창원 성산 상남동" },
+              { cd: "3114057000", label: "울산 남구 삼산동" },
+              { cd: "4711157000", label: "포항 남구 제철동" },
+              { cd: "1224074500", label: "광주 서구 치평동" },
+              { cd: "5211173000", label: "전주 완산 효자5동" },
+              { cd: "1213080000", label: "여수 여천동" },
+              { cd: "5011066000", label: "제주 노형동" },
+            ]
+              .filter((d) => d.cd !== dongCd)
+              .map((d) => (
+                <Link
+                  key={d.cd}
+                  href={`/stats/market-area/${d.cd}`}
+                  style={{
+                    fontSize: "0.8rem",
+                    fontWeight: 600,
+                    color: "var(--color-text-sub)",
+                    backgroundColor: "var(--bg-color-main)",
+                    border: "1px solid var(--color-border)",
+                    borderRadius: "20px",
+                    padding: "6px 12px",
+                    textDecoration: "none",
+                  }}
+                >
+                  {d.label}
+                </Link>
+              ))}
+          </div>
+        </section>
+
         {/* 하단 메인 바로가기 */}
-        <div style={{ textAlign: "center", marginTop: "24px" }}>
-          <Link href="/stats/market-area" style={{
-            fontSize: "0.9rem",
-            fontWeight: 700,
-            color: "var(--color-primary)",
-            textDecoration: "underline"
-          }}>
-            마음데이타 메인 화면으로 이동
+        <div style={{ display: "flex", justifyContent: "center", gap: "20px", flexWrap: "wrap", marginTop: "16px" }}>
+          <Link
+            href="/stats/market-area"
+            style={{
+              fontSize: "0.9rem",
+              fontWeight: 700,
+              color: "var(--color-primary)",
+              textDecoration: "underline",
+            }}
+          >
+            ← 전국 상권 분석 허브로 돌아가기
+          </Link>
+          <Link
+            href="/"
+            style={{
+              fontSize: "0.9rem",
+              fontWeight: 700,
+              color: "var(--color-text-sub)",
+              textDecoration: "underline",
+            }}
+          >
+            마음데이타 기업 조회 홈으로 이동
           </Link>
         </div>
 

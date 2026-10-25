@@ -1,6 +1,8 @@
 import React from "react";
 import { Metadata } from "next";
+import Link from "next/link";
 import DateSelector from "@/components/DateSelector";
+import StatsRelatedNav from "@/components/StatsRelatedNav";
 import { HistoryEntry } from "@/lib/statScheduler";
 import { getStatsHistory } from "@/lib/db";
 
@@ -14,7 +16,7 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   const { date } = await searchParams;
   const targetDate = date ? decodeURIComponent(date) : "";
   return {
-    title: `국내 산업군별 사업자 분포도 상세 ${targetDate ? `(${targetDate})` : ""} | 마음데이타`,
+    title: `국내 산업군별 사업자 분포도 상세${targetDate ? ` (${targetDate})` : ""}`,
     description: `${targetDate ? `${targetDate} 기준 ` : ""}대한민국 통계청 전국사업체조사 API 기반 19대 대분류 업종 상세 정보입니다.`,
     alternates: {
       canonical: "/stats/distribution",
@@ -51,13 +53,12 @@ export default async function DistributionStatsPage({ searchParams }: PageProps)
   }
 
   if (!activeEntry) {
-    activeEntry = {
-      date: "2026-06-11",
-      newBizToday: 1330,
-      newBizTodayDelta: 67,
-      activeBizRate: 91.4,
-      industryRatios: { retail: 25.2, ict: 2.1, manufacturing: 8.6, others: 64.1 }
-    };
+    return (
+      <div style={{ padding: "80px 0", textAlign: "center" }}>
+        <h3>통계 데이터를 불러오지 못했습니다.</h3>
+        <Link href="/">홈으로 이동</Link>
+      </div>
+    );
   }
 
   // 2. 동적 SVG 차트 세그먼트 계산
@@ -317,6 +318,8 @@ export default async function DistributionStatsPage({ searchParams }: PageProps)
             * 통계 데이터 연계 출처: 통계청 전국사업체조사 (최종 KOSIS 동기화 완료)
           </div>
         </div>
+
+        <StatsRelatedNav currentPath="/stats/distribution" />
 
       </div>
     </div>

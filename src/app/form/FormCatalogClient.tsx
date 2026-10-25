@@ -356,9 +356,7 @@ export default function FormCatalogClient({
                         key={idx}
                         href={`/form/tag/${encodeURIComponent(sub.tag)}`}
                         onClick={(e) => {
-                          e.preventDefault();
                           e.stopPropagation();
-                          handleSelectTag(sub.tag, cat.key);
                         }}
                         style={{
                           backgroundColor: isActive ? "var(--color-primary)" : "var(--bg-color-card)",

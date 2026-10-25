@@ -2,6 +2,7 @@ import React from "react";
 import { Metadata } from "next";
 import Link from "next/link";
 import DateSelector from "@/components/DateSelector";
+import StatsRelatedNav from "@/components/StatsRelatedNav";
 import { HistoryEntry } from "@/lib/statScheduler";
 import { getStatsHistory } from "@/lib/db";
 
@@ -15,7 +16,7 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   const { date } = await searchParams;
   const targetDate = date ? decodeURIComponent(date) : "";
   return {
-    title: `실시간 개업 현황 상세 분석 ${targetDate ? `(${targetDate})` : ""} | 마음데이타`,
+    title: `실시간 개업 현황 상세 분석${targetDate ? ` (${targetDate})` : ""}`,
     description: `${targetDate ? `${targetDate} 기준 ` : ""}대한민국 국세청 100대 생활업종 신규 개업 추세 분석 데이터입니다.`,
     alternates: {
       canonical: "/stats/new-biz",
@@ -53,13 +54,12 @@ export default async function NewBizStatsPage({ searchParams }: PageProps) {
   let activeEntry = activeIndex >= 0 ? history[activeIndex] : null;
 
   if (!activeEntry) {
-    activeEntry = {
-      date: "2026-06-11",
-      newBizToday: 1330,
-      newBizTodayDelta: 67,
-      activeBizRate: 91.4,
-      industryRatios: { retail: 25.2, ict: 2.1, manufacturing: 8.6, others: 64.1 }
-    };
+    return (
+      <div style={{ padding: "80px 0", textAlign: "center" }}>
+        <h3>통계 데이터를 불러오지 못했습니다.</h3>
+        <Link href="/">홈으로 이동</Link>
+      </div>
+    );
   }
 
   // 차트에 표시할 최근 7일간의 히스토리 슬라이스 (데이터가 뭉치지 않도록 최대 7개 구간으로 필터링)
@@ -332,6 +332,8 @@ export default async function NewBizStatsPage({ searchParams }: PageProps) {
             </table>
           </div>
         </div>
+
+        <StatsRelatedNav currentPath="/stats/new-biz" />
 
       </div>
     </div>

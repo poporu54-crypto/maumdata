@@ -84,3 +84,52 @@ export async function getTagTemplateSummariesServer(tag: string): Promise<Templa
   const all = await getAllTemplateSummariesServer();
   return all.filter((tpl) => matchesTagRule(tpl, tag));
 }
+
+/**
+ * 서버 전용: 서식 상세 하단 내부 링크용 동일 카테고리 추천 서식 조회 (초경량 쿼리)
+ */
+export async function getRelatedTemplateSummariesServer(
+  category: string,
+  excludeId: string,
+  limit: number = 8
+): Promise<Pick<TemplateSummary, "id" | "title" | "category" | "desc" | "popular">[]> {
+  const merged = new Map<string, Pick<TemplateSummary, "id" | "title" | "category" | "desc" | "popular">>();
+
+  for (const tpl of TEMPLATES) {
+    if (tpl.id !== excludeId && tpl.category === category) {
+      merged.set(tpl.id, {
+        id: tpl.id,
+        title: tpl.title,
+        category: tpl.category,
+        desc: tpl.desc,
+        popular: Boolean(tpl.popular),
+      });
+    }
+  }
+
+  try {
+    const res = await query(
+      `SELECT id, title, category, description AS desc, popular
+       FROM document_templates
+       WHERE category = $1 AND id != $2
+       ORDER BY popular DESC, title ASC
+       LIMIT $3`,
+      [category, excludeId, limit]
+    );
+    for (const row of res.rows) {
+      if (!merged.has(row.id)) {
+        merged.set(row.id, {
+          id: row.id,
+          title: row.title || "",
+          category: row.category || category,
+          desc: row.desc || "",
+          popular: Boolean(row.popular),
+        });
+      }
+    }
+  } catch (err) {
+    console.error("[formSummaries] Failed to load related template summaries:", err);
+  }
+
+  return Array.from(merged.values()).slice(0, limit);
+}
