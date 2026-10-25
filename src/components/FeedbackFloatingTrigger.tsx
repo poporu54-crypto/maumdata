@@ -1,7 +1,11 @@
 "use client";
 
 import React, { useState } from "react";
-import FeedbackModal from "./FeedbackModal";
+import dynamic from "next/dynamic";
+
+const FeedbackModal = dynamic(() => import("./FeedbackModal"), {
+  ssr: false,
+});
 
 export default function FeedbackFloatingTrigger() {
   const [isOpen, setIsOpen] = useState(false);
@@ -45,7 +49,7 @@ export default function FeedbackFloatingTrigger() {
         <span>피드백</span>
       </button>
 
-      <FeedbackModal isOpen={isOpen} onClose={() => setIsOpen(false)} />
+      {isOpen && <FeedbackModal isOpen={isOpen} onClose={() => setIsOpen(false)} />}
     </>
   );
 }

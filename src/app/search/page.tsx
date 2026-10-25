@@ -16,10 +16,18 @@ export async function generateMetadata({ searchParams }: SearchPageProps): Promi
   const decodedQuery = query ? decodeURIComponent(query) : "";
   const canonicalPath = decodedQuery ? `/search?query=${encodeURIComponent(decodedQuery)}` : "/search";
   return {
-    title: `"${decodedQuery}" 검색 결과 | 마음데이타 기업 검색`,
-    description: `마음데이타 포털에서 "${decodedQuery}"에 부합하는 실시간 기업 상태 및 3개년 종합 재무 분석 이력을 조회해보세요.`,
+    title: decodedQuery
+      ? `"${decodedQuery}" 기업 검색 결과`
+      : "기업 및 사업자등록번호 검색",
+    description: decodedQuery
+      ? `마음데이타 포털에서 "${decodedQuery}"에 부합하는 실시간 기업 상태 및 3개년 종합 재무 분석 이력을 조회해보세요.`
+      : "대한민국 기업명, 브랜드명, 사업자등록번호로 실시간 납세 상태와 재무·고용 분석 정보를 검색하세요.",
     alternates: {
       canonical: canonicalPath,
+    },
+    robots: {
+      index: false,
+      follow: true,
     },
   };
 }
@@ -101,12 +109,7 @@ async function getPopularQuickLinks() {
     });
   } catch (err) {
     console.error("Failed to fetch search quick links:", err);
-    return [
-      { name: "지윤 주식회사", no: "1378651839" },
-      { name: "토스 (비바리퍼블리카)", no: "1208801280" },
-      { name: "네이버 (NAVER)", no: "2208162517" },
-      { name: "스타벅스 코리아", no: "2018121515" }
-    ];
+    return [];
   }
 }
 
@@ -133,28 +136,30 @@ async function NoSearchResultSection({ searchQuery }: { searchQuery: string }) {
         </span>
       </p>
       
-      <div style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", gap: "12px" }}>
-        <span style={{ fontSize: "0.82rem", color: "var(--color-text-desc)", fontWeight: 600 }}>추천 인기 키워드 검색:</span>
-        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", justifyContent: "center" }}>
-          {quickLinks.map(link => (
-            <Link 
-              key={link.no}
-              href={`/search?query=${encodeURIComponent(link.name)}`}
-              style={{
-                padding: "6px 12px",
-                borderRadius: "30px",
-                border: "1px solid var(--color-border)",
-                fontSize: "0.8rem",
-                fontWeight: 600,
-                backgroundColor: "rgba(255, 255, 255, 0.02)",
-                color: "var(--color-text-sub)"
-              }}
-            >
-              {link.name}
-            </Link>
-          ))}
+      {quickLinks.length > 0 && (
+        <div style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", gap: "12px" }}>
+          <span style={{ fontSize: "0.82rem", color: "var(--color-text-desc)", fontWeight: 600 }}>추천 인기 키워드 검색:</span>
+          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", justifyContent: "center" }}>
+            {quickLinks.map(link => (
+              <Link 
+                key={link.no}
+                href={`/search?query=${encodeURIComponent(link.name)}`}
+                style={{
+                  padding: "6px 12px",
+                  borderRadius: "30px",
+                  border: "1px solid var(--color-border)",
+                  fontSize: "0.8rem",
+                  fontWeight: 600,
+                  backgroundColor: "rgba(255, 255, 255, 0.02)",
+                  color: "var(--color-text-sub)"
+                }}
+              >
+                {link.name}
+              </Link>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
@@ -344,4 +349,3 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
     </div>
   );
 }
-

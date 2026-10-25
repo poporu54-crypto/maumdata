@@ -14,6 +14,14 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://www.maumdata.com"),
   alternates: {
     canonical: "/",
+    types: {
+      "application/rss+xml": [
+        {
+          url: "https://www.maumdata.com/rss.xml",
+          title: "마음데이타 (MaumData) RSS 피드",
+        },
+      ],
+    },
   },
   title: {
     template: "%s | 마음데이타",

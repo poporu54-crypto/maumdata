@@ -165,15 +165,39 @@ export async function getAllBusinesses() {
   }));
 }
 
-// 3. 기업명 또는 업종 등 검색 (LIKE 쿼리)
-export async function searchBusinesses(q: string) {
-  const searchWord = `%${q}%`;
-  const cleanQ = q.replace(/[^0-9]/g, "");
+// 3. 기업명 또는 업종 등 검색 (정확도 우선 정렬 및 대용량 전송 폭탄 방지를 위한 LIMIT 적용)
+export async function searchBusinesses(q: string, limit: number = 60) {
+  const trimmed = q.trim();
+  const searchWord = `%${trimmed}%`;
+  const prefixWord = `${trimmed}%`;
+  const cleanQ = trimmed.replace(/[^0-9]/g, "");
+  const safeLimit = Math.min(200, Math.max(1, limit));
+
   const result = await query(
-    `SELECT b_no, b_nm, p_nm, b_adr, b_sector, is_sme, listing_status, data_source, brand_name 
-     FROM businesses 
-     WHERE b_nm LIKE $1 OR p_nm LIKE $1 OR b_adr LIKE $1 OR brand_name LIKE $1 OR b_no = $2`,
-    [searchWord, cleanQ || "NOT_A_NUMBER"]
+    `SELECT b_no, b_nm, p_nm, b_adr, b_sector, is_sme, listing_status, data_source, brand_name
+     FROM businesses
+     WHERE b_nm NOT IN ('', '상호 정보 없음', '상호 미등록 사업자')
+       AND (
+         b_nm ILIKE $1
+         OR p_nm ILIKE $1
+         OR b_adr ILIKE $1
+         OR brand_name ILIKE $1
+         OR b_no = $2
+       )
+     ORDER BY
+       CASE
+         WHEN b_no = $2 THEN 0
+         WHEN b_nm = $3 THEN 1
+         WHEN b_nm ILIKE $4 THEN 2
+         WHEN brand_name ILIKE $4 THEN 3
+         WHEN b_nm ILIKE $1 OR brand_name ILIKE $1 THEN 4
+         WHEN p_nm ILIKE $1 THEN 5
+         ELSE 6
+       END ASC,
+       COALESCE(nps_sbscrb_nmps, 0) DESC,
+       COALESCE(view_count, 0) DESC
+     LIMIT $5`,
+    [searchWord, cleanQ || "NOT_A_NUMBER", trimmed, prefixWord, safeLimit]
   );
   return result.rows.map((row) => ({
     b_no: row.b_no,

@@ -354,7 +354,7 @@ export default function QuickContractModal({ business }: QuickContractModalProps
                   textDecoration: "underline"
                 }}
               >
-                전체 80여 개 서식 보러가기
+                전체 300여 개 서식 보러가기
               </button>
             </div>
           </div>

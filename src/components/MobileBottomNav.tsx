@@ -2,9 +2,13 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
 import { vibrateDevice } from "@/lib/appBridge";
-import BusinessCardScannerModal from "./BusinessCardScannerModal";
+
+const BusinessCardScannerModal = dynamic(() => import("./BusinessCardScannerModal"), {
+  ssr: false,
+});
 
 export default function MobileBottomNav() {
   const pathname = usePathname() || "";
@@ -133,13 +137,15 @@ export default function MobileBottomNav() {
       </nav>
 
       {/* 카메라 스캐너 모달 */}
-      <BusinessCardScannerModal
-        isOpen={isScannerOpen}
-        onClose={() => setIsScannerOpen(false)}
-        onDetectedBusinessNo={(bNo) => {
-          router.push(`/biz/${bNo}`);
-        }}
-      />
+      {isScannerOpen && (
+        <BusinessCardScannerModal
+          isOpen={isScannerOpen}
+          onClose={() => setIsScannerOpen(false)}
+          onDetectedBusinessNo={(bNo) => {
+            router.push(`/biz/${bNo}`);
+          }}
+        />
+      )}
     </>
   );
 }

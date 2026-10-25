@@ -1,7 +1,11 @@
 "use client";
 
 import React, { useState } from "react";
-import FeedbackModal from "./FeedbackModal";
+import dynamic from "next/dynamic";
+
+const FeedbackModal = dynamic(() => import("./FeedbackModal"), {
+  ssr: false,
+});
 
 export default function FooterFeedbackButton() {
   const [isOpen, setIsOpen] = useState(false);
@@ -29,7 +33,7 @@ export default function FooterFeedbackButton() {
         <span>💬 의견 및 버그 제안</span>
       </button>
 
-      <FeedbackModal isOpen={isOpen} onClose={() => setIsOpen(false)} />
+      {isOpen && <FeedbackModal isOpen={isOpen} onClose={() => setIsOpen(false)} />}
     </>
   );
 }

@@ -1,7 +1,11 @@
 "use client";
 
 import React, { useState } from "react";
-import EditRequestModal from "./EditRequestModal";
+import dynamic from "next/dynamic";
+
+const EditRequestModal = dynamic(() => import("./EditRequestModal"), {
+  ssr: false,
+});
 
 interface EditRequestTriggerProps {
   bNo: string;
@@ -59,15 +63,17 @@ export default function EditRequestTrigger({
         </button>
       </div>
 
-      <EditRequestModal
-        bNo={bNo}
-        currentBusinessName={currentBusinessName}
-        currentBrandName={currentBrandName}
-        currentHomepage={currentHomepage}
-        currentDescription={currentDescription}
-        isOpen={isOpen}
-        onClose={() => setIsOpen(false)}
-      />
+      {isOpen && (
+        <EditRequestModal
+          bNo={bNo}
+          currentBusinessName={currentBusinessName}
+          currentBrandName={currentBrandName}
+          currentHomepage={currentHomepage}
+          currentDescription={currentDescription}
+          isOpen={isOpen}
+          onClose={() => setIsOpen(false)}
+        />
+      )}
     </>
   );
 }

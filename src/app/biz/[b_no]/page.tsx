@@ -64,10 +64,15 @@ export async function generateMetadata({ params }: { params: any }): Promise<Met
       alternates: {
         canonical: canonicalPath,
       },
+      robots: {
+        index: false,
+        follow: true,
+      },
     };
   }
 
   const name = business.b_nm;
+  const isUnnamed = !name || name === "상호 정보 없음" || name === "상호 미등록 사업자";
   const status = apiStatus?.b_stt || "계속사업자";
   const taxType = apiStatus?.tax_type || "부가가치세 일반과세자";
 
@@ -77,6 +82,14 @@ export async function generateMetadata({ params }: { params: any }): Promise<Met
     alternates: {
       canonical: canonicalPath,
     },
+    ...(isUnnamed
+      ? {
+          robots: {
+            index: false,
+            follow: true,
+          },
+        }
+      : {}),
     openGraph: {
       title: `${name} (${formattedBNo}) 실시간 사업자 조회`,
       description: `${name}의 국세청 실시간 납세자 상태(${status}), 주소, 매출 추이 및 기업 분석 정보를 제공합니다.`,
@@ -131,22 +144,31 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
     : null;
   const latestEmployees = latestFinance?.employees || 0;
 
+  const cleanFoundingDt = business?.start_dt ? business.start_dt.replace(/[^0-9]/g, "") : "";
+  const formattedFoundingDt =
+    cleanFoundingDt.length === 8
+      ? cleanFoundingDt.replace(/(\d{4})(\d{2})(\d{2})/, "$1-$2-$3")
+      : undefined;
+
   const jsonLd = business ? {
     "@context": "https://schema.org",
     "@type": "LocalBusiness",
     "name": business.b_nm,
-    "image": "https://www.maumdata.com/images/default-company.png",
+    "image": "https://www.maumdata.com/og-image.png",
     "@id": `https://www.maumdata.com/biz/${cleanBNo}`,
     "url": `https://www.maumdata.com/biz/${cleanBNo}`,
-    "telephone": "",
-    "address": {
-      "@type": "PostalAddress",
-      "streetAddress": business.b_adr,
-      "addressLocality": business.b_adr.split(" ")[0],
-      "addressCountry": "KR"
-    },
+    ...(business.b_adr
+      ? {
+          "address": {
+            "@type": "PostalAddress",
+            "streetAddress": business.b_adr,
+            "addressLocality": business.b_adr.split(" ")[0],
+            "addressCountry": "KR"
+          }
+        }
+      : {}),
     "taxID": formattedBNo,
-    "foundingDate": business.start_dt.replace(/(\d{4})(\d{2})(\d{2})/, "$1-$2-$3")
+    ...(formattedFoundingDt ? { "foundingDate": formattedFoundingDt } : {})
   } : null;
 
   return (
