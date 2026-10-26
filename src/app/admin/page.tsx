@@ -223,7 +223,7 @@ export default function AdminPage() {
           </form>
 
           <div style={{ marginTop: "24px" }}>
-            <Link href="/" style={{ color: "var(--color-text-desc)", fontSize: "0.85rem", textDecoration: "underline" }}>
+            <Link href="/" prefetch={false} style={{ color: "var(--color-text-desc)", fontSize: "0.85rem", textDecoration: "underline" }}>
               ← 홈으로 돌아가기
             </Link>
           </div>
@@ -284,6 +284,7 @@ export default function AdminPage() {
             </button>
             <Link
               href="/"
+              prefetch={false}
               style={{
                 backgroundColor: "var(--bg-color-card)",
                 color: "var(--color-text-main)",

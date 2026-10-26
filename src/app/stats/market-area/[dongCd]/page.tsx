@@ -343,6 +343,7 @@ export default async function MarketAreaPage({ params }: PageProps) {
             </h3>
             <Link
               href="/stats/market-area"
+              prefetch={false}
               style={{
                 fontSize: "0.84rem",
                 fontWeight: 700,
@@ -381,6 +382,7 @@ export default async function MarketAreaPage({ params }: PageProps) {
                 <Link
                   key={d.cd}
                   href={`/stats/market-area/${d.cd}`}
+                  prefetch={false}
                   style={{
                     fontSize: "0.8rem",
                     fontWeight: 600,
@@ -402,6 +404,7 @@ export default async function MarketAreaPage({ params }: PageProps) {
         <div style={{ display: "flex", justifyContent: "center", gap: "20px", flexWrap: "wrap", marginTop: "16px" }}>
           <Link
             href="/stats/market-area"
+            prefetch={false}
             style={{
               fontSize: "0.9rem",
               fontWeight: 700,
@@ -413,6 +416,7 @@ export default async function MarketAreaPage({ params }: PageProps) {
           </Link>
           <Link
             href="/"
+            prefetch={false}
             style={{
               fontSize: "0.9rem",
               fontWeight: 700,

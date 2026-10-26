@@ -13,7 +13,7 @@ export default function Header() {
     <header className="header">
       <div className="container header-inner">
         {/* SVG 로고 영역 */}
-        <Link href={isFormCenter ? "/form" : "/"} className="header-logo-link">
+        <Link href={isFormCenter ? "/form" : "/"} prefetch={false} className="header-logo-link">
           <MaumDataLogo 
             size="md" 
             variant={isFormCenter ? "form" : "biz"} 
@@ -26,6 +26,7 @@ export default function Header() {
             <>
               <Link 
                 href="/form" 
+                prefetch={false}
                 className={`nav-link ${pathname === "/form" ? "active" : ""}`}
                 style={{ fontWeight: pathname === "/form" ? 700 : 500 }}
               >
@@ -33,6 +34,7 @@ export default function Header() {
               </Link>
               <Link 
                 href="/form/resume" 
+                prefetch={false}
                 className={`nav-link ${pathname === "/form/resume" ? "active" : ""}`}
                 style={{ fontWeight: pathname === "/form/resume" ? 700 : 500 }}
               >
@@ -40,6 +42,7 @@ export default function Header() {
               </Link>
               <Link 
                 href="/form/resignation" 
+                prefetch={false}
                 className={`nav-link ${pathname === "/form/resignation" ? "active" : ""}`}
                 style={{ fontWeight: pathname === "/form/resignation" ? 700 : 500 }}
               >
@@ -47,6 +50,7 @@ export default function Header() {
               </Link>
               <Link 
                 href="/contracts" 
+                prefetch={false}
                 className={`nav-link ${pathname.startsWith("/contracts") ? "active" : ""}`}
                 style={{ fontWeight: pathname.startsWith("/contracts") ? 700 : 500 }}
               >
@@ -54,6 +58,7 @@ export default function Header() {
               </Link>
               <Link 
                 href="/" 
+                prefetch={false}
                 className="nav-link btn-portal-switch"
               >
                 기업 BIZ 분석 가기 →
@@ -63,30 +68,35 @@ export default function Header() {
             <>
               <Link 
                 href="/" 
+                prefetch={false}
                 className={`nav-link ${pathname === "/" ? "active" : ""}`}
               >
                 기업 조회
               </Link>
               <Link 
                 href="/stats/market-area" 
+                prefetch={false}
                 className={`nav-link ${pathname.startsWith("/stats") ? "active" : ""}`}
               >
                 상권 분석
               </Link>
               <Link 
                 href="/insights" 
+                prefetch={false}
                 className={`nav-link ${pathname.startsWith("/insights") ? "active" : ""}`}
               >
                 데이터 인사이트
               </Link>
               <Link 
                 href="/form" 
+                prefetch={false}
                 className={`nav-link nav-link-highlight ${pathname.startsWith("/form") ? "active" : ""}`}
               >
                 무료 서식 센터 🎁
               </Link>
               <Link 
                 href="/contracts" 
+                prefetch={false}
                 className={`nav-link ${pathname.startsWith("/contracts") ? "active" : ""}`}
                 style={{ fontWeight: pathname.startsWith("/contracts") ? 700 : 500 }}
               >

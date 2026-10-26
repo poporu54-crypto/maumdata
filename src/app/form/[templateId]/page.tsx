@@ -136,6 +136,7 @@ export default async function Page(props: PageProps) {
             </div>
             <Link
               href="/form"
+              prefetch={false}
               style={{
                 fontSize: "0.85rem",
                 fontWeight: 700,
@@ -160,6 +161,7 @@ export default async function Page(props: PageProps) {
                 <Link
                   key={item.id}
                   href={`/form/${item.id}`}
+                  prefetch={false}
                   className="related-card"
                   style={{
                     display: "flex",
@@ -228,6 +230,7 @@ export default async function Page(props: PageProps) {
               <Link
                 key={tag}
                 href={`/form/tag/${encodeURIComponent(tag)}`}
+                prefetch={false}
                 style={{
                   fontSize: "0.78rem",
                   fontWeight: 600,

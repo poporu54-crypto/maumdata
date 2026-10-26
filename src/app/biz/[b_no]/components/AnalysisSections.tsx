@@ -228,6 +228,7 @@ export async function IndustrySection({ bSector, bNo }: { bSector: string; bNo: 
                   <Link
                     key={l.b_no}
                     href={`/biz/${l.b_no}`}
+                    prefetch={false}
                     className="related-card"
                     style={{
                       display: "flex",

@@ -30,51 +30,41 @@ export async function query(text: string, params?: any[]) {
   return res;
 }
 
-// 1. 특정 사업자번호로 기업 상세 정보 및 재무이력 조회
+// 1. 특정 사업자번호로 기업 상세 정보 및 재무이력 조회 (순수 조회 전용 — 조회수 증가 사이드이펙트 분리)
 export async function getBusinessByBNo(bNo: string) {
   const clean = bNo.replace(/[^0-9]/g, "");
   const bizResult = await query("SELECT * FROM businesses WHERE b_no = $1 LIMIT 1", [clean]);
   if (bizResult.rows.length === 0) return null;
 
   const business = bizResult.rows[0];
-  
-  // 조회수 및 실시간 로그 증가 (비동기 수행하여 응답 속도 영향 방지)
-  Promise.all([
-    query("UPDATE businesses SET view_count = view_count + 1 WHERE b_no = $1", [clean]),
-    query("INSERT INTO business_view_logs (b_no) VALUES ($1)", [clean])
-  ]).catch(err => {
-    console.error("Failed to record view metrics:", err);
-  });
-  
-  // 1:N 연도별 이력 조회
-  const histResult = await query(
-    `SELECT year, revenue, operating_income as "operatingIncome", net_income as "netIncome", 
-            total_assets as "totalAssets", total_liabilities as "totalLiabilities", 
-            total_equity as "totalEquity", employees 
-     FROM business_history 
-     WHERE b_no = $1 
-     ORDER BY year ASC`,
-    [clean]
-  );
 
-  // 1:N 타임라인 연혁 조회
-  const timelineResult = await query(
-    `SELECT event_date as "eventDate", event_title as "eventTitle", event_description as "eventDescription"
-     FROM business_timeline
-     WHERE b_no = $1
-     ORDER BY event_date DESC`,
-    [clean]
-  );
-
-  // 1:N 월별 고용 이력 조회
-  const empHistResult = await query(
-    `SELECT record_month as "recordMonth", employees, new_acquisitions as "newAcquisitions", 
-            losses, nps_charge_amount as "npsChargeAmount"
-     FROM business_employment_history
-     WHERE b_no = $1
-     ORDER BY record_month ASC`,
-    [clean]
-  );
+  // 1:N 연도별 재무 이력 · 타임라인 연혁 · 월별 고용 이력을 병렬(Promise.all)로 동시에 조회하여 RTT 지연 최소화
+  const [histResult, timelineResult, empHistResult] = await Promise.all([
+    query(
+      `SELECT year, revenue, operating_income as "operatingIncome", net_income as "netIncome", 
+              total_assets as "totalAssets", total_liabilities as "totalLiabilities", 
+              total_equity as "totalEquity", employees 
+       FROM business_history 
+       WHERE b_no = $1 
+       ORDER BY year ASC`,
+      [clean]
+    ),
+    query(
+      `SELECT event_date as "eventDate", event_title as "eventTitle", event_description as "eventDescription"
+       FROM business_timeline
+       WHERE b_no = $1
+       ORDER BY event_date DESC`,
+      [clean]
+    ),
+    query(
+      `SELECT record_month as "recordMonth", employees, new_acquisitions as "newAcquisitions", 
+              losses, nps_charge_amount as "npsChargeAmount"
+       FROM business_employment_history
+       WHERE b_no = $1
+       ORDER BY record_month ASC`,
+      [clean]
+    ),
+  ]);
 
   return {
     b_no: business.b_no,
@@ -421,10 +411,30 @@ export async function upsertBusiness(biz: any) {
   }
 }
 
+// 1-1. 실제 사용자 상세 페이지 진입 시에만 조회수 및 실시간 로그 1회 기록 (프리패치 및 백그라운드 리프레시 제외)
+export function recordBusinessView(bNo: string) {
+  const clean = bNo.replace(/[^0-9]/g, "");
+  if (clean.length !== 10) return;
+  Promise.all([
+    query("UPDATE businesses SET view_count = view_count + 1 WHERE b_no = $1", [clean]),
+    query("INSERT INTO business_view_logs (b_no) VALUES ($1)", [clean]),
+  ]).catch((err) => {
+    console.error("Failed to record view metrics:", err);
+  });
+}
+
 // 5. 미등록/폐업 블랙리스트 조회
 export async function getInvalidBusinesses() {
   const result = await query("SELECT b_no FROM invalid_businesses");
   return result.rows.map(r => r.b_no);
+}
+
+// 5-1. 단일 사업자번호 블랙리스트 여부 초고속 단건 확인 (전체 테이블 풀스캔 방지)
+export async function isInvalidBusiness(bNo: string): Promise<boolean> {
+  const clean = bNo.replace(/[^0-9]/g, "");
+  if (clean.length !== 10) return true;
+  const result = await query("SELECT 1 FROM invalid_businesses WHERE b_no = $1 LIMIT 1", [clean]);
+  return result.rows.length > 0;
 }
 
 // 6. 미등록 블랙리스트 등록
@@ -747,6 +757,18 @@ export async function saveDisclosures(bNo: string, disclosures: any[]) {
   await query("UPDATE businesses SET dart_last_sync_at = CURRENT_TIMESTAMP WHERE b_no = $1", [clean]);
 }
 
+interface CachedIndustryGroupStats {
+  expiresAt: number;
+  totalCompanies: number;
+  closeRate: number;
+  avgRevenue: number;
+  avgDebtRatio: number;
+  avgOperatingMargin: number;
+  leaders: Array<{ b_no: string; b_nm: string; revenue: number }>;
+}
+
+const industryGroupStatsCache = new Map<string, CachedIndustryGroupStats>();
+
 // 22. 동일 업종 내 통계 및 상대적 위치 연산
 export async function getIndustryAnalysis(bSector: string, bNo: string) {
   const cleanBNo = bNo.replace(/[^0-9]/g, "");
@@ -774,65 +796,97 @@ export async function getIndustryAnalysis(bSector: string, bNo: string) {
   const peerGroup = getPeerSectorGroup(bSector);
 
   try {
-    // 1. 업종(동종 산업군) 내 기본 통계 조회 (전체 기업 수, 평균 폐업률, 평균 매출액 등)
-    const statsResult = await query(`
-      WITH latest_history AS (
-        SELECT DISTINCT ON (b_no) b_no, revenue, operating_income, total_liabilities, total_equity, employees
-        FROM business_history
-        ORDER BY b_no, year DESC
-      )
-      SELECT 
-        COUNT(*) as total_companies,
-        COALESCE(SUM(CASE WHEN b_stt_cd = '03' THEN 1 ELSE 0 END)::float / NULLIF(COUNT(*), 0)::float * 100, 0) as close_rate,
-        COALESCE(AVG(CASE WHEN h.revenue > 0 THEN h.revenue ELSE NULL END), 0) as avg_revenue,
-        COALESCE(AVG(CASE WHEN h.total_equity > 0 THEN (h.total_liabilities::float / h.total_equity::float)*100 ELSE NULL END), 0) as avg_debt_ratio,
-        COALESCE(AVG(CASE WHEN h.revenue > 0 THEN (h.operating_income::float / h.revenue::float)*100 ELSE NULL END), 0) as avg_operating_margin
-      FROM businesses b
-      LEFT JOIN latest_history h ON b.b_no = h.b_no
-      WHERE ${peerGroup.sqlCondition} AND b.b_nm != '상호 정보 없음'
-    `, peerGroup.params);
+    // 1. 업종(동종 산업군) 공통 기본 통계 + 상위 3개 리더는 15분 서버 메모리 캐시로 불필요한 반복 집계 차단
+    const cacheKey = peerGroup.groupTitle;
+    const now = Date.now();
+    let cachedGroup = industryGroupStatsCache.get(cacheKey);
 
-    const stats = statsResult.rows[0] || {
-      total_companies: 0,
-      close_rate: 0,
-      avg_revenue: 0,
-      avg_debt_ratio: 0,
-      avg_operating_margin: 0
-    };
+    if (!cachedGroup || cachedGroup.expiresAt <= now) {
+      const [statsResult, leadersResult] = await Promise.all([
+        query(`
+          WITH latest_history AS (
+            SELECT DISTINCT ON (b_no) b_no, revenue, operating_income, total_liabilities, total_equity, employees
+            FROM business_history
+            ORDER BY b_no, year DESC
+          )
+          SELECT 
+            COUNT(*) as total_companies,
+            COALESCE(SUM(CASE WHEN b_stt_cd = '03' THEN 1 ELSE 0 END)::float / NULLIF(COUNT(*), 0)::float * 100, 0) as close_rate,
+            COALESCE(AVG(CASE WHEN h.revenue > 0 THEN h.revenue ELSE NULL END), 0) as avg_revenue,
+            COALESCE(AVG(CASE WHEN h.total_equity > 0 THEN (h.total_liabilities::float / h.total_equity::float)*100 ELSE NULL END), 0) as avg_debt_ratio,
+            COALESCE(AVG(CASE WHEN h.revenue > 0 THEN (h.operating_income::float / h.revenue::float)*100 ELSE NULL END), 0) as avg_operating_margin
+          FROM businesses b
+          LEFT JOIN latest_history h ON b.b_no = h.b_no
+          WHERE ${peerGroup.sqlCondition} AND b.b_nm != '상호 정보 없음'
+        `, peerGroup.params),
+        query(`
+          WITH latest_history AS (
+            SELECT DISTINCT ON (b_no) b_no, revenue, year
+            FROM business_history
+            WHERE revenue > 0
+            ORDER BY b_no, year DESC
+          )
+          SELECT b.b_no, b.b_nm, COALESCE(h.revenue, 0) as revenue
+          FROM businesses b
+          JOIN latest_history h ON b.b_no = h.b_no
+          WHERE ${peerGroup.sqlCondition} AND b.b_nm != '상호 정보 없음' AND b.b_stt_cd = '01'
+          ORDER BY h.revenue DESC
+          LIMIT 3
+        `, peerGroup.params),
+      ]);
 
-    // 2. 현재 기업의 동종 산업군 내 상대적 백분위 위치 연산 (실제 재무/고용 보유 기업 간 비교)
-    const finRankResult = await query(`
-      WITH latest_history AS (
-        SELECT DISTINCT ON (b_no) b_no, revenue, operating_income, total_liabilities, total_equity
-        FROM business_history
-        WHERE revenue > 0
-        ORDER BY b_no, year DESC
-      ),
-      fin_peers AS (
-        SELECT 
-          b.b_no,
-          h.revenue,
-          RANK() OVER (ORDER BY h.revenue DESC) as rev_rank,
-          cume_dist() OVER (ORDER BY h.revenue ASC) as rev_pct,
-          cume_dist() OVER (ORDER BY (h.operating_income::float / NULLIF(h.revenue::float, 0)) ASC) as margin_pct,
-          cume_dist() OVER (ORDER BY CASE WHEN h.total_equity > 0 THEN (h.total_liabilities::float / h.total_equity::float) ELSE 9999 END DESC) as debt_pct
-        FROM businesses b
-        JOIN latest_history h ON b.b_no = h.b_no
-        WHERE ${peerGroup.sqlCondition} AND b.b_nm != '상호 정보 없음'
-      )
-      SELECT * FROM fin_peers WHERE b_no = $2
-    `, [...peerGroup.params, cleanBNo]);
+      const rawStats = statsResult.rows[0] || {};
+      cachedGroup = {
+        expiresAt: now + 15 * 60 * 1000,
+        totalCompanies: parseInt(rawStats.total_companies || "0", 10),
+        closeRate: parseFloat(parseFloat(rawStats.close_rate || "0").toFixed(2)),
+        avgRevenue: Math.round(parseFloat(rawStats.avg_revenue || "0")),
+        avgDebtRatio: Math.round(parseFloat(rawStats.avg_debt_ratio || "0")),
+        avgOperatingMargin: parseFloat(parseFloat(rawStats.avg_operating_margin || "0").toFixed(2)),
+        leaders: leadersResult.rows.map((r) => ({
+          b_no: r.b_no,
+          b_nm: r.b_nm,
+          revenue: Math.round(parseFloat(r.revenue) * 10) / 10,
+        })),
+      };
+      industryGroupStatsCache.set(cacheKey, cachedGroup);
+    }
 
-    const empRankResult = await query(`
-      WITH emp_peers AS (
-        SELECT 
-          b.b_no,
-          cume_dist() OVER (ORDER BY b.nps_sbscrb_nmps ASC) as emp_pct
-        FROM businesses b
-        WHERE ${peerGroup.sqlCondition} AND b.b_nm != '상호 정보 없음' AND b.nps_sbscrb_nmps > 0
-      )
-      SELECT * FROM emp_peers WHERE b_no = $2
-    `, [...peerGroup.params, cleanBNo]);
+    // 2. 현재 기업의 동종 산업군 내 상대적 백분위 위치 연산 (병렬 조회)
+    const [finRankResult, empRankResult] = await Promise.all([
+      query(`
+        WITH latest_history AS (
+          SELECT DISTINCT ON (b_no) b_no, revenue, operating_income, total_liabilities, total_equity
+          FROM business_history
+          WHERE revenue > 0
+          ORDER BY b_no, year DESC
+        ),
+        fin_peers AS (
+          SELECT 
+            b.b_no,
+            b.b_nm,
+            h.revenue,
+            RANK() OVER (ORDER BY h.revenue DESC) as rev_rank,
+            cume_dist() OVER (ORDER BY h.revenue ASC) as rev_pct,
+            cume_dist() OVER (ORDER BY (h.operating_income::float / NULLIF(h.revenue::float, 0)) ASC) as margin_pct,
+            cume_dist() OVER (ORDER BY CASE WHEN h.total_equity > 0 THEN (h.total_liabilities::float / h.total_equity::float) ELSE 9999 END DESC) as debt_pct
+          FROM businesses b
+          JOIN latest_history h ON b.b_no = h.b_no
+          WHERE ${peerGroup.sqlCondition} AND b.b_nm != '상호 정보 없음'
+        )
+        SELECT * FROM fin_peers WHERE b_no = $2
+      `, [...peerGroup.params, cleanBNo]),
+      query(`
+        WITH emp_peers AS (
+          SELECT 
+            b.b_no,
+            cume_dist() OVER (ORDER BY b.nps_sbscrb_nmps ASC) as emp_pct
+          FROM businesses b
+          WHERE ${peerGroup.sqlCondition} AND b.b_nm != '상호 정보 없음' AND b.nps_sbscrb_nmps > 0
+        )
+        SELECT * FROM emp_peers WHERE b_no = $2
+      `, [...peerGroup.params, cleanBNo]),
+    ]);
 
     const clampPct = (v: number) => Math.min(99, Math.max(1, Math.round(v * 100)));
 
@@ -840,54 +894,30 @@ export async function getIndustryAnalysis(bSector: string, bNo: string) {
       revenuePercentile: finRankResult.rows[0] ? clampPct(finRankResult.rows[0].rev_pct) : 50,
       operatingMarginPercentile: finRankResult.rows[0] ? clampPct(finRankResult.rows[0].margin_pct) : 50,
       debtRatioPercentile: finRankResult.rows[0] ? clampPct(finRankResult.rows[0].debt_pct) : 50,
-      employeePercentile: empRankResult.rows[0] ? clampPct(empRankResult.rows[0].emp_pct) : 50
+      employeePercentile: empRankResult.rows[0] ? clampPct(empRankResult.rows[0].emp_pct) : 50,
     };
 
-    // 3. 업종 내 순위 리스트 (매출액 기준 상위 3개 업체)
-    const leadersResult = await query(`
-      WITH latest_history AS (
-        SELECT DISTINCT ON (b_no) b_no, revenue, year
-        FROM business_history
-        WHERE revenue > 0
-        ORDER BY b_no, year DESC
-      )
-      SELECT b.b_no, b.b_nm, COALESCE(h.revenue, 0) as revenue
-      FROM businesses b
-      JOIN latest_history h ON b.b_no = h.b_no
-      WHERE ${peerGroup.sqlCondition} AND b.b_nm != '상호 정보 없음' AND b.b_stt_cd = '01'
-      ORDER BY h.revenue DESC
-      LIMIT 3
-    `, peerGroup.params);
-
-    const leaders = leadersResult.rows.map(r => ({
-      b_no: r.b_no,
-      b_nm: r.b_nm,
-      revenue: Math.round(parseFloat(r.revenue) * 10) / 10
-    }));
-
+    const leaders = cachedGroup.leaders;
     let myRankItem: { rank: number; b_no: string; b_nm: string; revenue: number } | null = null;
-    if (finRankResult.rows[0] && !leaders.some(l => l.b_no === cleanBNo)) {
-      const meRes = await query("SELECT b_nm FROM businesses WHERE b_no = $1 LIMIT 1", [cleanBNo]);
-      if (meRes.rows[0]) {
-        myRankItem = {
-          rank: parseInt(finRankResult.rows[0].rev_rank, 10),
-          b_no: cleanBNo,
-          b_nm: meRes.rows[0].b_nm,
-          revenue: Math.round(parseFloat(finRankResult.rows[0].revenue) * 10) / 10
-        };
-      }
+    if (finRankResult.rows[0] && !leaders.some((l) => l.b_no === cleanBNo)) {
+      myRankItem = {
+        rank: parseInt(finRankResult.rows[0].rev_rank, 10),
+        b_no: cleanBNo,
+        b_nm: finRankResult.rows[0].b_nm,
+        revenue: Math.round(parseFloat(finRankResult.rows[0].revenue) * 10) / 10,
+      };
     }
 
     return {
       groupTitle: peerGroup.groupTitle,
-      totalCompanies: parseInt(stats.total_companies || "0", 10),
-      closeRate: parseFloat(parseFloat(stats.close_rate || "0").toFixed(2)),
-      avgRevenue: Math.round(parseFloat(stats.avg_revenue || "0")),
-      avgDebtRatio: Math.round(parseFloat(stats.avg_debt_ratio || "0")),
-      avgOperatingMargin: parseFloat(parseFloat(stats.avg_operating_margin || "0").toFixed(2)),
+      totalCompanies: cachedGroup.totalCompanies,
+      closeRate: cachedGroup.closeRate,
+      avgRevenue: cachedGroup.avgRevenue,
+      avgDebtRatio: cachedGroup.avgDebtRatio,
+      avgOperatingMargin: cachedGroup.avgOperatingMargin,
       rankings,
       leaders,
-      myRankItem
+      myRankItem,
     };
 
   } catch (err) {

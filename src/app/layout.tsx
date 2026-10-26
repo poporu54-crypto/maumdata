@@ -106,17 +106,17 @@ export default function RootLayout({
                   <div>
                     <div style={{ fontWeight: 600, color: "var(--color-text-sub)", marginBottom: "8px" }}>서비스</div>
                     <ul style={{ listStyle: "none", display: "flex", flexDirection: "column", gap: "6px" }}>
-                      <li><Link href="/" className="footer-link">사업자 조회</Link></li>
-                      <li><Link href="/insights" className="footer-link">데이터 인사이트</Link></li>
-                      <li><Link href="/stats/market-area" className="footer-link">국가 통계 및 상권 분석</Link></li>
-                      <li><Link href="/form" className="footer-link">무료 서식 센터</Link></li>
+                      <li><Link href="/" prefetch={false} className="footer-link">사업자 조회</Link></li>
+                      <li><Link href="/insights" prefetch={false} className="footer-link">데이터 인사이트</Link></li>
+                      <li><Link href="/stats/market-area" prefetch={false} className="footer-link">국가 통계 및 상권 분석</Link></li>
+                      <li><Link href="/form" prefetch={false} className="footer-link">무료 서식 센터</Link></li>
                     </ul>
                   </div>
                   <div>
                     <div style={{ fontWeight: 600, color: "var(--color-text-sub)", marginBottom: "8px" }}>법적 고지</div>
                     <ul style={{ listStyle: "none", display: "flex", flexDirection: "column", gap: "6px" }}>
-                      <li><Link href="/terms" className="footer-link">이용약관</Link></li>
-                      <li><Link href="/privacy" className="footer-link">개인정보처리방침</Link></li>
+                      <li><Link href="/terms" prefetch={false} className="footer-link">이용약관</Link></li>
+                      <li><Link href="/privacy" prefetch={false} className="footer-link">개인정보처리방침</Link></li>
                     </ul>
                   </div>
                   <div>

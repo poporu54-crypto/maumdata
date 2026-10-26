@@ -417,6 +417,7 @@ export default async function NewBizStatsPage() {
                       <td style={{ padding: "12px 14px" }}>
                         <Link
                           href={`/biz/${comp.bNo}`}
+                          prefetch={false}
                           style={{
                             color: "var(--color-text-main)",
                             fontWeight: 700,
@@ -490,6 +491,7 @@ export default async function NewBizStatsPage() {
                 <Link
                   key={comp.bNo}
                   href={`/biz/${comp.bNo}`}
+                  prefetch={false}
                   style={{
                     textDecoration: "none",
                     padding: "16px",
@@ -623,6 +625,7 @@ export default async function NewBizStatsPage() {
                       {reg.topBNo && reg.topBNm ? (
                         <Link
                           href={`/biz/${reg.topBNo}`}
+                          prefetch={false}
                           style={{
                             color: "var(--color-primary)",
                             fontWeight: 700,

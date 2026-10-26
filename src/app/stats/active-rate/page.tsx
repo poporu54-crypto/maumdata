@@ -443,6 +443,7 @@ export default async function ActiveRateStatsPage() {
                     <td style={{ padding: "12px 14px" }}>
                       <Link
                         href={`/biz/${comp.bNo}`}
+                        prefetch={false}
                         style={{
                           color: "var(--color-text-main)",
                           fontWeight: 700,
@@ -513,6 +514,7 @@ export default async function ActiveRateStatsPage() {
               <Link
                 key={comp.bNo}
                 href={`/biz/${comp.bNo}`}
+                prefetch={false}
                 style={{
                   textDecoration: "none",
                   padding: "16px",

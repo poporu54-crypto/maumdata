@@ -413,6 +413,7 @@ export default function InteractiveDemoShowcase({
 
             <Link
               href={`/biz/${company.bNo}`}
+              prefetch={false}
               className="btn-primary"
               style={{
                 padding: "8px 16px",

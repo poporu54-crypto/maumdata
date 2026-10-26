@@ -110,6 +110,7 @@ export default async function MainPage() {
                   <Link
                     key={link.no}
                     href={`/biz/${link.no}`}
+                    prefetch={false}
                     className="related-card"
                     style={{
                       backgroundColor: "var(--bg-color-card)",
@@ -189,16 +190,16 @@ export default async function MainPage() {
               </div>
               {/* 퀵 추천 상권 단축키 */}
               <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "4px" }}>
-                <Link href="/stats/market-area/1168064000" className="btn-secondary" style={{ padding: "6px 12px", fontSize: "0.8rem", borderRadius: "8px" }}>
+                <Link href="/stats/market-area/1168064000" prefetch={false} className="btn-secondary" style={{ padding: "6px 12px", fontSize: "0.8rem", borderRadius: "8px" }}>
                   서울 역삼동
                 </Link>
-                <Link href="/stats/market-area/1159062000" className="btn-secondary" style={{ padding: "6px 12px", fontSize: "0.8rem", borderRadius: "8px" }}>
+                <Link href="/stats/market-area/1159062000" prefetch={false} className="btn-secondary" style={{ padding: "6px 12px", fontSize: "0.8rem", borderRadius: "8px" }}>
                   서울 사당동
                 </Link>
-                <Link href="/stats/market-area/2635051000" className="btn-secondary" style={{ padding: "6px 12px", fontSize: "0.8rem", borderRadius: "8px" }}>
+                <Link href="/stats/market-area/2635051000" prefetch={false} className="btn-secondary" style={{ padding: "6px 12px", fontSize: "0.8rem", borderRadius: "8px" }}>
                   부산 우동
                 </Link>
-                <Link href="/stats/market-area/2726051000" className="btn-secondary" style={{ padding: "6px 12px", fontSize: "0.8rem", borderRadius: "8px" }}>
+                <Link href="/stats/market-area/2726051000" prefetch={false} className="btn-secondary" style={{ padding: "6px 12px", fontSize: "0.8rem", borderRadius: "8px" }}>
                   대구 범어동
                 </Link>
               </div>

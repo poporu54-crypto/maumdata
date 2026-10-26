@@ -96,7 +96,7 @@ export default function StatsDashboard({ stats }: StatsDashboardProps) {
           }}
         >
           {/* 카드 1: 국민연금 신규 채용 및 신설 법인 동향 */}
-          <Link href="/stats/new-biz" className="stats-dashboard-link">
+          <Link href="/stats/new-biz" prefetch={false} className="stats-dashboard-link">
             <div
               className="card stats-dashboard-card"
               style={{
@@ -153,7 +153,7 @@ export default function StatsDashboard({ stats }: StatsDashboardProps) {
           </Link>
 
           {/* 카드 2: 국세청 검증 계속사업자 현황 */}
-          <Link href="/stats/active-rate" className="stats-dashboard-link">
+          <Link href="/stats/active-rate" prefetch={false} className="stats-dashboard-link">
             <div
               className="card stats-dashboard-card"
               style={{
@@ -211,7 +211,7 @@ export default function StatsDashboard({ stats }: StatsDashboardProps) {
         </div>
 
         {/* 카드 3: 업종별 검증 기업 실데이터 분포도 */}
-        <Link href="/stats/distribution" className="stats-dashboard-link">
+        <Link href="/stats/distribution" prefetch={false} className="stats-dashboard-link">
           <div
             className="card stats-dashboard-card"
             style={{

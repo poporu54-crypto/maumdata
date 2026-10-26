@@ -1240,7 +1240,7 @@ export default function DocumentEditor({ templateId, initialTemplate }: { templa
 
   return (
     <div className="container" style={{ padding: "32px 24px", maxWidth: "1400px" }}>
-      <Link href="/form" className="back-link">
+      <Link href="/form" prefetch={false} className="back-link">
         ← 무료 서식 센터 홈으로
       </Link>
 

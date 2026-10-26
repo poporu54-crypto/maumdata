@@ -227,6 +227,7 @@ export default function QuickContractModal({ business }: QuickContractModalProps
             <Link
               key={q.id}
               href={`/form/${q.id}`}
+              prefetch={false}
               onClick={handlePreparePrefill}
               style={{
                 fontSize: "0.78rem",
@@ -244,6 +245,7 @@ export default function QuickContractModal({ business }: QuickContractModalProps
           ))}
           <Link
             href="/form"
+            prefetch={false}
             style={{
               fontSize: "0.78rem",
               fontWeight: 700,
@@ -330,6 +332,7 @@ export default function QuickContractModal({ business }: QuickContractModalProps
                 <Link
                   key={item.id}
                   href={`/form/${item.id}`}
+                  prefetch={false}
                   onClick={handlePreparePrefill}
                   style={{
                     display: "flex",
@@ -407,6 +410,7 @@ export default function QuickContractModal({ business }: QuickContractModalProps
             <div style={{ marginTop: "16px", textAlign: "center" }}>
               <Link
                 href="/form"
+                prefetch={false}
                 onClick={() => vibrateDevice(20)}
                 style={{
                   color: "#2563eb",

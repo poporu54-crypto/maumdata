@@ -204,6 +204,7 @@ export default function AdSpace({
 
         <Link
           href={activeMock.title.includes("FORM") || activeMock.title.includes("서식") ? "/form" : "/"}
+          prefetch={false}
           style={{
             backgroundColor: "#ffffff",
             color: "#111827",

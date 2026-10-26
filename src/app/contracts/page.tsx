@@ -179,6 +179,7 @@ export default function ContractsDashboardPage() {
 
           <Link
             href="/form"
+            prefetch={false}
             className="btn-primary"
             style={{
               padding: "10px 18px",
@@ -396,7 +397,7 @@ export default function ContractsDashboardPage() {
               새 계약서를 작성해 상대방에게 전용 주소를 보내거나, 기존 계정으로 로그인해 보세요.
             </p>
             <div style={{ display: "flex", justifyContent: "center", gap: "10px", flexWrap: "wrap" }}>
-              <Link href="/form" className="btn-primary" style={{ padding: "10px 20px", fontSize: "0.9rem" }}>
+              <Link href="/form" prefetch={false} className="btn-primary" style={{ padding: "10px 20px", fontSize: "0.9rem" }}>
                 + 무료 계약서 작성하러 가기
               </Link>
               {!currentUser && (
@@ -567,6 +568,7 @@ export default function ContractsDashboardPage() {
 
                       <Link
                         href={`/sign/${item.signToken}`}
+                        prefetch={false}
                         style={{
                           padding: "7px 14px",
                           borderRadius: "8px",

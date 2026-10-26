@@ -312,6 +312,7 @@ export default function MarketAreaHub() {
                 <Link
                   key={tagName}
                   href={`/stats/market-area/${matched?.cd || "1168064000"}`}
+                  prefetch={false}
                   style={{
                     backgroundColor: "rgba(255, 255, 255, 0.04)",
                     border: "1px solid var(--color-border)",
@@ -488,6 +489,7 @@ export default function MarketAreaHub() {
                     <Link
                       key={dong.cd}
                       href={`/stats/market-area/${dong.cd}`}
+                      prefetch={false}
                       style={{
                         border: "1px solid var(--color-border)",
                         borderRadius: "14px",
@@ -565,6 +567,7 @@ export default function MarketAreaHub() {
               <Link
                 key={hot.cd}
                 href={`/stats/market-area/${hot.cd}`}
+                prefetch={false}
                 style={{
                   padding: "24px",
                   borderRadius: "18px",

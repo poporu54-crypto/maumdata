@@ -28,6 +28,7 @@ export default function MobileBottomNav() {
           {/* 1. 기업조회 */}
           <Link
             href="/"
+            prefetch={false}
             onClick={() => vibrateDevice(15)}
             className={`mobile-nav-tab ${isHome ? "active" : ""}`}
           >
@@ -46,6 +47,7 @@ export default function MobileBottomNav() {
           {/* 2. 상권분석 */}
           <Link
             href="/stats/market-area"
+            prefetch={false}
             onClick={() => vibrateDevice(15)}
             className={`mobile-nav-tab ${isMarket ? "active" : ""}`}
           >
@@ -102,6 +104,7 @@ export default function MobileBottomNav() {
           {/* 4. 무료서식 */}
           <Link
             href="/form"
+            prefetch={false}
             onClick={() => vibrateDevice(15)}
             className={`mobile-nav-tab ${isForm ? "active" : ""}`}
           >
@@ -121,6 +124,7 @@ export default function MobileBottomNav() {
           {/* 5. 계약보관 */}
           <Link
             href="/contracts"
+            prefetch={false}
             onClick={() => vibrateDevice(15)}
             className={`mobile-nav-tab ${isContracts ? "active" : ""}`}
           >

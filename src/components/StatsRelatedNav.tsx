@@ -30,6 +30,7 @@ export default function StatsRelatedNav({ currentPath }: { currentPath?: string 
           <Link
             key={item.href}
             href={item.href}
+            prefetch={false}
             style={{
               fontSize: "0.82rem",
               fontWeight: 600,

@@ -152,7 +152,7 @@ export default function SignContractPage({ params }: { params: Promise<{ token: 
         <p style={{ color: "var(--color-text-sub)", margin: "8px 0 24px 0" }}>
           {error || "만료되었거나 유효하지 않은 서명 링크입니다."}
         </p>
-        <Link href="/" className="btn-primary" style={{ padding: "10px 20px" }}>
+        <Link href="/" prefetch={false} className="btn-primary" style={{ padding: "10px 20px" }}>
           마음데이터 홈으로 이동
         </Link>
       </div>
@@ -262,6 +262,7 @@ export default function SignContractPage({ params }: { params: Promise<{ token: 
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
             <Link
               href="/contracts"
+              prefetch={false}
               style={{
                 fontSize: "0.82rem",
                 fontWeight: 700,
@@ -322,6 +323,7 @@ export default function SignContractPage({ params }: { params: Promise<{ token: 
               ) : (
                 <Link
                   href="/contracts"
+                  prefetch={false}
                   style={{
                     padding: "9px 16px",
                     fontSize: "0.88rem",

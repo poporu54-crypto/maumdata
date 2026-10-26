@@ -144,6 +144,7 @@ async function NoSearchResultSection({ searchQuery }: { searchQuery: string }) {
               <Link 
                 key={link.no}
                 href={`/search?query=${encodeURIComponent(link.name)}`}
+                prefetch={false}
                 style={{
                   padding: "6px 12px",
                   borderRadius: "30px",
@@ -236,6 +237,7 @@ async function SearchResultList({ searchQuery }: { searchQuery: string }) {
           <Link 
             href={`/biz/${item.b_no}`} 
             key={item.b_no}
+            prefetch={false}
             style={{
               display: "block",
               padding: "24px",

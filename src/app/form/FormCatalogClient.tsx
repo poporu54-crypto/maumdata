@@ -355,6 +355,7 @@ export default function FormCatalogClient({
                       <Link
                         key={idx}
                         href={`/form/tag/${encodeURIComponent(sub.tag)}`}
+                        prefetch={false}
                         onClick={(e) => {
                           e.stopPropagation();
                         }}
@@ -491,6 +492,7 @@ export default function FormCatalogClient({
 
                       <Link
                         href={`/form/${tpl.id}`}
+                        prefetch={false}
                         className="doc-card-title"
                         style={{
                           fontSize: "1.1rem",
@@ -545,6 +547,7 @@ export default function FormCatalogClient({
                       <div className="doc-card-actions" style={{ marginTop: "auto" }}>
                         <Link
                           href={`/form/${tpl.id}`}
+                          prefetch={false}
                           className="btn-card-action primary"
                           style={{ display: "block" }}
                         >

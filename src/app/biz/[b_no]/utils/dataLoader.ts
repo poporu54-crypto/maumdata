@@ -1,3 +1,5 @@
+import { cache } from "react";
+import { headers } from "next/headers";
 import { getNtsCompanyStatus, NtsCompanyStatus } from "@/lib/ntsApi";
 import { getCorpBasicOutline, getCorpFinanceInfo } from "@/lib/corpApi";
 import { getNpsBplcInfo } from "@/lib/npsApi";
@@ -7,7 +9,7 @@ import { syncPatentsByCompany } from "@/lib/patentApi";
 import { syncDisclosuresByCompany } from "@/lib/dartApi";
 import { 
   getBusinessByBNo, 
-  getInvalidBusinesses, 
+  isInvalidBusiness, 
   addInvalidBusiness, 
   upsertBusiness, 
   query 
@@ -90,10 +92,38 @@ export interface BusinessData {
   }>;
   ntsLastSyncAt?: any;
   npsLastSyncAt?: any;
+  patentsLastSyncAt?: any;
+  bidsLastSyncAt?: any;
+  dartLastSyncAt?: any;
   taxType?: string;
   taxTypeCd?: string;
   bStt?: string;
   bSttCd?: string;
+}
+
+/**
+ * 현재 요청이 브라우저/Next.js 라우터의 백그라운드 프리패치 요청인지 판별합니다.
+ * 프리패치 요청일 때는 조회수 증가 및 외부 공공 API 백그라운드 동기화를 일체 실행하지 않습니다.
+ */
+export async function isPrefetchRequest(): Promise<boolean> {
+  try {
+    const hdrs = await headers();
+    const routerPrefetch = hdrs.get("next-router-prefetch");
+    const middlewarePrefetch = hdrs.get("x-middleware-prefetch");
+    const purpose = (hdrs.get("purpose") || "").toLowerCase();
+    const secPurpose = (hdrs.get("sec-purpose") || "").toLowerCase();
+    const moz = (hdrs.get("x-moz") || "").toLowerCase();
+
+    return (
+      routerPrefetch === "1" ||
+      middlewarePrefetch === "1" ||
+      purpose.includes("prefetch") ||
+      secPurpose.includes("prefetch") ||
+      moz === "prefetch"
+    );
+  } catch {
+    return false;
+  }
 }
 
 // 로컬 Neon DB에서 사업자 번호로 기업 조회
@@ -141,19 +171,19 @@ export function generateVirtualBusiness(bNo: string): BusinessData {
   };
 }
 
-/**
- * 국세청 API, 금융위 API, 로컬 DB 통합 코어 헬퍼 함수
- * (새로운 사업자 번호 최초 등록 시에만 실시간 외부 API 조회를 발생시키고 캐싱을 실행합니다)
- */
-export async function getUnifiedBusinessData(bNo: string): Promise<{
+interface UnifiedBusinessResult {
   apiStatus: NtsCompanyStatus | null;
   business: BusinessData | null;
   isInvalid: boolean;
   isNew?: boolean;
   relatedBusinesses?: any[];
-}> {
-  const cleanBNo = bNo.replace(/[^0-9]/g, "");
-  
+}
+
+/**
+ * 단일 SSR 렌더링 패스 내에서 generateMetadata()와 BusinessDetailPage()가
+ * 동일한 DB 쿼리를 2번 중복 실행하지 않도록 React.cache()로 요청 단위 메모이제이션합니다.
+ */
+const loadUnifiedBusinessCached = cache(async (cleanBNo: string, isPrefetch: boolean): Promise<UnifiedBusinessResult> => {
   // 0. 체크섬 수학적 검증 (1차 방어)
   if (!validateBizrNo(cleanBNo)) {
     return {
@@ -178,35 +208,8 @@ export async function getUnifiedBusinessData(bNo: string): Promise<{
   // 1. 로컬 DB 선조회
   const localBiz = await getLocalBusiness(cleanBNo);
   
-  // DB 캐시가 이미 존재하는 경우 ➔ 구버전 불완전 캐시(국민연금 고지액/월별이력 누락 등)는 즉시 최신 API로 자가 치유(Self-Healing) 수행
+  // DB 캐시가 이미 존재하는 경우 ➔ 실제 방문(!isPrefetch)일 때만 구버전 불완전 캐시 자가치유 및 미동기화 상세정보 1회 수집 수행
   if (localBiz) {
-    const needsImmediateHeal = Boolean(
-      (localBiz.npsLinked && (!localBiz.npsChrgAmt || !localBiz.employmentHistory || localBiz.employmentHistory.length <= 1))
-    );
-    if (needsImmediateHeal) {
-      try {
-        console.log(`[Self-Healing Sync] Refreshing outdated/incomplete cache for ${localBiz.b_nm} (${cleanBNo})`);
-        const healed = await syncAndCacheBusinessData(cleanBNo);
-        if (healed.business) {
-          Object.assign(localBiz, healed.business);
-        }
-      } catch (healErr) {
-        console.error("[Self-Healing Sync Failed]", healErr);
-      }
-    }
-
-    let dartCode = (localBiz as any).dart_code || "";
-    let dartLastSync = (localBiz as any).dart_last_sync_at;
-    const patentsLastSync = (localBiz as any).patents_last_sync_at;
-    const bidsLastSync = (localBiz as any).bids_last_sync_at;
-
-    let stockCode = "";
-    const listingStatus = localBiz.listing_status || "";
-    const stockMatch = listingStatus.match(/\((\d{6})\)/);
-    if (stockMatch) {
-      stockCode = stockMatch[1];
-    }
-
     const hasValidCompanyName = Boolean(
       localBiz.b_nm &&
       localBiz.b_nm !== "상호 정보 없음" &&
@@ -214,60 +217,89 @@ export async function getUnifiedBusinessData(bNo: string): Promise<{
       localBiz.b_nm !== "정보 조회 중..."
     );
 
-    // 개인사업자(법인번호 corp_no가 없거나 유효하지 않음)는 DART 매핑 대상에서 완전히 제외
-    const hasCorpNo = localBiz.corp_no && localBiz.corp_no.replace(/[^0-9]/g, "").length === 13;
-
-    if (hasValidCompanyName && (hasCorpNo || stockCode)) {
-      findDartCode(localBiz.b_nm, stockCode)
-        .then(async (correctDartCode) => {
-          if (correctDartCode && correctDartCode !== dartCode) {
-            console.log(`[DART Self-Healing] Correcting DART code for ${localBiz.b_nm}: ${dartCode} -> ${correctDartCode}`);
-            await query(
-              "UPDATE businesses SET dart_code = $1, dart_last_sync_at = NULL WHERE b_no = $2", 
-              [correctDartCode, cleanBNo]
-            );
-            dartCode = correctDartCode;
-            dartLastSync = null;
+    if (!isPrefetch) {
+      const needsImmediateHeal = Boolean(
+        localBiz.npsLinked && (!localBiz.npsChrgAmt || !localBiz.employmentHistory || localBiz.employmentHistory.length <= 1)
+      );
+      if (needsImmediateHeal) {
+        try {
+          console.log(`[Self-Healing Sync] Refreshing outdated/incomplete cache for ${localBiz.b_nm} (${cleanBNo})`);
+          const healed = await syncAndCacheBusinessData(cleanBNo);
+          if (healed.business) {
+            Object.assign(localBiz, healed.business);
           }
-
-          if (dartCode && !dartLastSync) {
-            console.log(`[Background Detail Sync] Syncing DART disclosures for ${localBiz.b_nm} (${cleanBNo}) with code ${dartCode}`);
-            syncDisclosuresByCompany(cleanBNo, dartCode)
-              .then(() => {
-                query("UPDATE businesses SET dart_last_sync_at = CURRENT_TIMESTAMP WHERE b_no = $1", [cleanBNo])
-                  .catch(err => console.error("Failed to update dart_last_sync_at:", err));
-              })
-              .catch(err => console.error("Background DART sync failed:", err));
-          }
-        })
-        .catch(err => console.error("[DART Self-Healing Check failed]", err));
-    } else if (!hasCorpNo && !stockCode) {
-      // 법인번호가 없는 개인사업자의 경우, 혹시 DART 코드가 잘못 들어가 있다면 NULL로 제거 (자가 치유 보완)
-      if (dartCode) {
-        console.log(`[DART Self-Healing] Removing invalid DART code for individual business ${localBiz.b_nm}: ${dartCode}`);
-        query("UPDATE businesses SET dart_code = NULL, dart_last_sync_at = NULL WHERE b_no = $1", [cleanBNo])
-          .catch(err => console.error("Failed to clean up invalid DART code:", err));
+        } catch (healErr) {
+          console.error("[Self-Healing Sync Failed]", healErr);
+        }
       }
-    }
 
-    if (hasValidCompanyName && !bidsLastSync) {
-      console.log(`[Background Detail Sync] Syncing recent bids for ${localBiz.b_nm} (${cleanBNo})`);
-      syncRecentBidsByCompany(localBiz.b_nm, cleanBNo)
-        .then(() => {
-          query("UPDATE businesses SET bids_last_sync_at = CURRENT_TIMESTAMP WHERE b_no = $1", [cleanBNo])
-            .catch(err => console.error("Failed to update bids_last_sync_at:", err));
-        })
-        .catch(err => console.error("Background Bids sync failed:", err));
-    }
+      let dartCode = localBiz.dart_code || "";
+      let dartLastSync = localBiz.dartLastSyncAt ?? (localBiz as any).dart_last_sync_at;
+      const patentsLastSync = localBiz.patentsLastSyncAt ?? (localBiz as any).patents_last_sync_at;
+      const bidsLastSync = localBiz.bidsLastSyncAt ?? (localBiz as any).bids_last_sync_at;
 
-    if (hasValidCompanyName && !patentsLastSync) {
-      console.log(`[Background Detail Sync] Syncing patents for ${localBiz.b_nm} (${cleanBNo})`);
-      syncPatentsByCompany(localBiz.b_nm, localBiz.p_nm || "")
-        .then(() => {
-          query("UPDATE businesses SET patents_last_sync_at = CURRENT_TIMESTAMP WHERE b_no = $1", [cleanBNo])
-            .catch(err => console.error("Failed to update patents_last_sync_at:", err));
-        })
-        .catch(err => console.error("Background Patents sync failed:", err));
+      let stockCode = "";
+      const listingStatus = localBiz.listing_status || "";
+      const stockMatch = listingStatus.match(/\((\d{6})\)/);
+      if (stockMatch) {
+        stockCode = stockMatch[1];
+      }
+
+      // 개인사업자(법인번호 corp_no가 없거나 유효하지 않음)는 DART 매핑 대상에서 완전히 제외
+      const hasCorpNo = localBiz.corp_no && localBiz.corp_no.replace(/[^0-9]/g, "").length === 13;
+
+      if (hasValidCompanyName && (hasCorpNo || stockCode) && (!dartCode || !dartLastSync)) {
+        findDartCode(localBiz.b_nm, stockCode)
+          .then(async (correctDartCode) => {
+            if (correctDartCode && correctDartCode !== dartCode) {
+              console.log(`[DART Self-Healing] Correcting DART code for ${localBiz.b_nm}: ${dartCode} -> ${correctDartCode}`);
+              await query(
+                "UPDATE businesses SET dart_code = $1, dart_last_sync_at = NULL WHERE b_no = $2", 
+                [correctDartCode, cleanBNo]
+              );
+              dartCode = correctDartCode;
+              dartLastSync = null;
+            }
+
+            if (dartCode && !dartLastSync) {
+              console.log(`[Background Detail Sync] Syncing DART disclosures for ${localBiz.b_nm} (${cleanBNo}) with code ${dartCode}`);
+              syncDisclosuresByCompany(cleanBNo, dartCode)
+                .then(() => {
+                  query("UPDATE businesses SET dart_last_sync_at = CURRENT_TIMESTAMP WHERE b_no = $1", [cleanBNo])
+                    .catch(err => console.error("Failed to update dart_last_sync_at:", err));
+                })
+                .catch(err => console.error("Background DART sync failed:", err));
+            }
+          })
+          .catch(err => console.error("[DART Self-Healing Check failed]", err));
+      } else if (!hasCorpNo && !stockCode) {
+        // 법인번호가 없는 개인사업자의 경우, 혹시 DART 코드가 잘못 들어가 있다면 NULL로 제거 (자가 치유 보완)
+        if (dartCode) {
+          console.log(`[DART Self-Healing] Removing invalid DART code for individual business ${localBiz.b_nm}: ${dartCode}`);
+          query("UPDATE businesses SET dart_code = NULL, dart_last_sync_at = NULL WHERE b_no = $1", [cleanBNo])
+            .catch(err => console.error("Failed to clean up invalid DART code:", err));
+        }
+      }
+
+      if (hasValidCompanyName && !bidsLastSync) {
+        console.log(`[Background Detail Sync] Syncing recent bids for ${localBiz.b_nm} (${cleanBNo})`);
+        syncRecentBidsByCompany(localBiz.b_nm, cleanBNo)
+          .then(() => {
+            query("UPDATE businesses SET bids_last_sync_at = CURRENT_TIMESTAMP WHERE b_no = $1", [cleanBNo])
+              .catch(err => console.error("Failed to update bids_last_sync_at:", err));
+          })
+          .catch(err => console.error("Background Bids sync failed:", err));
+      }
+
+      if (hasValidCompanyName && !patentsLastSync) {
+        console.log(`[Background Detail Sync] Syncing patents for ${localBiz.b_nm} (${cleanBNo})`);
+        syncPatentsByCompany(localBiz.b_nm, localBiz.p_nm || "")
+          .then(() => {
+            query("UPDATE businesses SET patents_last_sync_at = CURRENT_TIMESTAMP WHERE b_no = $1", [cleanBNo])
+              .catch(err => console.error("Failed to update patents_last_sync_at:", err));
+          })
+          .catch(err => console.error("Background Patents sync failed:", err));
+      }
     }
 
     console.log(`[Database Hit] Serving from DB cache (Zero External Network Requests): ${localBiz.b_nm} (${cleanBNo})`);
@@ -312,15 +344,15 @@ export async function getUnifiedBusinessData(bNo: string): Promise<{
   // 2. DB 캐시가 없는 경우 ➔ [최초 등록 시점]으로 식별하고 "불러오는 중..." 로딩 플레이스홀더 반환 (Non-blocking)
   console.log(`[Non-blocking SSR Serving] Unregistered business detected: ${cleanBNo}`);
 
-  // 2.1. 미등록 블랙리스트 캐시 검사
-  let invalidList: string[] = [];
+  // 2.1. 미등록 블랙리스트 캐시 단건 PK 조회 (전체 테이블 스캔 방지)
+  let blacklisted = false;
   try {
-    invalidList = await getInvalidBusinesses();
+    blacklisted = await isInvalidBusiness(cleanBNo);
   } catch (e) {
-    console.error("Failed to read invalid list from Neon DB:", e);
+    console.error("Failed to check invalid business in Neon DB:", e);
   }
 
-  if (invalidList.includes(cleanBNo)) {
+  if (blacklisted) {
     return {
       apiStatus: {
         b_no: cleanBNo,
@@ -363,6 +395,16 @@ export async function getUnifiedBusinessData(bNo: string): Promise<{
     isNew: true,
     relatedBusinesses: []
   };
+});
+
+/**
+ * 국세청 API, 금융위 API, 로컬 DB 통합 코어 헬퍼 함수
+ * (새로운 사업자 번호 최초 등록 시에만 실시간 외부 API 조회를 발생시키고 캐싱을 실행합니다)
+ */
+export async function getUnifiedBusinessData(bNo: string): Promise<UnifiedBusinessResult> {
+  const cleanBNo = bNo.replace(/[^0-9]/g, "");
+  const isPrefetch = await isPrefetchRequest();
+  return loadUnifiedBusinessCached(cleanBNo, isPrefetch);
 }
 
 /**
@@ -380,19 +422,11 @@ export async function syncAndCacheBusinessData(bNo: string): Promise<{
   const isInvalid = !apiStatus || apiStatus.tax_type === "국세청에 등록되지 않은 사업자등록번호입니다";
 
   if (isInvalid) {
-    let invalidList: string[] = [];
     try {
-      invalidList = await getInvalidBusinesses();
+      await addInvalidBusiness(cleanBNo);
+      console.log(`Added invalid business number to blacklist in Neon DB: ${cleanBNo}`);
     } catch (e) {
-      console.error("Failed to read invalid list from Neon DB:", e);
-    }
-    if (!invalidList.includes(cleanBNo)) {
-      try {
-        await addInvalidBusiness(cleanBNo);
-        console.log(`Added invalid business number to blacklist in Neon DB: ${cleanBNo}`);
-      } catch (e) {
-        console.error("Failed to write invalid list to Neon DB:", e);
-      }
+      console.error("Failed to write invalid business to Neon DB:", e);
     }
     return { apiStatus, business: null, isInvalid: true };
   }

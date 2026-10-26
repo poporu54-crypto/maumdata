@@ -245,6 +245,7 @@ export default function InsightsTabsClient({ stats }: InsightsTabsClientProps) {
                     <td style={{ padding: "12px 14px" }}>
                       <Link
                         href={`/biz/${comp.bNo}`}
+                        prefetch={false}
                         style={{
                           color: "var(--color-text-main)",
                           fontWeight: 700,
@@ -313,6 +314,7 @@ export default function InsightsTabsClient({ stats }: InsightsTabsClientProps) {
               <Link
                 key={comp.bNo}
                 href={`/biz/${comp.bNo}`}
+                prefetch={false}
                 style={{
                   textDecoration: "none",
                   padding: "18px",
@@ -403,6 +405,7 @@ export default function InsightsTabsClient({ stats }: InsightsTabsClientProps) {
                       대표 검증 기업:{" "}
                       <Link
                         href={`/biz/${item.topBNo}`}
+                        prefetch={false}
                         style={{
                           color: "var(--color-primary)",
                           fontWeight: 700,
@@ -522,6 +525,7 @@ export default function InsightsTabsClient({ stats }: InsightsTabsClientProps) {
                   >
                     <Link
                       href={`/biz/${item.topBNo}`}
+                      prefetch={false}
                       style={{
                         color: "var(--color-primary)",
                         fontWeight: 700,

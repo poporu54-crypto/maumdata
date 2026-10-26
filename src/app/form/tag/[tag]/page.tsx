@@ -50,6 +50,7 @@ export default async function TagPage(props: TagPageProps) {
       <div style={{ marginBottom: "40px", textAlign: "center" }}>
         <Link
           href="/form"
+          prefetch={false}
           style={{
             color: "var(--color-primary)",
             fontWeight: 700,
@@ -103,7 +104,7 @@ export default async function TagPage(props: TagPageProps) {
                     </div>
                   )}
 
-                  <Link href={`/form/${tpl.id}`} style={{ textDecoration: "none", color: "inherit" }}>
+                  <Link href={`/form/${tpl.id}`} prefetch={false} style={{ textDecoration: "none", color: "inherit" }}>
                     <div className="doc-card" style={{ position: "relative", cursor: "pointer", height: "100%" }}>
                       {tpl.popular && (
                         <span
@@ -207,7 +208,7 @@ export default async function TagPage(props: TagPageProps) {
             <p style={{ color: "var(--color-text-sub)", fontSize: "1rem", marginBottom: "16px" }}>
               현재 &apos;{decodedTag}&apos; 관련 등록된 서식이 없거나 제작 중입니다.
             </p>
-            <Link href="/form" className="btn btn-primary" style={{ fontSize: "0.9rem", padding: "10px 24px" }}>
+            <Link href="/form" prefetch={false} className="btn btn-primary" style={{ fontSize: "0.9rem", padding: "10px 24px" }}>
               ← 전체 무료 서식 센터에서 검색하기
             </Link>
           </div>

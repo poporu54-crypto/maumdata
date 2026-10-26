@@ -91,6 +91,7 @@ export default async function DocsPage() {
                       <Link
                         key={tpl.id}
                         href={`/form/${tpl.id}`}
+                        prefetch={false}
                         style={{
                           fontSize: "0.82rem",
                           color: "var(--color-text-sub)",

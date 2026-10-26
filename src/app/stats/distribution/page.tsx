@@ -315,6 +315,7 @@ export default async function DistributionStatsPage() {
                       {item.topBNo && item.topBNm ? (
                         <Link
                           href={`/biz/${item.topBNo}`}
+                          prefetch={false}
                           style={{
                             color: "var(--color-primary)",
                             fontWeight: 700,

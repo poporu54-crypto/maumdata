@@ -39,6 +39,7 @@ export async function RecommendedSection({
         <Link
           key={item.no}
           href={`/biz/${item.no}`}
+          prefetch={false}
           className="related-card"
         >
           <div style={{ fontSize: "0.75rem", color: "var(--color-text-desc)", fontWeight: 700, marginBottom: "6px" }}>

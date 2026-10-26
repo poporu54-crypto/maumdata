@@ -17,7 +17,9 @@ import {
 } from "./utils/helpers";
 import { 
   getUnifiedBusinessData, 
+  isPrefetchRequest,
 } from "./utils/dataLoader";
+import { recordBusinessView } from "@/lib/db";
 
 // 분리한 서브 컴포넌트 임포트
 import { 
@@ -109,6 +111,9 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
   }
 
   const { apiStatus, business, isInvalid, isNew, relatedBusinesses = [] } = await getUnifiedBusinessData(cleanBNo);
+  if (!isInvalid && business && !isNew && !(await isPrefetchRequest())) {
+    recordBusinessView(cleanBNo);
+  }
   const formattedBNo = cleanBNo.replace(/(\d{3})(\d{2})(\d{5})/, "$1-$2-$3");
 
   const renderSourceBadge = () => {
@@ -841,7 +846,7 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                       gap: "16px"
                     }}>
                       {relatedBusinesses.map((rb: any) => (
-                        <Link href={`/biz/${rb.b_no}`} key={rb.b_no} className="related-card" style={{ textDecoration: "none" }}>
+                        <Link href={`/biz/${rb.b_no}`} key={rb.b_no} prefetch={false} className="related-card" style={{ textDecoration: "none" }}>
                           <div style={{
                             display: "flex",
                             flexDirection: "column",
