@@ -6,6 +6,7 @@ export const dynamic = "force-dynamic";
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
+  const state = searchParams.get("state") || "";
   const host = request.headers.get("host") || "www.maumdata.com";
   const protocol = request.headers.get("x-forwarded-proto") || "https";
   const redirectUri = `${protocol}://${host}/api/auth/kakao/callback`;
@@ -69,9 +70,23 @@ export async function GET(request: NextRequest) {
       })
     ).toString("base64");
 
-    return NextResponse.redirect(
-      `${protocol}://${host}/contracts?oauth_session=${encodeURIComponent(userPayload)}`
-    );
+    const encodedSession = encodeURIComponent(userPayload);
+    const webTargetUrl = `${protocol}://${host}/contracts?oauth_session=${encodedSession}`;
+
+    // iOS ASWebAuthenticationSession 복귀 스킴
+    if (state === "ios") {
+      return NextResponse.redirect(`maumdata://oauth?oauth_session=${encodedSession}`);
+    }
+
+    // 안드로이드 네이티브 앱(Custom Tabs)에서 호출된 경우 앱 내부로 즉시 세션 복귀
+    if (state === "app") {
+      const appIntentUrl = `intent://oauth?oauth_session=${encodedSession}#Intent;scheme=maumdata;package=com.maumdata.dataapp;S.browser_fallback_url=${encodeURIComponent(
+        webTargetUrl
+      )};end`;
+      return NextResponse.redirect(appIntentUrl);
+    }
+
+    return NextResponse.redirect(webTargetUrl);
   } catch (err) {
     console.error("Kakao OAuth error:", err);
     return NextResponse.redirect(`${protocol}://${host}/contracts?auth_notice=oauth_failed`);

@@ -15,15 +15,15 @@ export default function MobileBottomNav() {
   const router = useRouter();
   const [isScannerOpen, setIsScannerOpen] = useState(false);
 
-  // 현재 활성 탭 판별
+  // 현재 활성 탭 판별 (/stats/new-biz 등 거시 통계 페이지에서 상권분석 탭이 오점등되지 않도록 정확히 분기)
   const isHome = pathname === "/" || pathname.startsWith("/biz") || pathname.startsWith("/search");
-  const isMarket = pathname.startsWith("/stats");
+  const isMarket = pathname.startsWith("/stats/market-area");
   const isForm = pathname.startsWith("/form");
-  const isContracts = pathname.startsWith("/contracts");
+  const isContracts = pathname.startsWith("/contracts") || pathname.startsWith("/sign");
 
   return (
     <>
-      <nav className="mobile-bottom-nav" aria-label="모바일 하단 내비게이션">
+      <nav className="mobile-bottom-nav no-print" aria-label="모바일 하단 내비게이션">
         <div className="mobile-bottom-nav-inner" style={{ display: "flex", justifyContent: "space-around", alignItems: "center" }}>
           {/* 1. 기업조회 */}
           <Link
@@ -88,7 +88,7 @@ export default function MobileBottomNav() {
                 color: "#ffffff",
                 boxShadow: "0 4px 14px rgba(37, 99, 235, 0.4)",
                 marginTop: "-14px",
-                border: "2.5px solid var(--color-card)"
+                border: "2.5px solid var(--bg-color-card)"
               }}
             >
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">

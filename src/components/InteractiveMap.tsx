@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import { lockAppPullToRefresh } from "@/lib/appBridge";
 
 export interface MapMarker {
   lat: number;
@@ -29,7 +30,18 @@ export default function InteractiveMap({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const markersGroupRef = useRef<any>(null);
+  const ptrUnlockRef = useRef<(() => void) | null>(null);
   const [leafletLoaded, setLeafletLoaded] = useState(false);
+
+  // 컴포넌트 언마운트 시 당겨서 새로고침 잠금 안전 해제
+  useEffect(() => {
+    return () => {
+      if (ptrUnlockRef.current) {
+        ptrUnlockRef.current();
+        ptrUnlockRef.current = null;
+      }
+    };
+  }, []);
 
   // Load Leaflet Script & CSS
   useEffect(() => {
@@ -240,6 +252,23 @@ export default function InteractiveMap({
       )}
       <div
         ref={mapContainerRef}
+        onTouchStart={() => {
+          if (!ptrUnlockRef.current) {
+            ptrUnlockRef.current = lockAppPullToRefresh();
+          }
+        }}
+        onTouchEnd={() => {
+          if (ptrUnlockRef.current) {
+            ptrUnlockRef.current();
+            ptrUnlockRef.current = null;
+          }
+        }}
+        onTouchCancel={() => {
+          if (ptrUnlockRef.current) {
+            ptrUnlockRef.current();
+            ptrUnlockRef.current = null;
+          }
+        }}
         style={{
           width: "100%",
           height: "100%",

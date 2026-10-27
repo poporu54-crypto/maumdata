@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { vibrateDevice } from "@/lib/appBridge";
+import { vibrateDevice, useAppModalBack } from "@/lib/appBridge";
 
 interface QuickContractModalProps {
   business: {
@@ -90,6 +90,8 @@ const INLINE_QUICK_LINKS = [
 
 export default function QuickContractModal({ business }: QuickContractModalProps) {
   const [isOpen, setIsOpen] = useState(false);
+
+  useAppModalBack(isOpen, () => setIsOpen(false));
 
   const handleOpen = () => {
     vibrateDevice(30);

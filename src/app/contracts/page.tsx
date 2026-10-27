@@ -116,6 +116,35 @@ export default function ContractsDashboardPage() {
     showAppToast("로그아웃되었습니다.");
   };
 
+  const handleDeleteAccount = async () => {
+    if (!currentUser) return;
+    vibrateDevice(30);
+    const ok = window.confirm(
+      `'${currentUser.email}' 영구 계약 보관함 계정을 탈퇴하시겠습니까?\n(탈퇴 즉시 내 계정 정보와 보관함 연결이 영구 삭제되며 복구할 수 없습니다)`
+    );
+    if (!ok) return;
+
+    try {
+      const res = await fetch("/api/auth/session", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: currentUser.id,
+          email: currentUser.email,
+        }),
+      });
+      if (!res.ok) {
+        throw new Error("계정 탈퇴 처리에 실패했습니다.");
+      }
+      setLoggedInUser(null);
+      setCurrentUser(null);
+      fetchMyVault(null);
+      showAppToast("계정 탈퇴가 완료되어 모든 계정 정보가 영구 삭제되었습니다.");
+    } catch (err: any) {
+      alert(err?.message || "계정 탈퇴 중 오류가 발생했습니다.");
+    }
+  };
+
   const handleDeleteContract = async (contractId: string, title: string) => {
     vibrateDevice(25);
     const ok = window.confirm(
@@ -253,22 +282,40 @@ export default function ContractsDashboardPage() {
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={handleLogout}
-                style={{
-                  padding: "8px 14px",
-                  borderRadius: "10px",
-                  border: "1px solid var(--color-border)",
-                  backgroundColor: "var(--bg-color-main)",
-                  color: "var(--color-text-sub)",
-                  fontSize: "0.82rem",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                }}
-              >
-                로그아웃
-              </button>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  style={{
+                    padding: "8px 14px",
+                    borderRadius: "10px",
+                    border: "1px solid var(--color-border)",
+                    backgroundColor: "var(--bg-color-main)",
+                    color: "var(--color-text-sub)",
+                    fontSize: "0.82rem",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                  }}
+                >
+                  로그아웃
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteAccount}
+                  style={{
+                    padding: "8px 12px",
+                    borderRadius: "10px",
+                    border: "1px solid rgba(240, 68, 56, 0.3)",
+                    backgroundColor: "transparent",
+                    color: "var(--color-danger)",
+                    fontSize: "0.78rem",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
+                  계정 탈퇴
+                </button>
+              </div>
             </>
           ) : (
             <>

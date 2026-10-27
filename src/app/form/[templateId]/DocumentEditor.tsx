@@ -6,7 +6,13 @@ import dynamic from "next/dynamic";
 import { useParams, useRouter } from "next/navigation";
 import type { LayoutElement } from "../templatesData";
 import AdSpace from "@/components/AdSpace";
-import { shareDocumentPdf, vibrateDevice, showAppToast } from "@/lib/appBridge";
+import {
+  shareDocumentPdf,
+  vibrateDevice,
+  showAppToast,
+  printDocument,
+  saveOrDownloadBlob,
+} from "@/lib/appBridge";
 import type { SelectedCompany } from "@/components/CompanySearchModal";
 
 const LegacyTemplateRenderer = dynamic(() => import("./LegacyTemplateRenderer"));
@@ -901,9 +907,9 @@ export default function DocumentEditor({ templateId, initialTemplate }: { templa
     });
   };
 
-  // PDF 저장 및 인쇄
+  // PDF 저장 및 인쇄 (안드로이드 네이티브 PrintManager 어댑터 연동)
   const handlePrint = () => {
-    window.print();
+    printDocument(template?.title || "마음데이터_서식");
   };
 
   // HWP/Word 파일 다운로드 브릿지 (HTML Blob 형식 이용)
@@ -1034,15 +1040,10 @@ export default function DocumentEditor({ templateId, initialTemplate }: { templa
       </html>
     `;
 
-    const blob = new Blob(["\ufeff", htmlHead], { type: "application/msword;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${templateId}_form_${new Date().toISOString().substring(0, 10)}.${format === "hwp" ? "hwp" : "doc"}`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    const mimeType = format === "hwp" ? "application/x-hwp" : "application/msword";
+    const blob = new Blob(["\ufeff", htmlHead], { type: `${mimeType};charset=utf-8` });
+    const fileName = `${templateId}_form_${new Date().toISOString().substring(0, 10)}.${format === "hwp" ? "hwp" : "doc"}`;
+    void saveOrDownloadBlob({ blob, fileName, mimeType });
   };
 
   // 결재란 실시간 Preview 렌더러

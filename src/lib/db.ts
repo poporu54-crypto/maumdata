@@ -1187,6 +1187,21 @@ export async function getContractUserByEmail(email: string) {
   return res.rows[0] || null;
 }
 
+export async function deleteContractUser(userId: string, email: string) {
+  await ensureContractsTable();
+  await query(
+    `UPDATE electronic_contracts
+     SET party_a_user_id = CASE WHEN party_a_user_id = $1 THEN '' ELSE party_a_user_id END,
+         party_b_user_id = CASE WHEN party_b_user_id = $1 THEN '' ELSE party_b_user_id END
+     WHERE party_a_user_id = $1 OR party_b_user_id = $1`,
+    [userId]
+  );
+  await query(
+    `DELETE FROM contract_users WHERE id = $1 OR email = LOWER($2)`,
+    [userId, (email || "").trim()]
+  );
+}
+
 export async function createContract(data: {
   id: string;
   templateId: string;

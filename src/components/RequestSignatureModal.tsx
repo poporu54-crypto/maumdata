@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { vibrateDevice, showAppToast } from "@/lib/appBridge";
+import { vibrateDevice, showAppToast, shareTextOrUrl, useAppModalBack } from "@/lib/appBridge";
 import { saveContractToLocal, getLoggedInUser, ContractUser } from "@/lib/contractStorage";
 import ContractAuthModal from "@/components/ContractAuthModal";
 
@@ -67,6 +67,8 @@ export default function RequestSignatureModal({
       }
     }
   }, [isOpen]);
+
+  useAppModalBack(isOpen, onClose);
 
   if (!isOpen) return null;
 
@@ -164,20 +166,14 @@ ${createdResult.signUrl}${pinLine}`;
     showAppToast("계약서 주소만 복사되었습니다.");
   };
 
-  const handleNativeShare = () => {
+  const handleNativeShare = async () => {
     if (!createdResult) return;
-    vibrateDevice(30);
     const msg = getInviteMessage();
-    if (navigator.share) {
-      navigator
-        .share({
-          title: `[전자계약] ${templateTitle} 서명 요청`,
-          text: msg,
-        })
-        .catch(() => {});
-    } else {
-      handleCopyInvite();
-    }
+    await shareTextOrUrl({
+      title: `[전자계약] ${templateTitle} 서명 요청`,
+      text: msg,
+      url: createdResult.signUrl,
+    });
   };
 
   return (
@@ -204,7 +200,8 @@ ${createdResult.signUrl}${pinLine}`;
         <div
           onClick={(e) => e.stopPropagation()}
           style={{
-            backgroundColor: "#ffffff",
+            backgroundColor: "var(--bg-color-card)",
+            border: "1px solid var(--color-border)",
             width: "100%",
             maxWidth: "500px",
             borderRadius: "20px",
@@ -346,7 +343,7 @@ ${createdResult.signUrl}${pinLine}`;
               <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
                   <div>
-                    <label style={{ fontSize: "0.78rem", fontWeight: 700, color: "#0f172a", display: "block", marginBottom: "4px" }}>
+                    <label style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--color-text-main)", display: "block", marginBottom: "4px" }}>
                       상대방 상호/소속
                     </label>
                     <input
@@ -358,15 +355,15 @@ ${createdResult.signUrl}${pinLine}`;
                         width: "100%",
                         padding: "9px 12px",
                         borderRadius: "8px",
-                        border: "1.5px solid #cbd5e1",
-                        backgroundColor: "#ffffff",
-                        color: "#0f172a",
+                        border: "1.5px solid var(--color-border)",
+                        backgroundColor: "var(--bg-color-main)",
+                        color: "var(--color-text-main)",
                         fontSize: "0.9rem",
                       }}
                     />
                   </div>
                   <div>
-                    <label style={{ fontSize: "0.78rem", fontWeight: 700, color: "#0f172a", display: "block", marginBottom: "4px" }}>
+                    <label style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--color-text-main)", display: "block", marginBottom: "4px" }}>
                       상대방 성명 *
                     </label>
                     <input
@@ -378,9 +375,9 @@ ${createdResult.signUrl}${pinLine}`;
                         width: "100%",
                         padding: "9px 12px",
                         borderRadius: "8px",
-                        border: "1.5px solid #cbd5e1",
-                        backgroundColor: "#ffffff",
-                        color: "#0f172a",
+                        border: "1.5px solid var(--color-border)",
+                        backgroundColor: "var(--bg-color-main)",
+                        color: "var(--color-text-main)",
                         fontSize: "0.9rem",
                         fontWeight: 600,
                       }}

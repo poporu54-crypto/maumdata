@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { useAppModalBack } from "@/lib/appBridge";
 
 interface EditRequestModalProps {
   bNo: string;
@@ -51,6 +52,8 @@ export default function EditRequestModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+
+  useAppModalBack(isOpen, onClose);
 
   if (!isOpen || !mounted) return null;
 

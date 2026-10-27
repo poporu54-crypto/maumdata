@@ -2,7 +2,13 @@
 
 import React, { useState } from "react";
 import { ContractUser, setLoggedInUser } from "@/lib/contractStorage";
-import { vibrateDevice, showAppToast } from "@/lib/appBridge";
+import {
+  vibrateDevice,
+  showAppToast,
+  startSocialLogin,
+  useAppModalBack,
+  isIOSAppEnvironment,
+} from "@/lib/appBridge";
 
 interface ContractAuthModalProps {
   isOpen: boolean;
@@ -20,6 +26,8 @@ export default function ContractAuthModal({
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+
+  useAppModalBack(isOpen, onClose);
 
   if (!isOpen) return null;
 
@@ -72,9 +80,11 @@ export default function ContractAuthModal({
   };
 
   const handleSocialLogin = (provider: "kakao" | "google") => {
-    vibrateDevice(25);
-    window.location.href = `/api/auth/${provider}`;
+    startSocialLogin(provider);
   };
+
+  // Apple App Store 가이드라인 4.8 준수: iOS 네이티브 앱에서는 당사 자체 보안 이메일 인증을 기본 제공
+  const hideThirdPartyOAuthOnIOS = isIOSAppEnvironment();
 
   return (
     <div
@@ -99,15 +109,18 @@ export default function ContractAuthModal({
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          backgroundColor: "#ffffff",
+          backgroundColor: "var(--bg-color-card)",
+          border: "1px solid var(--color-border)",
           width: "100%",
           maxWidth: "440px",
           borderRadius: "22px",
-          padding: "28px 24px",
+          padding: "26px 22px",
           boxShadow: "0 20px 50px rgba(0,0,0,0.35)",
           display: "flex",
           flexDirection: "column",
-          gap: "18px",
+          gap: "16px",
+          maxHeight: "90vh",
+          overflowY: "auto",
         }}
       >
         {/* 헤더 */}
@@ -117,15 +130,15 @@ export default function ContractAuthModal({
               style={{
                 fontSize: "0.75rem",
                 fontWeight: 800,
-                color: "#2563eb",
-                backgroundColor: "rgba(37, 99, 235, 0.1)",
+                color: "var(--color-primary)",
+                backgroundColor: "var(--color-primary-light)",
                 padding: "3px 8px",
                 borderRadius: "6px",
               }}
             >
               영구 클라우드 보관함
             </span>
-            <h3 style={{ margin: "8px 0 0 0", fontSize: "1.3rem", fontWeight: 800, color: "var(--color-text-main)" }}>
+            <h3 style={{ margin: "8px 0 0 0", fontSize: "1.28rem", fontWeight: 800, color: "var(--color-text-main)" }}>
               내 계약 보관함 로그인
             </h3>
             <p style={{ margin: "4px 0 0 0", fontSize: "0.82rem", color: "var(--color-text-sub)", lineHeight: 1.4 }}>
@@ -135,6 +148,7 @@ export default function ContractAuthModal({
           <button
             onClick={onClose}
             type="button"
+            aria-label="로그인 창 닫기"
             style={{
               background: "none",
               border: "none",
@@ -148,62 +162,66 @@ export default function ContractAuthModal({
           </button>
         </div>
 
-        {/* 소셜 로그인 버튼 */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-          <button
-            type="button"
-            onClick={() => handleSocialLogin("kakao")}
-            style={{
-              width: "100%",
-              padding: "12px 16px",
-              borderRadius: "12px",
-              border: "none",
-              backgroundColor: "#FEE500",
-              color: "#191919",
-              fontWeight: 800,
-              fontSize: "0.92rem",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "8px",
-            }}
-          >
-            <span>💬</span>
-            <span>카카오로 1초 시작하기</span>
-          </button>
+        {/* 소셜 로그인 버튼 (웹·안드로이드 앱 노출 / iOS 앱은 당사 1st-party 전용 보관함 인증 사용) */}
+        {!hideThirdPartyOAuthOnIOS && (
+          <>
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              <button
+                type="button"
+                onClick={() => handleSocialLogin("kakao")}
+                style={{
+                  width: "100%",
+                  padding: "12px 16px",
+                  borderRadius: "12px",
+                  border: "none",
+                  backgroundColor: "#FEE500",
+                  color: "#191919",
+                  fontWeight: 800,
+                  fontSize: "0.92rem",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "8px",
+                }}
+              >
+                <span>💬</span>
+                <span>카카오로 1초 시작하기</span>
+              </button>
 
-          <button
-            type="button"
-            onClick={() => handleSocialLogin("google")}
-            style={{
-              width: "100%",
-              padding: "12px 16px",
-              borderRadius: "12px",
-              border: "1px solid var(--color-border)",
-              backgroundColor: "#ffffff",
-              color: "#1e293b",
-              fontWeight: 700,
-              fontSize: "0.92rem",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "8px",
-            }}
-          >
-            <span style={{ fontWeight: 900, color: "#ea4335" }}>G</span>
-            <span>Google 계정으로 시작하기</span>
-          </button>
-        </div>
+              <button
+                type="button"
+                onClick={() => handleSocialLogin("google")}
+                style={{
+                  width: "100%",
+                  padding: "12px 16px",
+                  borderRadius: "12px",
+                  border: "1px solid var(--color-border)",
+                  backgroundColor: "#ffffff",
+                  color: "#1e293b",
+                  fontWeight: 700,
+                  fontSize: "0.92rem",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "8px",
+                }}
+              >
+                <span style={{ fontWeight: 900, color: "#ea4335" }}>G</span>
+                <span>Google 계정으로 시작하기</span>
+              </button>
+            </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <div style={{ flex: 1, height: "1px", backgroundColor: "var(--color-border)" }} />
-          <span style={{ fontSize: "0.75rem", color: "var(--color-text-desc)", fontWeight: 600 }}>
-            또는 이메일 1초 간편 시작 (가입절차 없음)
-          </span>
-          <div style={{ flex: 1, height: "1px", backgroundColor: "var(--color-border)" }} />
-        </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <div style={{ flex: 1, height: "1px", backgroundColor: "var(--color-border)" }} />
+              <span style={{ fontSize: "0.75rem", color: "var(--color-text-desc)", fontWeight: 600 }}>
+                또는 이메일 1초 간편 시작 (가입절차 없음)
+              </span>
+              <div style={{ flex: 1, height: "1px", backgroundColor: "var(--color-border)" }} />
+            </div>
+          </>
+        )}
 
         {/* 이메일 + 비밀번호 즉시 시작 폼 */}
         <form onSubmit={handleQuickAuth} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
@@ -220,9 +238,9 @@ export default function ContractAuthModal({
                 width: "100%",
                 padding: "10px 12px",
                 borderRadius: "10px",
-                border: "1.5px solid #cbd5e1",
-                backgroundColor: "#ffffff",
-                color: "#0f172a",
+                border: "1.5px solid var(--color-border)",
+                backgroundColor: "var(--bg-color-main)",
+                color: "var(--color-text-main)",
                 fontSize: "0.92rem",
               }}
               required
@@ -243,9 +261,9 @@ export default function ContractAuthModal({
                   width: "100%",
                   padding: "10px 12px",
                   borderRadius: "10px",
-                  border: "1.5px solid #cbd5e1",
-                  backgroundColor: "#ffffff",
-                  color: "#0f172a",
+                  border: "1.5px solid var(--color-border)",
+                  backgroundColor: "var(--bg-color-main)",
+                  color: "var(--color-text-main)",
                   fontSize: "0.92rem",
                 }}
                 required
@@ -264,9 +282,9 @@ export default function ContractAuthModal({
                   width: "100%",
                   padding: "10px 12px",
                   borderRadius: "10px",
-                  border: "1.5px solid #cbd5e1",
-                  backgroundColor: "#ffffff",
-                  color: "#0f172a",
+                  border: "1.5px solid var(--color-border)",
+                  backgroundColor: "var(--bg-color-main)",
+                  color: "var(--color-text-main)",
                   fontSize: "0.92rem",
                 }}
               />
@@ -274,7 +292,7 @@ export default function ContractAuthModal({
           </div>
 
           {errorMsg && (
-            <div style={{ fontSize: "0.8rem", color: "#dc2626", fontWeight: 600 }}>
+            <div style={{ fontSize: "0.8rem", color: "var(--color-danger)", fontWeight: 600 }}>
               ⚠️ {errorMsg}
             </div>
           )}

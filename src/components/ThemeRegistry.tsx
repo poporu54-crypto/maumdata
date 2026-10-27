@@ -1,6 +1,8 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
+import { syncAppTheme, vibrateDevice } from "@/lib/appBridge";
 
 type Theme = "light" | "dark";
 
@@ -24,25 +26,28 @@ export default function ThemeRegistry({ children }: { children: React.ReactNode 
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    // 최초 렌더링 시 로컬스토리지 또는 HTML 속성 확인
     const savedTheme = localStorage.getItem("theme") as Theme;
-    if (savedTheme) {
+    if (savedTheme === "light" || savedTheme === "dark") {
       setTheme(savedTheme);
       document.documentElement.setAttribute("data-theme", savedTheme);
+      syncAppTheme(savedTheme);
     } else {
       const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      const initialTheme = prefersDark ? "dark" : "light";
+      const initialTheme: Theme = prefersDark ? "dark" : "light";
       setTheme(initialTheme);
       document.documentElement.setAttribute("data-theme", initialTheme);
+      syncAppTheme(initialTheme);
     }
     setMounted(true);
   }, []);
 
   const toggleTheme = () => {
-    const nextTheme = theme === "light" ? "dark" : "light";
+    vibrateDevice(15);
+    const nextTheme: Theme = theme === "light" ? "dark" : "light";
     setTheme(nextTheme);
     localStorage.setItem("theme", nextTheme);
     document.documentElement.setAttribute("data-theme", nextTheme);
+    syncAppTheme(nextTheme);
   };
 
   return (
@@ -53,33 +58,46 @@ export default function ThemeRegistry({ children }: { children: React.ReactNode 
   );
 }
 
-// 헤더의 #theme-toggle-container 에 포탈 느낌으로 React Portal을 써도 되고,
-// 아니면 간단히 useEffect로 버튼을 마운트하는 컴포넌트를 정의합니다.
-import { createPortal } from "react-dom";
-
 function ThemeButtonPortal({ theme, toggleTheme }: { theme: Theme; toggleTheme: () => void }) {
-  const [target, setTarget] = useState<Element | null>(null);
+  const [targets, setTargets] = useState<Element[]>([]);
 
   useEffect(() => {
-    setTarget(document.getElementById("theme-toggle-container"));
+    const found: Element[] = [];
+    const desktopSlot = document.getElementById("theme-toggle-container");
+    const mobileSlot = document.getElementById("mobile-theme-toggle-slot");
+    if (desktopSlot) found.push(desktopSlot);
+    if (mobileSlot) found.push(mobileSlot);
+    setTargets(found);
   }, []);
 
-  if (!target) return null;
+  if (targets.length === 0) return null;
 
-  return createPortal(
-    <button className="theme-toggle-btn" onClick={toggleTheme} aria-label="테마 전환">
-      {theme === "light" ? (
-        <>
-          <span>🌙</span>
-          <span>다크 모드</span>
-        </>
-      ) : (
-        <>
-          <span>☀️</span>
-          <span>라이트 모드</span>
-        </>
+  return (
+    <>
+      {targets.map((target, idx) =>
+        createPortal(
+          <button
+            key={idx}
+            type="button"
+            className="theme-toggle-btn"
+            onClick={toggleTheme}
+            aria-label="테마 전환"
+          >
+            {theme === "light" ? (
+              <>
+                <span>🌙</span>
+                <span>다크 모드</span>
+              </>
+            ) : (
+              <>
+                <span>☀️</span>
+                <span>라이트 모드</span>
+              </>
+            )}
+          </button>,
+          target
+        )
       )}
-    </button>,
-    target
+    </>
   );
 }

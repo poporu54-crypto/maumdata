@@ -66,6 +66,7 @@ export default function AppInstallBanner() {
   const [visible, setVisible] = useState(false);
   const [closing, setClosing] = useState(false);
   const [storeUrl, setStoreUrl] = useState(PLAY_STORE_URL);
+  const [isIOS, setIsIOS] = useState(false);
 
   // 관리자 페이지 및 비대면 계약 서명 전용 페이지에서는 배너 미노출
   const isExcludedRoute = pathname.startsWith("/admin") || pathname.startsWith("/sign");
@@ -88,12 +89,14 @@ export default function AppInstallBanner() {
 
     // 2. iOS 기기 체크 (아이폰 앱 출시 전까지는 미노출, 출시 후 IOS_STORE_URL로 자동 분기)
     if (isIOSDevice()) {
+      setIsIOS(true);
       if (!IOS_STORE_URL) {
         setVisible(false);
         return;
       }
       setStoreUrl(IOS_STORE_URL);
     } else {
+      setIsIOS(false);
       setStoreUrl(PLAY_STORE_URL);
     }
 
@@ -190,7 +193,9 @@ export default function AppInstallBanner() {
 
       {/* 하단 슬림 컨트롤 바: 인터페이스 해치지 않는 깔끔한 7일간 알림 끄기 */}
       <div className="app-install-footer">
-        <span className="app-install-badge-txt">Google Play 공식 무료 앱</span>
+        <span className="app-install-badge-txt">
+          {isIOS ? "App Store 공식 무료 앱" : "Google Play 공식 무료 앱"}
+        </span>
         <button
           type="button"
           onClick={handleDismissFor7Days}

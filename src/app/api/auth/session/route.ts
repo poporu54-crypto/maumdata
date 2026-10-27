@@ -1,5 +1,5 @@
 import { NextResponse, NextRequest } from "next/server";
-import { getContractUserByEmail, upsertContractUser } from "@/lib/db";
+import { getContractUserByEmail, upsertContractUser, deleteContractUser } from "@/lib/db";
 import crypto from "crypto";
 
 export const dynamic = "force-dynamic";
@@ -89,6 +89,29 @@ export async function POST(request: NextRequest) {
     console.error("Auth session error:", err);
     return NextResponse.json(
       { error: "로그인 처리 중 오류가 발생했습니다: " + err.message },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { userId, email } = body || {};
+
+    if (!userId && !email) {
+      return NextResponse.json(
+        { error: "삭제할 계정 정보가 없습니다." },
+        { status: 400 }
+      );
+    }
+
+    await deleteContractUser(String(userId || ""), String(email || ""));
+    return NextResponse.json({ success: true });
+  } catch (err: any) {
+    console.error("Account delete error:", err);
+    return NextResponse.json(
+      { error: "계정 탈퇴 처리 중 오류가 발생했습니다." },
       { status: 500 }
     );
   }

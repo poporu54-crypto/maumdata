@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useState, useEffect } from "react";
-import { vibrateDevice } from "@/lib/appBridge";
+import { vibrateDevice, useAppModalBack } from "@/lib/appBridge";
 
 interface DocumentSignatureModalProps {
   isOpen: boolean;
@@ -245,6 +245,8 @@ export default function DocumentSignatureModal({
     }
     onClose();
   };
+
+  useAppModalBack(isOpen, onClose);
 
   if (!isOpen) return null;
 

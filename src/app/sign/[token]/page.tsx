@@ -4,7 +4,7 @@ import React, { useEffect, useState, use } from "react";
 import Link from "next/link";
 import DocumentSignatureModal from "@/components/DocumentSignatureModal";
 import ContractAuthModal from "@/components/ContractAuthModal";
-import { vibrateDevice, showAppToast } from "@/lib/appBridge";
+import { vibrateDevice, showAppToast, printDocument } from "@/lib/appBridge";
 import { saveContractToLocal, getLoggedInUser, ContractUser } from "@/lib/contractStorage";
 import MaumDataLogo from "@/components/MaumDataLogo";
 
@@ -131,7 +131,7 @@ export default function SignContractPage({ params }: { params: Promise<{ token: 
   };
 
   const handlePrint = () => {
-    window.print();
+    printDocument(contract?.title || "마음데이터_전자계약서");
   };
 
   if (loading) {
@@ -553,6 +553,7 @@ export default function SignContractPage({ params }: { params: Promise<{ token: 
         {/* 하단 플로팅 서명 버튼 (미완료 시) */}
         {!completed && (
           <div
+            className="sign-floating-cta no-print"
             style={{
               position: "fixed",
               bottom: "16px",

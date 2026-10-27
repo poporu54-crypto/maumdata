@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 
 const FeedbackModal = dynamic(() => import("./FeedbackModal"), {
@@ -10,9 +10,17 @@ const FeedbackModal = dynamic(() => import("./FeedbackModal"), {
 export default function FeedbackFloatingTrigger() {
   const [isOpen, setIsOpen] = useState(false);
 
+  useEffect(() => {
+    const handleOpenEvent = () => setIsOpen(true);
+    window.addEventListener("maumdata-open-feedback", handleOpenEvent);
+    return () => window.removeEventListener("maumdata-open-feedback", handleOpenEvent);
+  }, []);
+
   return (
     <>
       <button
+        type="button"
+        className="feedback-floating-btn no-print"
         onClick={() => setIsOpen(true)}
         aria-label="사용자 의견 보내기"
         style={{

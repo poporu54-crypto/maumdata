@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { vibrateDevice } from "@/lib/appBridge";
+import { vibrateDevice, useAppModalBack } from "@/lib/appBridge";
 
 export interface SelectedCompany {
   b_no: string;
@@ -69,6 +69,8 @@ export default function CompanySearchModal({
     onSelectCompany(company);
     onClose();
   };
+
+  useAppModalBack(isOpen, onClose);
 
   if (!isOpen) return null;
 

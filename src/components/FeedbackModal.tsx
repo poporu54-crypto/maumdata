@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
+import { useAppModalBack } from "@/lib/appBridge";
 
 interface FeedbackModalProps {
   isOpen: boolean;
@@ -75,6 +76,8 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
       setIsSubmitting(false);
     }
   };
+
+  useAppModalBack(isOpen, onClose);
 
   if (!isOpen || !mounted) return null;
 
