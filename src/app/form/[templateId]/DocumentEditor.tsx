@@ -709,10 +709,10 @@ export default function DocumentEditor({ templateId, initialTemplate }: { templa
 
   const handleShareDoc = async () => {
     vibrateDevice(30);
-    const docTitle = template?.title || "마음데이터 서식";
+    const docTitle = template?.title || "마음데이타 서식";
     await shareDocumentPdf({
       title: docTitle,
-      text: `[${docTitle}] 마음데이터에서 생성된 문서입니다.`,
+      text: `[${docTitle}] 마음데이타에서 생성된 문서입니다.`,
       fileName: `${docTitle}.pdf`
     });
   };
@@ -909,7 +909,7 @@ export default function DocumentEditor({ templateId, initialTemplate }: { templa
 
   // PDF 저장 및 인쇄 (안드로이드 네이티브 PrintManager 어댑터 연동)
   const handlePrint = () => {
-    printDocument(template?.title || "마음데이터_서식");
+    printDocument(template?.title || "마음데이타_서식");
   };
 
   // HWP/Word 파일 다운로드 브릿지 (HTML Blob 형식 이용)

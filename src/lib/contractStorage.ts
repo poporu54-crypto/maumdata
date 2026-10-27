@@ -1,5 +1,5 @@
 /**
- * 마음데이터 전자계약 보관함: 회원 세션 & 로컬 캐싱 헬퍼
+ * 마음데이타 전자계약 보관함: 회원 세션 & 로컬 캐싱 헬퍼
  */
 
 const STORAGE_KEY = "maumdata_recent_contracts_v1";

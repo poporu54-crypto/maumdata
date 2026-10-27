@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 
 /**
- * 마음데이터 웹 - 안드로이드 앱 하이브리드 브릿지 (v1.2+)
+ * 마음데이타 웹 - 안드로이드 앱 하이브리드 브릿지 (v1.2+)
  * 앱 환경(AndroidBridge)에서는 네이티브 기능(인쇄/PDF저장, 파일다운로드, ML Kit OCR 스캔,
  * 크롬 커스텀탭 OAuth, 시스템 공유창, 뒤로가기 모달 제어, 당겨서 새로고침 잠금, 상태바 테마 동기화)을 호출하고,
  * 일반 웹 브라우저 환경에서는 표준 웹 API로 자연스럽게 폴백(Fallback)합니다.
@@ -103,7 +103,7 @@ export function extractBizNoFromText(text: string): string {
 }
 
 /**
- * 현재 실행 환경이 마음데이터 네이티브 앱(안드로이드/iOS WebView)인지 확인
+ * 현재 실행 환경이 마음데이타 네이티브 앱(안드로이드/iOS WebView)인지 확인
  */
 export function isAppEnvironment(): boolean {
   if (typeof window === "undefined") return false;
@@ -117,7 +117,7 @@ export function isAppEnvironment(): boolean {
 }
 
 /**
- * 현재 실행 환경이 마음데이터 iOS 네이티브 앱인지 확인
+ * 현재 실행 환경이 마음데이타 iOS 네이티브 앱인지 확인
  */
 export function isIOSAppEnvironment(): boolean {
   if (typeof window === "undefined") return false;
@@ -313,7 +313,7 @@ export function printDocument(jobTitle?: string): void {
   if (typeof window === "undefined") return;
   vibrateDevice(25);
 
-  const safeTitle = (jobTitle || document.title || "마음데이터_문서").trim();
+  const safeTitle = (jobTitle || document.title || "마음데이타_문서").trim();
 
   if (window.AndroidBridge?.printCurrentPage) {
     try {
@@ -425,7 +425,7 @@ export async function shareDocumentPdf({
   title,
   text,
   base64Data,
-  fileName = "마음데이터_서식.pdf",
+  fileName = "마음데이타_서식.pdf",
   fileBlob,
   url,
 }: {
@@ -470,7 +470,7 @@ export async function shareDocumentPdf({
   // 3. 텍스트 / 링크 공유 (앱 네이티브 공유창 또는 클립보드 복사)
   return shareTextOrUrl({
     title,
-    text: text || `[${title}] 마음데이터 무료 서식 문서입니다.`,
+    text: text || `[${title}] 마음데이타 무료 서식 문서입니다.`,
     url: url || window.location.href,
   });
 }

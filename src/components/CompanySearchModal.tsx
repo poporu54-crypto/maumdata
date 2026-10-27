@@ -24,7 +24,7 @@ export default function CompanySearchModal({
   onClose,
   onSelectCompany,
   title = "🔍 기업 DB에서 정보 불러오기",
-  description = "마음데이터의 실시간 기업 DB에서 거래처 정보를 검색하여 서식에 자동 입력합니다."
+  description = "마음데이타의 실시간 기업 DB에서 거래처 정보를 검색하여 서식에 자동 입력합니다."
 }: CompanySearchModalProps) {
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);

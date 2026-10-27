@@ -138,7 +138,7 @@ export default function RequestSignatureModal({
       ? `\n🔑 열람용 임시 비밀번호: ${createdResult.accessPin}`
       : "";
 
-    return `[마음데이터 전자계약 서명 요청]
+    return `[마음데이타 전자계약 서명 요청]
 안녕하세요, ${recipientDisplay}.
 ${senderDisplay}에서 작성한 '${templateTitle}' 계약서입니다.
 

@@ -175,7 +175,7 @@ export default function ContractsDashboardPage() {
     vibrateDevice(20);
     const url = `${window.location.origin}/sign/${item.signToken}`;
     const pinLine = item.accessPin ? `\n🔑 열람용 임시 비밀번호: ${item.accessPin}` : "";
-    const text = `[마음데이터 전자계약 서명 요청]\n'${item.title}' 계약서 전용 주소입니다.\n\n👉 계약서 주소:\n${url}${pinLine}`;
+    const text = `[마음데이타 전자계약 서명 요청]\n'${item.title}' 계약서 전용 주소입니다.\n\n👉 계약서 주소:\n${url}${pinLine}`;
     navigator.clipboard.writeText(text);
     showAppToast("계약서 주소와 임시 비밀번호가 복사되었습니다!");
     alert(`계약서 주소와 임시 비밀번호가 복사되었습니다:\n\n${url}${pinLine}`);

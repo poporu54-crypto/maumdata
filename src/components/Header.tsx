@@ -176,7 +176,7 @@ export default function Header() {
         <div
           role="dialog"
           aria-modal="true"
-          aria-label="마음데이터 전체 메뉴"
+          aria-label="마음데이타 전체 메뉴"
           className="no-print"
           onClick={() => setIsMobileMenuOpen(false)}
           style={{

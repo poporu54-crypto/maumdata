@@ -131,7 +131,7 @@ export default function SignContractPage({ params }: { params: Promise<{ token: 
   };
 
   const handlePrint = () => {
-    printDocument(contract?.title || "마음데이터_전자계약서");
+    printDocument(contract?.title || "마음데이타_전자계약서");
   };
 
   if (loading) {
@@ -153,7 +153,7 @@ export default function SignContractPage({ params }: { params: Promise<{ token: 
           {error || "만료되었거나 유효하지 않은 서명 링크입니다."}
         </p>
         <Link href="/" prefetch={false} className="btn-primary" style={{ padding: "10px 20px" }}>
-          마음데이터 홈으로 이동
+          마음데이타 홈으로 이동
         </Link>
       </div>
     );
@@ -542,7 +542,7 @@ export default function SignContractPage({ params }: { params: Promise<{ token: 
             }}
           >
             <div style={{ fontWeight: 800, color: "#1e293b", marginBottom: "4px" }}>
-              🛡️ 마음데이터 위변조 방지 전자계약 감사 증명 (Cloudflare R2 불변 보관)
+              🛡️ 마음데이타 위변조 방지 전자계약 감사 증명 (Cloudflare R2 불변 보관)
             </div>
             <div>• 계약서 고유 식별코드: {contract.id}</div>
             <div>• 체결 규정: 대한민국 전자서명법 제3조 및 전자문서 및 전자거래 기본법 제4조 준수</div>
