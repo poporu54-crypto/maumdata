@@ -211,6 +211,9 @@ export async function getCorpFinanceInfo(crno: string): Promise<CorpFinanceDetai
   }
 }
 
+const corpSearchCache = new Map<string, { expiresAt: number; items: CorpBasicOutline[] }>();
+const CORP_SEARCH_CACHE_TTL_MS = 10 * 60 * 1000; // 10분 서버 메모리 캐시
+
 /**
  * 3. 금융위원회 기업기본정보 API를 조회하여 법인명(상호명)으로 기업 목록을 검색합니다.
  */
@@ -220,17 +223,29 @@ export async function searchCorpOutline(corpNm: string): Promise<CorpBasicOutlin
   const cleanQuery = corpNm
     .replace(/주식회사|\(주\)|（주）|유한회사|\(유\)/g, "")
     .trim();
-  const encodedCorpNm = encodeURIComponent(cleanQuery.length >= 2 ? cleanQuery : corpNm.trim());
+  const effectiveQuery = cleanQuery.length >= 2 ? cleanQuery : corpNm.trim();
+  const cacheKey = effectiveQuery.toLowerCase();
+  const now = Date.now();
+  const cached = corpSearchCache.get(cacheKey);
+  if (cached && cached.expiresAt > now) {
+    return cached.items;
+  }
+
+  const encodedCorpNm = encodeURIComponent(effectiveQuery);
   const url = `https://apis.data.go.kr/1160100/service/GetCorpBasicInfoService_V2/getCorpOutline_V2?serviceKey=${SERVICE_KEY}&pageNo=1&numOfRows=30&resultType=json&corpNm=${encodedCorpNm}`;
 
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3500);
     const response = await fetch(url, {
       method: "GET",
       headers: {
         "Accept": "application/json",
       },
       cache: "no-store",
+      signal: controller.signal,
     });
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       console.error(`searchCorpOutline HTTP error: ${response.status}`);
@@ -277,9 +292,16 @@ export async function searchCorpOutline(corpNm: string): Promise<CorpBasicOutlin
           enpEntprScaleNm: item.smenpYn === "Y" ? "중소기업" : "일반기업",
         });
       }
-      return Array.from(byBzno.values());
+      const results = Array.from(byBzno.values());
+      if (corpSearchCache.size > 300) {
+        const oldestKey = corpSearchCache.keys().next().value;
+        if (oldestKey) corpSearchCache.delete(oldestKey);
+      }
+      corpSearchCache.set(cacheKey, { expiresAt: Date.now() + CORP_SEARCH_CACHE_TTL_MS, items: results });
+      return results;
     }
 
+    corpSearchCache.set(cacheKey, { expiresAt: Date.now() + CORP_SEARCH_CACHE_TTL_MS, items: [] });
     return [];
   } catch (error) {
     console.error("Failed to search corp outline by name:", error);

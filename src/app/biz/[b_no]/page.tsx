@@ -749,7 +749,7 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                     💡 보유 특허 및 지식재산권(IP) 포트폴리오
                   </h4>
                   <Suspense fallback={<TableSkeleton />}>
-                    <PatentsSection companyNm={business?.b_nm || ""} pNm={business?.p_nm || ""} />
+                    <PatentsSection companyNm={business?.b_nm || ""} pNm={business?.p_nm || ""} bNo={cleanBNo} />
                   </Suspense>
                 </div>
 

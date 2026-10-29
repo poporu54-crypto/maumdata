@@ -9,6 +9,7 @@ import FeedbackFloatingTrigger from "@/components/FeedbackFloatingTrigger";
 import MobileBottomNav from "@/components/MobileBottomNav";
 import AppInstallBanner from "@/components/AppInstallBanner";
 import MaumDataLogo from "@/components/MaumDataLogo";
+import NavigationProgressBar from "@/components/NavigationProgressBar";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.maumdata.com"),
@@ -69,6 +70,7 @@ export default function RootLayout({
           strategy="lazyOnload"
         />
         <ThemeRegistry>
+          <NavigationProgressBar />
           <Header />
           
           <main style={{ flex: 1, display: "flex", flexDirection: "column" }}>

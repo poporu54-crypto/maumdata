@@ -1,8 +1,14 @@
-import React from "react";
+import React, { cache } from "react";
 import Link from "next/link";
 import { Metadata } from "next";
 import { getTagTemplateSummariesServer } from "@/lib/formSummaries";
 import AdSpace from "@/components/AdSpace";
+
+export const revalidate = 3600;
+
+const loadTagSummariesCached = cache(async (decodedTag: string) => {
+  return getTagTemplateSummariesServer(decodedTag);
+});
 
 interface TagPageProps {
   params: Promise<{ tag: string }>;
@@ -12,7 +18,7 @@ export async function generateMetadata(props: TagPageProps): Promise<Metadata> {
   const { tag } = await props.params;
   const decodedTag = decodeURIComponent(tag);
   const canonicalPath = `/form/tag/${encodeURIComponent(decodedTag)}`;
-  const matched = await getTagTemplateSummariesServer(decodedTag);
+  const matched = await loadTagSummariesCached(decodedTag);
 
   return {
     title: `무료 ${decodedTag} 서식 양식 모음`,
@@ -41,7 +47,7 @@ export async function generateMetadata(props: TagPageProps): Promise<Metadata> {
 export default async function TagPage(props: TagPageProps) {
   const { tag } = await props.params;
   const decodedTag = decodeURIComponent(tag);
-  const matchedTemplates = await getTagTemplateSummariesServer(decodedTag);
+  const matchedTemplates = await loadTagSummariesCached(decodedTag);
 
   return (
     <div className="container animate-fade-in" style={{ padding: "40px 24px" }}>

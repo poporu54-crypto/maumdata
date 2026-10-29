@@ -3,44 +3,19 @@ import Link from "next/link";
 import { getRealPortalStats } from "@/lib/statApi";
 import SearchForm from "@/components/SearchForm";
 import StatsDashboard from "@/components/StatsDashboard";
-import { query } from "@/lib/db";
+import { getPopularQuickLinks } from "@/lib/db";
 import DragScrollContainer from "@/components/DragScrollContainer";
 import AdBanner from "@/components/AdBanner";
 import InteractiveDemoShowcase from "@/components/InteractiveDemoShowcase";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300;
 
 export default async function MainPage() {
-  // 서버 사이드에서 마음데이타 실제 검증 기업 DB 통계 조회 (가짜 스케줄러 및 추정 공식 없음)
-  const stats = await getRealPortalStats();
-
-  // DB에서 조회수 기준 상위 인기 검색 기업 6개 동적 조회
-  let quickLinks: { name: string; no: string }[] = [];
-  try {
-    const popularBizRes = await query(`
-      SELECT b.b_no, b.b_nm, b.brand_name, COUNT(l.id) AS recent_views
-      FROM businesses b
-      LEFT JOIN business_view_logs l ON b.b_no = l.b_no AND l.viewed_at >= NOW() - INTERVAL '24 hours'
-      WHERE b.b_nm != '상호 정보 없음'
-      GROUP BY b.b_no, b.b_nm, b.brand_name, b.view_count, b.nps_sbscrb_nmps
-      ORDER BY recent_views DESC, b.view_count DESC, b.nps_sbscrb_nmps DESC
-      LIMIT 6
-    `);
-    
-    quickLinks = popularBizRes.rows.map((row: any) => {
-      let shortName = row.b_nm;
-      if (row.brand_name) {
-        const brandPrefix = row.brand_name.split(",")[0].trim();
-        if (brandPrefix && brandPrefix !== "상호 미등록 사업자" && brandPrefix !== "상호 정보 없음") {
-          shortName = brandPrefix;
-        }
-      }
-      return { name: shortName, no: row.b_no };
-    });
-  } catch (err) {
-    console.error("Failed to fetch dynamic quick links:", err);
-    quickLinks = [];
-  }
+  // 서버 사이드에서 마음데이타 실제 검증 기업 DB 통계 및 인기 기업 병렬 조회
+  const [stats, quickLinks] = await Promise.all([
+    getRealPortalStats(),
+    getPopularQuickLinks(6),
+  ]);
 
   return (
     <div className="animate-fade-in" style={{ padding: "24px 0 80px 0" }}>

@@ -3,7 +3,7 @@ import { Metadata } from "next";
 import Link from "next/link";
 import SearchForm from "@/components/SearchForm";
 import { searchCorpOutline, CorpBasicOutline } from "@/lib/corpApi";
-import { searchBusinesses, query as dbQuery } from "@/lib/db";
+import { searchBusinesses, getPopularQuickLinks } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -84,38 +84,9 @@ function SearchResultsSkeleton() {
   );
 }
 
-// 24시간 실시간 조회 로그 집계 및 인기 추천 기업 목록 비동기 조회
-async function getPopularQuickLinks() {
-  try {
-    const popularBizRes = await dbQuery(`
-      SELECT b.b_no, b.b_nm, b.brand_name, COUNT(l.id) AS recent_views
-      FROM businesses b
-      LEFT JOIN business_view_logs l ON b.b_no = l.b_no AND l.viewed_at >= NOW() - INTERVAL '24 hours'
-      WHERE b.b_nm != '상호 정보 없음'
-      GROUP BY b.b_no, b.b_nm, b.brand_name, b.view_count, b.nps_sbscrb_nmps
-      ORDER BY recent_views DESC, b.view_count DESC, b.nps_sbscrb_nmps DESC
-      LIMIT 4
-    `);
-    
-    return popularBizRes.rows.map((row: any) => {
-      let shortName = row.b_nm;
-      if (row.brand_name) {
-        const brandPrefix = row.brand_name.split(",")[0].trim();
-        if (brandPrefix && brandPrefix !== "상호 미등록 사업자" && brandPrefix !== "상호 정보 없음") {
-          shortName = brandPrefix;
-        }
-      }
-      return { name: shortName, no: row.b_no };
-    });
-  } catch (err) {
-    console.error("Failed to fetch search quick links:", err);
-    return [];
-  }
-}
-
 // 검색 결과가 존재하지 않을 때 추천 링크 목록과 함께 오류 메시지를 띄우는 비동기 컴포넌트
 async function NoSearchResultSection({ searchQuery }: { searchQuery: string }) {
-  const quickLinks = await getPopularQuickLinks();
+  const quickLinks = await getPopularQuickLinks(4);
   
   return (
     <div style={{

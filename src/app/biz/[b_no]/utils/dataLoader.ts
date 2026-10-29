@@ -179,6 +179,8 @@ interface UnifiedBusinessResult {
   relatedBusinesses?: any[];
 }
 
+const healingInProgress = new Set<string>();
+
 /**
  * 단일 SSR 렌더링 패스 내에서 generateMetadata()와 BusinessDetailPage()가
  * 동일한 DB 쿼리를 2번 중복 실행하지 않도록 React.cache()로 요청 단위 메모이제이션합니다.
@@ -218,19 +220,18 @@ const loadUnifiedBusinessCached = cache(async (cleanBNo: string, isPrefetch: boo
     );
 
     if (!isPrefetch) {
-      const needsImmediateHeal = Boolean(
-        localBiz.npsLinked && (!localBiz.npsChrgAmt || !localBiz.employmentHistory || localBiz.employmentHistory.length <= 1)
+      const npsLastSync = localBiz.npsLastSyncAt ?? (localBiz as any).nps_last_sync_at;
+      const needsBackgroundHeal = Boolean(
+        localBiz.npsLinked && !npsLastSync && (!localBiz.npsChrgAmt || !localBiz.employmentHistory || localBiz.employmentHistory.length === 0)
       );
-      if (needsImmediateHeal) {
-        try {
-          console.log(`[Self-Healing Sync] Refreshing outdated/incomplete cache for ${localBiz.b_nm} (${cleanBNo})`);
-          const healed = await syncAndCacheBusinessData(cleanBNo);
-          if (healed.business) {
-            Object.assign(localBiz, healed.business);
-          }
-        } catch (healErr) {
-          console.error("[Self-Healing Sync Failed]", healErr);
-        }
+      if (needsBackgroundHeal && !healingInProgress.has(cleanBNo)) {
+        healingInProgress.add(cleanBNo);
+        console.log(`[Self-Healing Sync - Async] Scheduling background refresh for ${localBiz.b_nm} (${cleanBNo})`);
+        syncAndCacheBusinessData(cleanBNo)
+          .catch((healErr) => console.error("[Self-Healing Sync Failed]", healErr))
+          .finally(() => {
+            healingInProgress.delete(cleanBNo);
+          });
       }
 
       let dartCode = localBiz.dart_code || "";
@@ -248,7 +249,7 @@ const loadUnifiedBusinessCached = cache(async (cleanBNo: string, isPrefetch: boo
       // 개인사업자(법인번호 corp_no가 없거나 유효하지 않음)는 DART 매핑 대상에서 완전히 제외
       const hasCorpNo = localBiz.corp_no && localBiz.corp_no.replace(/[^0-9]/g, "").length === 13;
 
-      if (hasValidCompanyName && (hasCorpNo || stockCode) && (!dartCode || !dartLastSync)) {
+      if (hasValidCompanyName && (hasCorpNo || stockCode) && !dartLastSync) {
         findDartCode(localBiz.b_nm, stockCode)
           .then(async (correctDartCode) => {
             if (correctDartCode && correctDartCode !== dartCode) {
@@ -269,6 +270,10 @@ const loadUnifiedBusinessCached = cache(async (cleanBNo: string, isPrefetch: boo
                     .catch(err => console.error("Failed to update dart_last_sync_at:", err));
                 })
                 .catch(err => console.error("Background DART sync failed:", err));
+            } else if (!dartCode && !dartLastSync) {
+              // 비외감 일반 법인이 DART 미대상임이 확인되면 동기화 시각을 기록하여 매 클릭 반복 조회를 차단
+              query("UPDATE businesses SET dart_last_sync_at = CURRENT_TIMESTAMP WHERE b_no = $1", [cleanBNo])
+                .catch(err => console.error("Failed to mark non-DART sync timestamp:", err));
             }
           })
           .catch(err => console.error("[DART Self-Healing Check failed]", err));
@@ -293,7 +298,7 @@ const loadUnifiedBusinessCached = cache(async (cleanBNo: string, isPrefetch: boo
 
       if (hasValidCompanyName && !patentsLastSync) {
         console.log(`[Background Detail Sync] Syncing patents for ${localBiz.b_nm} (${cleanBNo})`);
-        syncPatentsByCompany(localBiz.b_nm, localBiz.p_nm || "")
+        syncPatentsByCompany(localBiz.b_nm, cleanBNo)
           .then(() => {
             query("UPDATE businesses SET patents_last_sync_at = CURRENT_TIMESTAMP WHERE b_no = $1", [cleanBNo])
               .catch(err => console.error("Failed to update patents_last_sync_at:", err));
@@ -304,20 +309,28 @@ const loadUnifiedBusinessCached = cache(async (cleanBNo: string, isPrefetch: boo
 
     console.log(`[Database Hit] Serving from DB cache (Zero External Network Requests): ${localBiz.b_nm} (${cleanBNo})`);
     
-    // 관련 사업자 조회 (동일 대표자 및 상호명 유사 매칭)
+    // 관련 사업자 조회 (동일 대표자 후보군 먼저 경량 추출 후 상호명 유사 매칭 — 양방향 SQL 문자열 연산 제거)
     let relatedBusinesses: any[] = [];
     if (hasValidCompanyName && localBiz.p_nm && localBiz.p_nm !== "-") {
       try {
         const cleanName = localBiz.b_nm.replace(/\(.*?\)/g, "").replace(/주식회사/g, "").replace(/\(주\)/g, "").trim();
         if (cleanName.length >= 2) {
-          const relatedRes = await query(
+          const sameCeoRes = await query(
             `SELECT b_no, b_nm, p_nm, b_adr, b_sector, listing_status, data_source, dart_code
              FROM businesses
-             WHERE p_nm = $1 AND b_no != $2 AND (b_nm LIKE $3 OR $4 LIKE '%' || b_nm || '%')
-             LIMIT 5`,
-            [localBiz.p_nm, cleanBNo, `%${cleanName}%`, cleanName]
+             WHERE p_nm = $1
+               AND b_no != $2
+               AND b_nm IS NOT NULL
+               AND b_nm NOT IN ('', '상호 정보 없음', '상호 미등록 사업자')
+             LIMIT 25`,
+            [localBiz.p_nm, cleanBNo]
           );
-          relatedBusinesses = relatedRes.rows;
+          relatedBusinesses = sameCeoRes.rows
+            .filter((row: any) => {
+              const target = String(row.b_nm || "").replace(/\(.*?\)/g, "").replace(/주식회사/g, "").replace(/\(주\)/g, "").trim();
+              return target.length >= 2 && (target.includes(cleanName) || cleanName.includes(target));
+            })
+            .slice(0, 5);
         }
       } catch (err) {
         console.error("Failed to query related businesses in dataLoader:", err);
@@ -687,7 +700,7 @@ export async function syncAndCacheBusinessData(bNo: string): Promise<{
       syncRecentBidsByCompany(business.b_nm, cleanBNo)
         .then(() => query("UPDATE businesses SET bids_last_sync_at = CURRENT_TIMESTAMP WHERE b_no = $1", [cleanBNo]))
         .catch(err => console.error("[Initial bids sync error]", err)),
-      syncPatentsByCompany(business.b_nm, business.p_nm || "")
+      syncPatentsByCompany(business.b_nm, cleanBNo)
         .then(() => query("UPDATE businesses SET patents_last_sync_at = CURRENT_TIMESTAMP WHERE b_no = $1", [cleanBNo]))
         .catch(err => console.error("[Initial patents sync error]", err)),
       dartCode 

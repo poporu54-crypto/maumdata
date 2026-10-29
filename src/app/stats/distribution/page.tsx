@@ -4,7 +4,7 @@ import Link from "next/link";
 import StatsRelatedNav from "@/components/StatsRelatedNav";
 import { getRealPortalStats, getOfficialKosisSurvey } from "@/lib/statApi";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 1800;
 
 export const metadata: Metadata = {
   title: "산업군별 검증 기업 분포 & 통계청 전국사업체조사 공식 통계",

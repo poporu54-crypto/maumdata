@@ -443,7 +443,115 @@ export async function addInvalidBusiness(bNo: string) {
   await query("INSERT INTO invalid_businesses (b_no) VALUES ($1) ON CONFLICT (b_no) DO NOTHING", [clean]);
 }
 
-// 9. 주변 기업 및 유사 사업자 하이브리드 스코어링 추천 조회
+interface PopularQuickLinkItem {
+  name: string;
+  no: string;
+}
+
+let cachedPopularLinks: PopularQuickLinkItem[] | null = null;
+let cachedPopularLinksAt = 0;
+let inFlightPopularLinks: Promise<PopularQuickLinkItem[]> | null = null;
+const POPULAR_LINKS_TTL_MS = 5 * 60 * 1000; // 5분 서버 인메모리 캐시
+
+// 8-1. 24시간 실시간 조회 로그 기반 인기 추천 기업 (전체 테이블 LEFT JOIN + GROUP BY 풀스캔 차단)
+export async function getPopularQuickLinks(limit: number = 6): Promise<PopularQuickLinkItem[]> {
+  const safeLimit = Math.max(1, Math.min(10, limit));
+  const now = Date.now();
+
+  if (cachedPopularLinks && now - cachedPopularLinksAt < POPULAR_LINKS_TTL_MS) {
+    return cachedPopularLinks.slice(0, safeLimit);
+  }
+
+  const refreshTask = async (): Promise<PopularQuickLinkItem[]> => {
+    try {
+      const popularBizRes = await query(
+        `WITH recent_logs AS (
+           SELECT b_no, COUNT(*)::int AS recent_views
+           FROM business_view_logs
+           WHERE viewed_at >= NOW() - INTERVAL '24 hours'
+           GROUP BY b_no
+           ORDER BY recent_views DESC
+           LIMIT 20
+         ),
+         ranked AS (
+           SELECT b.b_no, b.b_nm, b.brand_name, r.recent_views,
+                  COALESCE(b.view_count, 0) AS view_count,
+                  COALESCE(b.nps_sbscrb_nmps, 0) AS nps_sbscrb_nmps
+           FROM recent_logs r
+           JOIN businesses b ON b.b_no = r.b_no
+           WHERE b.b_nm IS NOT NULL AND b.b_nm NOT IN ('', '상호 정보 없음', '상호 미등록 사업자')
+           UNION ALL
+           (
+             SELECT b.b_no, b.b_nm, b.brand_name, 0 AS recent_views,
+                    COALESCE(b.view_count, 0) AS view_count,
+                    COALESCE(b.nps_sbscrb_nmps, 0) AS nps_sbscrb_nmps
+             FROM businesses b
+             WHERE b.b_nm IS NOT NULL
+               AND b.b_nm NOT IN ('', '상호 정보 없음', '상호 미등록 사업자')
+               AND NOT EXISTS (SELECT 1 FROM recent_logs r2 WHERE r2.b_no = b.b_no)
+             ORDER BY COALESCE(b.view_count, 0) DESC, COALESCE(b.nps_sbscrb_nmps, 0) DESC
+             LIMIT 10
+           )
+         )
+         SELECT b_no, b_nm, brand_name
+         FROM ranked
+         ORDER BY recent_views DESC, view_count DESC, nps_sbscrb_nmps DESC
+         LIMIT 10`
+      );
+
+      const mapped = popularBizRes.rows.map((row: any) => {
+        let shortName = row.b_nm;
+        if (row.brand_name) {
+          const brandPrefix = row.brand_name.split(",")[0].trim();
+          if (brandPrefix && brandPrefix !== "상호 미등록 사업자" && brandPrefix !== "상호 정보 없음") {
+            shortName = brandPrefix;
+          }
+        }
+        return { name: shortName, no: row.b_no };
+      });
+
+      cachedPopularLinks = mapped;
+      cachedPopularLinksAt = Date.now();
+      return mapped;
+    } catch (err) {
+      console.error("Failed to fetch popular quick links:", err);
+      return cachedPopularLinks || [];
+    } finally {
+      inFlightPopularLinks = null;
+    }
+  };
+
+  if (cachedPopularLinks) {
+    if (!inFlightPopularLinks) {
+      inFlightPopularLinks = refreshTask();
+    }
+    return cachedPopularLinks.slice(0, safeLimit);
+  }
+
+  if (!inFlightPopularLinks) {
+    inFlightPopularLinks = refreshTask();
+  }
+  const fresh = await inFlightPopularLinks;
+  return fresh.slice(0, safeLimit);
+}
+
+interface RecommendedCacheEntry {
+  expiresAt: number;
+  items: Array<{
+    b_no: string;
+    b_nm: string;
+    b_adr: string;
+    b_sector: string;
+    is_sme: string;
+    listing_status: string;
+    dataSource: string;
+  }>;
+}
+
+const recommendedBizCache = new Map<string, RecommendedCacheEntry>();
+const RECOMMENDED_CACHE_TTL_MS = 10 * 60 * 1000; // 10분 지역·업종별 서버 메모리 캐시
+
+// 9. 주변 기업 및 유사 사업자 하이브리드 스코어링 추천 조회 (전체 테이블 풀스캔 차단 + 캐싱)
 export async function getRecommendedBusinesses(
   bNo: string,
   bAdr: string,
@@ -451,7 +559,7 @@ export async function getRecommendedBusinesses(
   isSme: string
 ) {
   const cleanBNo = bNo.replace(/[^0-9]/g, "");
-  
+
   // 시/군/구 추출 (예: "마포구", "강남구", "안양시" 등)
   let sigungu = "";
   const adrMatch = bAdr.match(/\s([^\s]+(?:구|군|시))\s/);
@@ -463,34 +571,69 @@ export async function getRecommendedBusinesses(
   }
 
   // 업종 핵심 키워드 추출 (예: "음식점", "제조업", "소프트웨어")
-  let sectorKeyword = "%";
+  let sectorKeyword = "";
   if (bSector) {
     const cleanSector = bSector.split(",")[0].split(" 및 ")[0].trim();
-    sectorKeyword = `%${cleanSector}%`;
+    if (cleanSector && cleanSector !== "-" && cleanSector !== "미등록 업종") {
+      sectorKeyword = `%${cleanSector}%`;
+    }
   }
 
-  const queryText = `
-    SELECT b_no, b_nm, b_adr, b_sector, is_sme, listing_status, data_source
-    FROM businesses
-    WHERE b_no != $1 AND b_nm != '상호 정보 없음'
-    ORDER BY 
-      (CASE WHEN b_adr LIKE $2 THEN 50 ELSE 0 END) +
-      (CASE WHEN b_sector LIKE $3 THEN 40 ELSE 0 END) +
-      (CASE WHEN is_sme = $4 THEN 10 ELSE 0 END) DESC,
-      start_dt DESC
-    LIMIT 4
-  `;
+  const cacheKey = `${sigungu}|${sectorKeyword}|${isSme || ""}`;
+  const now = Date.now();
+  const cached = recommendedBizCache.get(cacheKey);
+  if (cached && cached.expiresAt > now) {
+    return cached.items.filter((item) => item.b_no !== cleanBNo).slice(0, 4);
+  }
 
-  const result = await query(queryText, [cleanBNo, sigungu, sectorKeyword, isSme || ""]);
-  return result.rows.map((row) => ({
+  const queryText = sectorKeyword
+    ? `
+      SELECT b_no, b_nm, b_adr, b_sector, is_sme, listing_status, data_source
+      FROM businesses
+      WHERE b_nm IS NOT NULL
+        AND b_nm NOT IN ('', '상호 정보 없음', '상호 미등록 사업자')
+        AND (b_adr LIKE $1 OR b_sector LIKE $2)
+      ORDER BY
+        (CASE WHEN b_adr LIKE $1 THEN 50 ELSE 0 END) +
+        (CASE WHEN b_sector LIKE $2 THEN 40 ELSE 0 END) +
+        (CASE WHEN is_sme = $3 THEN 10 ELSE 0 END) DESC,
+        COALESCE(view_count, 0) DESC
+      LIMIT 8
+    `
+    : `
+      SELECT b_no, b_nm, b_adr, b_sector, is_sme, listing_status, data_source
+      FROM businesses
+      WHERE b_nm IS NOT NULL
+        AND b_nm NOT IN ('', '상호 정보 없음', '상호 미등록 사업자')
+        AND b_adr LIKE $1
+      ORDER BY
+        (CASE WHEN is_sme = $2 THEN 10 ELSE 0 END) DESC,
+        COALESCE(view_count, 0) DESC
+      LIMIT 8
+    `;
+
+  const params = sectorKeyword ? [sigungu, sectorKeyword, isSme || ""] : [sigungu, isSme || ""];
+  const result = await query(queryText, params);
+  const items = result.rows.map((row) => ({
     b_no: row.b_no,
     b_nm: row.b_nm,
     b_adr: row.b_adr,
     b_sector: row.b_sector,
     is_sme: row.is_sme,
     listing_status: row.listing_status,
-    dataSource: row.data_source || "local"
+    dataSource: row.data_source || "local",
   }));
+
+  if (recommendedBizCache.size > 300) {
+    const oldestKey = recommendedBizCache.keys().next().value;
+    if (oldestKey) recommendedBizCache.delete(oldestKey);
+  }
+  recommendedBizCache.set(cacheKey, {
+    expiresAt: now + RECOMMENDED_CACHE_TTL_MS,
+    items,
+  });
+
+  return items.filter((item) => item.b_no !== cleanBNo).slice(0, 4);
 }
 
 // 10. 수정 요청 등록 (business_edit_requests)
@@ -1095,58 +1238,73 @@ export async function deleteFeedback(id: number) {
 // 무료 전자계약 플랫폼 (e-Contract) DB 함수군
 // ----------------------------------------------------
 
-export async function ensureContractsTable() {
-  await query(`
-    CREATE TABLE IF NOT EXISTS contracts (
-      id VARCHAR(64) PRIMARY KEY,
-      template_id VARCHAR(64) NOT NULL,
-      title VARCHAR(255) NOT NULL,
-      status VARCHAR(32) NOT NULL DEFAULT 'WAITING_PARTY_B',
-      party_a_name VARCHAR(128),
-      party_a_company VARCHAR(128),
-      party_a_bno VARCHAR(32),
-      party_a_phone VARCHAR(32),
-      party_a_signature TEXT,
-      party_a_signed_at TIMESTAMPTZ,
-      party_a_ip VARCHAR(64),
-      party_b_name VARCHAR(128),
-      party_b_company VARCHAR(128),
-      party_b_bno VARCHAR(32),
-      party_b_phone VARCHAR(32),
-      party_b_signature TEXT,
-      party_b_signed_at TIMESTAMPTZ,
-      party_b_ip VARCHAR(64),
-      form_data JSONB NOT NULL,
-      sign_token VARCHAR(64) UNIQUE NOT NULL,
-      access_pin VARCHAR(16),
-      party_a_user_id VARCHAR(128),
-      party_b_user_id VARCHAR(128),
-      r2_key VARCHAR(255),
-      deleted_by_a BOOLEAN DEFAULT FALSE,
-      deleted_by_b BOOLEAN DEFAULT FALSE,
-      created_at TIMESTAMPTZ DEFAULT NOW(),
-      updated_at TIMESTAMPTZ DEFAULT NOW()
-    );
-    ALTER TABLE contracts ADD COLUMN IF NOT EXISTS access_pin VARCHAR(16);
-    ALTER TABLE contracts ADD COLUMN IF NOT EXISTS party_a_user_id VARCHAR(128);
-    ALTER TABLE contracts ADD COLUMN IF NOT EXISTS party_b_user_id VARCHAR(128);
-    ALTER TABLE contracts ADD COLUMN IF NOT EXISTS r2_key VARCHAR(255);
-    ALTER TABLE contracts ADD COLUMN IF NOT EXISTS deleted_by_a BOOLEAN DEFAULT FALSE;
-    ALTER TABLE contracts ADD COLUMN IF NOT EXISTS deleted_by_b BOOLEAN DEFAULT FALSE;
-    CREATE INDEX IF NOT EXISTS idx_contracts_sign_token ON contracts(sign_token);
-    CREATE INDEX IF NOT EXISTS idx_contracts_party_a_user ON contracts(party_a_user_id);
-    CREATE INDEX IF NOT EXISTS idx_contracts_party_b_user ON contracts(party_b_user_id);
+let contractsTableEnsuredPromise: Promise<void> | null = null;
 
-    CREATE TABLE IF NOT EXISTS contract_users (
-      id VARCHAR(128) PRIMARY KEY,
-      provider VARCHAR(32) NOT NULL DEFAULT 'quick',
-      email VARCHAR(255) UNIQUE NOT NULL,
-      name VARCHAR(128),
-      company VARCHAR(128),
-      password_hash VARCHAR(255),
-      created_at TIMESTAMPTZ DEFAULT NOW()
-    );
-  `);
+export async function ensureContractsTable() {
+  if (contractsTableEnsuredPromise) {
+    return contractsTableEnsuredPromise;
+  }
+
+  contractsTableEnsuredPromise = (async () => {
+    try {
+      await query(`
+        CREATE TABLE IF NOT EXISTS contracts (
+          id VARCHAR(64) PRIMARY KEY,
+          template_id VARCHAR(64) NOT NULL,
+          title VARCHAR(255) NOT NULL,
+          status VARCHAR(32) NOT NULL DEFAULT 'WAITING_PARTY_B',
+          party_a_name VARCHAR(128),
+          party_a_company VARCHAR(128),
+          party_a_bno VARCHAR(32),
+          party_a_phone VARCHAR(32),
+          party_a_signature TEXT,
+          party_a_signed_at TIMESTAMPTZ,
+          party_a_ip VARCHAR(64),
+          party_b_name VARCHAR(128),
+          party_b_company VARCHAR(128),
+          party_b_bno VARCHAR(32),
+          party_b_phone VARCHAR(32),
+          party_b_signature TEXT,
+          party_b_signed_at TIMESTAMPTZ,
+          party_b_ip VARCHAR(64),
+          form_data JSONB NOT NULL,
+          sign_token VARCHAR(64) UNIQUE NOT NULL,
+          access_pin VARCHAR(16),
+          party_a_user_id VARCHAR(128),
+          party_b_user_id VARCHAR(128),
+          r2_key VARCHAR(255),
+          deleted_by_a BOOLEAN DEFAULT FALSE,
+          deleted_by_b BOOLEAN DEFAULT FALSE,
+          created_at TIMESTAMPTZ DEFAULT NOW(),
+          updated_at TIMESTAMPTZ DEFAULT NOW()
+        );
+        ALTER TABLE contracts ADD COLUMN IF NOT EXISTS access_pin VARCHAR(16);
+        ALTER TABLE contracts ADD COLUMN IF NOT EXISTS party_a_user_id VARCHAR(128);
+        ALTER TABLE contracts ADD COLUMN IF NOT EXISTS party_b_user_id VARCHAR(128);
+        ALTER TABLE contracts ADD COLUMN IF NOT EXISTS r2_key VARCHAR(255);
+        ALTER TABLE contracts ADD COLUMN IF NOT EXISTS deleted_by_a BOOLEAN DEFAULT FALSE;
+        ALTER TABLE contracts ADD COLUMN IF NOT EXISTS deleted_by_b BOOLEAN DEFAULT FALSE;
+        CREATE INDEX IF NOT EXISTS idx_contracts_sign_token ON contracts(sign_token);
+        CREATE INDEX IF NOT EXISTS idx_contracts_party_a_user ON contracts(party_a_user_id);
+        CREATE INDEX IF NOT EXISTS idx_contracts_party_b_user ON contracts(party_b_user_id);
+
+        CREATE TABLE IF NOT EXISTS contract_users (
+          id VARCHAR(128) PRIMARY KEY,
+          provider VARCHAR(32) NOT NULL DEFAULT 'quick',
+          email VARCHAR(255) UNIQUE NOT NULL,
+          name VARCHAR(128),
+          company VARCHAR(128),
+          password_hash VARCHAR(255),
+          created_at TIMESTAMPTZ DEFAULT NOW()
+        );
+      `);
+    } catch (err) {
+      contractsTableEnsuredPromise = null;
+      throw err;
+    }
+  })();
+
+  return contractsTableEnsuredPromise;
 }
 
 export async function upsertContractUser(data: {

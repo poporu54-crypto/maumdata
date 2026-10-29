@@ -4,7 +4,7 @@ import StatsRelatedNav from "@/components/StatsRelatedNav";
 import InsightsTabsClient from "@/components/InsightsTabsClient";
 import { getRealPortalStats } from "@/lib/statApi";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 600;
 
 export default async function InsightsPage() {
   const stats = await getRealPortalStats();

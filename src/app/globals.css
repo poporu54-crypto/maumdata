@@ -1439,3 +1439,18 @@ input::placeholder {
     display: none !important;
   }
 }
+
+/* 페이지 전환 스켈레톤 공통 애니메이션 */
+@keyframes maumSkeletonPulse {
+  0%, 100% {
+    opacity: 0.65;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.skeleton-pulse {
+  background-color: var(--color-border);
+  animation: maumSkeletonPulse 1.4s infinite ease-in-out;
+}

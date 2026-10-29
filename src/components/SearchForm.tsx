@@ -1,15 +1,20 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useTransition } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { validateBizrNo } from "@/lib/bizValidation";
-import BusinessCardScannerModal from "./BusinessCardScannerModal";
 import { vibrateDevice } from "@/lib/appBridge";
+
+const BusinessCardScannerModal = dynamic(() => import("./BusinessCardScannerModal"), {
+  ssr: false,
+});
 
 export default function SearchForm() {
   const [query, setQuery] = useState("");
   const [error, setError] = useState("");
   const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
   // 사업자번호 포맷팅 (XXX-XX-XXXXX)
@@ -80,9 +85,18 @@ export default function SearchForm() {
       "노형동": "5011066000",
     };
 
+    const navigateTo = (targetHref: string) => {
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("maumdata:nav-start"));
+      }
+      startTransition(() => {
+        router.push(targetHref);
+      });
+    };
+
     const targetDongCd = dongMapping[trimmed];
     if (targetDongCd) {
-      router.push(`/stats/market-area/${targetDongCd}`);
+      navigateTo(`/stats/market-area/${targetDongCd}`);
       return;
     }
 
@@ -93,9 +107,9 @@ export default function SearchForm() {
         setError("유효하지 않은 사업자등록번호 형식입니다 (체크섬 수학적 검증 실패).");
         return;
       }
-      router.push(`/biz/${cleanNumber}`);
+      navigateTo(`/biz/${cleanNumber}`);
     } else {
-      router.push(`/search?query=${encodeURIComponent(trimmed)}`);
+      navigateTo(`/search?query=${encodeURIComponent(trimmed)}`);
     }
   };
 
@@ -208,6 +222,7 @@ export default function SearchForm() {
 
           <button
             type="submit"
+            disabled={isPending}
             className="btn-primary"
             style={{
               borderRadius: "14px",
@@ -217,9 +232,10 @@ export default function SearchForm() {
               whiteSpace: "nowrap",
               boxShadow: "0 4px 14px rgba(49, 130, 246, 0.35)",
               border: "none",
+              opacity: isPending ? 0.8 : 1,
             }}
           >
-            조회
+            {isPending ? "조회 중..." : "조회"}
           </button>
         </div>
 
@@ -293,15 +309,17 @@ export default function SearchForm() {
         ))}
       </div>
 
-      {/* 명함 · 사업자등록증 카메라 스캔 모달 */}
-      <BusinessCardScannerModal
-        isOpen={isScannerOpen}
-        onClose={() => setIsScannerOpen(false)}
-        onDetectedBusinessNo={(bNo) => {
-          setQuery(bNo);
-          executeSearch(bNo);
-        }}
-      />
+      {/* 명함 · 사업자등록증 카메라 스캔 모달 (온디맨드 조건부 마운트) */}
+      {isScannerOpen && (
+        <BusinessCardScannerModal
+          isOpen={isScannerOpen}
+          onClose={() => setIsScannerOpen(false)}
+          onDetectedBusinessNo={(bNo) => {
+            setQuery(bNo);
+            executeSearch(bNo);
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -146,6 +146,9 @@ export default function MobileBottomNav() {
           isOpen={isScannerOpen}
           onClose={() => setIsScannerOpen(false)}
           onDetectedBusinessNo={(bNo) => {
+            if (typeof window !== "undefined") {
+              window.dispatchEvent(new CustomEvent("maumdata:nav-start"));
+            }
             router.push(`/biz/${bNo}`);
           }}
         />

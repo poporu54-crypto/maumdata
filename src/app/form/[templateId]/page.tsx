@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -5,6 +6,12 @@ import { getTemplateByIdFromDB } from "@/lib/db";
 import { getRelatedTemplateSummariesServer } from "@/lib/formSummaries";
 import { getTemplateById } from "../templatesData";
 import DocumentEditor from "./DocumentEditor";
+
+export const revalidate = 3600;
+
+const loadTemplateCached = cache(async (templateId: string) => {
+  return getTemplateById(templateId) || (await getTemplateByIdFromDB(templateId));
+});
 
 interface PageProps {
   params: Promise<{ templateId: string }>;
@@ -21,7 +28,7 @@ const CATEGORY_QUICK_TAGS: Record<string, string[]> = {
 
 export async function generateMetadata(props: PageProps): Promise<Metadata> {
   const { templateId } = await props.params;
-  const tpl = getTemplateById(templateId) || (await getTemplateByIdFromDB(templateId));
+  const tpl = await loadTemplateCached(templateId);
   const canonicalPath = `/form/${templateId}`;
 
   if (!tpl) {
@@ -60,7 +67,7 @@ export async function generateMetadata(props: PageProps): Promise<Metadata> {
 
 export default async function Page(props: PageProps) {
   const { templateId } = await props.params;
-  const tpl = getTemplateById(templateId) || (await getTemplateByIdFromDB(templateId));
+  const tpl = await loadTemplateCached(templateId);
 
   if (!tpl) {
     notFound();

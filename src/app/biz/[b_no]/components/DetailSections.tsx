@@ -251,8 +251,8 @@ export async function BidsSection({ companyNm, bNo }: { companyNm: string; bNo: 
 }
 
 // 3. 특허 및 지식재산권 컴포넌트
-export async function PatentsSection({ companyNm, pNm }: { companyNm: string, pNm: string }) {
-  const patents = await getPatentsByCompany(companyNm, pNm);
+export async function PatentsSection({ companyNm, pNm, bNo }: { companyNm: string; pNm: string; bNo?: string }) {
+  const patents = await getPatentsByCompany(companyNm, pNm, bNo);
 
   const tagMap: Record<string, string[]> = {
     "#빅데이터": ["데이터", "DB", "분석", "데이터베이스", "통계"],

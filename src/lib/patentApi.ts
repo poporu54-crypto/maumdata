@@ -79,9 +79,36 @@ function sanitizeCorpName(name: string): string {
 /**
  * 1. 로컬 DB에서 해당 기업이 보유한 특허/상표 지식재산권을 즉시 조회합니다. (실시간 외부 API 호출 차단)
  */
-export async function getPatentsByCompany(companyNm: string, applicantNm: string): Promise<PatentInfo[]> {
+export async function getPatentsByCompany(companyNm: string, applicantNm: string, bNo?: string): Promise<PatentInfo[]> {
   try {
     const cleanCompanyNm = companyNm.trim();
+    const cleanBNo = (bNo || "").replace(/[^0-9]/g, "");
+
+    if (cleanBNo.length === 10) {
+      const directRes = await query(
+        `SELECT application_number as "applicationNumber",
+                application_date as "applicationDate",
+                invention_title as "inventionTitle",
+                patent_status as "patentStatus",
+                detail_url as "detailUrl"
+         FROM business_patents
+         WHERE b_no = $1
+         ORDER BY application_date DESC
+         LIMIT 5`,
+        [cleanBNo]
+      );
+      if (directRes.rows.length > 0) {
+        return directRes.rows.map((r) => ({
+          applicationNumber: r.applicationNumber || "",
+          applicationDate: r.applicationDate || "",
+          inventionTitle: r.inventionTitle || "지식재산권",
+          applicantName: cleanCompanyNm,
+          patentStatus: r.patentStatus || "등록",
+          detailUrl: r.detailUrl || "",
+        }));
+      }
+    }
+
     if (!cleanCompanyNm) return [];
 
     const res = await query(

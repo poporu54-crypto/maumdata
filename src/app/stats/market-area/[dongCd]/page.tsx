@@ -4,7 +4,7 @@ import Link from "next/link";
 import { getStoreDataInDong, getDongName } from "@/lib/marketApi";
 import ClientMapWrapper from "@/components/ClientMapWrapper";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 86400;
 
 interface PageProps {
   params: Promise<{ dongCd: string }>;

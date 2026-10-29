@@ -4,7 +4,7 @@ import Link from "next/link";
 import StatsRelatedNav from "@/components/StatsRelatedNav";
 import { getRealPortalStats, formatBizNo } from "@/lib/statApi";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 600;
 
 export const metadata: Metadata = {
   title: "국민연금 신규 채용 & 신설 법인 실데이터 동향",

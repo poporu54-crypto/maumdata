@@ -27,54 +27,81 @@ function summarizeFields(fields: any[] | undefined | null): {
   };
 }
 
+let cachedAllTemplateSummaries: TemplateSummary[] | null = null;
+let cachedAllTemplateSummariesAt = 0;
+let inFlightAllTemplateSummaries: Promise<TemplateSummary[]> | null = null;
+const TEMPLATE_SUMMARIES_TTL_MS = 10 * 60 * 1000; // 10분 서버 인메모리 캐시
+
 /**
  * 서버 전용: 로컬(TEMPLATES) + DB(document_templates) 전체 서식을 병합한 뒤,
  * 무거운 본문 레이아웃(layout)과 초기값(initialValues)을 완전히 제거하고
  * 목록/태그 카드 렌더링에 필요한 최소 요약 데이터만 반환합니다.
  */
 export async function getAllTemplateSummariesServer(): Promise<TemplateSummary[]> {
-  const merged = new Map<string, TemplateSummary>();
+  const now = Date.now();
+  if (cachedAllTemplateSummaries && now - cachedAllTemplateSummariesAt < TEMPLATE_SUMMARIES_TTL_MS) {
+    return cachedAllTemplateSummaries;
+  }
 
-  for (const tpl of TEMPLATES) {
-    const { fieldLabels, totalFields } = summarizeFields(tpl.fields);
-    merged.set(tpl.id, {
-      id: tpl.id,
-      title: tpl.title,
-      category: tpl.category,
-      desc: tpl.desc,
-      popular: Boolean(tpl.popular),
-      tags: Array.isArray(tpl.tags) ? tpl.tags : [],
-      fieldLabels,
-      totalFields,
+  const loadTask = async (): Promise<TemplateSummary[]> => {
+    const merged = new Map<string, TemplateSummary>();
+
+    for (const tpl of TEMPLATES) {
+      const { fieldLabels, totalFields } = summarizeFields(tpl.fields);
+      merged.set(tpl.id, {
+        id: tpl.id,
+        title: tpl.title,
+        category: tpl.category,
+        desc: tpl.desc,
+        popular: Boolean(tpl.popular),
+        tags: Array.isArray(tpl.tags) ? tpl.tags : [],
+        fieldLabels,
+        totalFields,
+      });
+    }
+
+    try {
+      const res = await query(
+        `SELECT id, title, category, description AS desc, popular, tags, fields
+         FROM document_templates
+         ORDER BY popular DESC, title ASC`
+      );
+      for (const row of res.rows) {
+        if (!merged.has(row.id)) {
+          const { fieldLabels, totalFields } = summarizeFields(row.fields);
+          merged.set(row.id, {
+            id: row.id,
+            title: row.title || "",
+            category: row.category || "행정",
+            desc: row.desc || "",
+            popular: Boolean(row.popular),
+            tags: Array.isArray(row.tags) ? row.tags : [],
+            fieldLabels,
+            totalFields,
+          });
+        }
+      }
+    } catch (err) {
+      console.error("[formSummaries] Failed to load DB template summaries:", err);
+    }
+
+    const list = Array.from(merged.values());
+    cachedAllTemplateSummaries = list;
+    cachedAllTemplateSummariesAt = Date.now();
+    return list;
+  };
+
+  if (!inFlightAllTemplateSummaries) {
+    inFlightAllTemplateSummaries = loadTask().finally(() => {
+      inFlightAllTemplateSummaries = null;
     });
   }
 
-  try {
-    const res = await query(
-      `SELECT id, title, category, description AS desc, popular, tags, fields
-       FROM document_templates
-       ORDER BY popular DESC, title ASC`
-    );
-    for (const row of res.rows) {
-      if (!merged.has(row.id)) {
-        const { fieldLabels, totalFields } = summarizeFields(row.fields);
-        merged.set(row.id, {
-          id: row.id,
-          title: row.title || "",
-          category: row.category || "행정",
-          desc: row.desc || "",
-          popular: Boolean(row.popular),
-          tags: Array.isArray(row.tags) ? row.tags : [],
-          fieldLabels,
-          totalFields,
-        });
-      }
-    }
-  } catch (err) {
-    console.error("[formSummaries] Failed to load DB template summaries:", err);
+  if (cachedAllTemplateSummaries) {
+    return cachedAllTemplateSummaries;
   }
 
-  return Array.from(merged.values());
+  return inFlightAllTemplateSummaries;
 }
 
 /**

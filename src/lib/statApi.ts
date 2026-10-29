@@ -170,18 +170,10 @@ function mapRankedCompanyRow(row: any): RankedCompanyItem {
 
 let cachedRealStats: RealPortalStats | null = null;
 let cachedRealStatsTime = 0;
-const REAL_STATS_CACHE_TTL_MS = 3 * 60 * 1000; // 3분 서버 인메모리 캐시
+let inFlightRealStatsPromise: Promise<RealPortalStats> | null = null;
+const REAL_STATS_CACHE_TTL_MS = 10 * 60 * 1000; // 10분 서버 인메모리 캐시 (만료 시 SWR 백그라운드 갱신)
 
-/**
- * 마음데이타 Neon PostgreSQL에 실제 동기화된 기업·국민연금·DART 데이터를
- * 일체의 추정 공식이나 가짜 폴백 없이 100% 실시간 SQL로 집계하여 반환합니다.
- */
-export async function getRealPortalStats(): Promise<RealPortalStats> {
-  const now = Date.now();
-  if (cachedRealStats && now - cachedRealStatsTime < REAL_STATS_CACHE_TTL_MS) {
-    return cachedRealStats;
-  }
-
+async function computeRealPortalStats(): Promise<RealPortalStats> {
   const [
     summaryRes,
     macroRes,
@@ -681,12 +673,40 @@ export async function getRealPortalStats(): Promise<RealPortalStats> {
   };
 
   cachedRealStats = result;
-  cachedRealStatsTime = now;
+  cachedRealStatsTime = Date.now();
   return result;
+}
+
+/**
+ * 마음데이타 Neon PostgreSQL에 실제 동기화된 기업·국민연금·DART 데이터를
+ * 일체의 추정 공식이나 가짜 폴백 없이 100% 실시간 SQL로 집계하여 반환합니다.
+ * (동시 요청 In-flight 병합 및 Stale-While-Revalidate 백그라운드 갱신 적용)
+ */
+export async function getRealPortalStats(): Promise<RealPortalStats> {
+  const now = Date.now();
+  if (cachedRealStats && now - cachedRealStatsTime < REAL_STATS_CACHE_TTL_MS) {
+    return cachedRealStats;
+  }
+
+  if (!inFlightRealStatsPromise) {
+    inFlightRealStatsPromise = computeRealPortalStats().finally(() => {
+      inFlightRealStatsPromise = null;
+    });
+  }
+
+  if (cachedRealStats) {
+    inFlightRealStatsPromise.catch((err) => {
+      console.error("[statApi] Background stats refresh failed:", err);
+    });
+    return cachedRealStats;
+  }
+
+  return inFlightRealStatsPromise;
 }
 
 let cachedKosisSurvey: OfficialKosisSurvey | null = null;
 let cachedKosisTime = 0;
+let inFlightKosisPromise: Promise<OfficialKosisSurvey | null> | null = null;
 const KOSIS_CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 확정 공식 통계이므로 6시간 캐시
 
 /**
@@ -704,17 +724,19 @@ export async function getOfficialKosisSurvey(): Promise<OfficialKosisSurvey | nu
     return null;
   }
 
-  try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 5000);
-    const surveyUrl = `${SURVEY_API_URL}?serviceKey=${SERVICE_KEY}&page=1&perPage=2000`;
-    const res = await fetch(surveyUrl, {
-      method: "GET",
-      headers: { Accept: "application/json" },
-      cache: "no-store",
-      signal: controller.signal,
-    });
-    clearTimeout(timer);
+  if (!inFlightKosisPromise) {
+    inFlightKosisPromise = (async () => {
+      try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 4500);
+        const surveyUrl = `${SURVEY_API_URL}?serviceKey=${SERVICE_KEY}&page=1&perPage=2000`;
+        const res = await fetch(surveyUrl, {
+          method: "GET",
+          headers: { Accept: "application/json" },
+          next: { revalidate: 21600 },
+          signal: controller.signal,
+        });
+        clearTimeout(timer);
 
     if (!res.ok) {
       return null;
@@ -765,11 +787,21 @@ export async function getOfficialKosisSurvey(): Promise<OfficialKosisSurvey | nu
       industries,
     };
 
-    cachedKosisSurvey = survey;
-    cachedKosisTime = now;
-    return survey;
-  } catch (err) {
-    console.error("[statApi] Official KOSIS survey API unavailable (no fallback used):", err);
-    return null;
+        cachedKosisSurvey = survey;
+        cachedKosisTime = Date.now();
+        return survey;
+      } catch (err) {
+        console.error("[statApi] Official KOSIS survey API unavailable (no fallback used):", err);
+        return cachedKosisSurvey;
+      } finally {
+        inFlightKosisPromise = null;
+      }
+    })();
   }
+
+  if (cachedKosisSurvey) {
+    return cachedKosisSurvey;
+  }
+
+  return inFlightKosisPromise;
 }

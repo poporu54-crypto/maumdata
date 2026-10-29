@@ -10,8 +10,12 @@ import {
   ContractUser,
 } from "@/lib/contractStorage";
 import { vibrateDevice, showAppToast } from "@/lib/appBridge";
+import dynamic from "next/dynamic";
 import MaumDataLogo from "@/components/MaumDataLogo";
-import ContractAuthModal from "@/components/ContractAuthModal";
+
+const ContractAuthModal = dynamic(() => import("@/components/ContractAuthModal"), {
+  ssr: false,
+});
 
 interface ContractSummary {
   id: string;
@@ -660,14 +664,16 @@ export default function ContractsDashboardPage() {
       </div>
 
       {/* 로그인 모달 */}
-      <ContractAuthModal
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
-        onSuccess={(user) => {
-          setCurrentUser(user);
-          fetchMyVault(user);
-        }}
-      />
+      {isAuthModalOpen && (
+        <ContractAuthModal
+          isOpen={isAuthModalOpen}
+          onClose={() => setIsAuthModalOpen(false)}
+          onSuccess={(user) => {
+            setCurrentUser(user);
+            fetchMyVault(user);
+          }}
+        />
+      )}
     </div>
   );
 }
