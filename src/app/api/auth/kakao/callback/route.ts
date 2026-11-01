@@ -1,23 +1,38 @@
 import { NextResponse, NextRequest } from "next/server";
 import { upsertContractUser } from "@/lib/db";
+import {
+  createSignedUserSessionToken,
+  getSafeBaseOrigin,
+  setUserSessionCookie,
+  verifySignedOAuthState,
+} from "@/lib/sessionAuth";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
-  const state = searchParams.get("state") || "";
-  const host = request.headers.get("host") || "www.maumdata.com";
-  const protocol = request.headers.get("x-forwarded-proto") || "https";
-  const redirectUri = `${protocol}://${host}/api/auth/kakao/callback`;
+  const rawState = searchParams.get("state") || "";
+  const baseOrigin = getSafeBaseOrigin(request);
+  const redirectUri = `${baseOrigin}/api/auth/kakao/callback`;
+
+  const stateInfo = verifySignedOAuthState(rawState);
 
   if (!code) {
-    return NextResponse.redirect(`${protocol}://${host}/contracts`);
+    return NextResponse.redirect(`${baseOrigin}${stateInfo.returnTo}`);
+  }
+
+  if (!stateInfo.valid) {
+    return NextResponse.redirect(`${baseOrigin}/contracts?auth_error=oauth_state_invalid`);
   }
 
   try {
-    const clientId = process.env.KAKAO_CLIENT_ID || "83c099e699aebea20f572b85a32bfab5";
-    const clientSecret = process.env.KAKAO_CLIENT_SECRET || "";
+    const clientId = (process.env.KAKAO_CLIENT_ID || "").trim();
+    const clientSecret = (process.env.KAKAO_CLIENT_SECRET || "").trim();
+
+    if (!clientId) {
+      return NextResponse.redirect(`${baseOrigin}/contracts?auth_error=kakao_not_configured`);
+    }
 
     const tokenParams = new URLSearchParams({
       grant_type: "authorization_code",
@@ -45,7 +60,10 @@ export async function GET(request: NextRequest) {
     });
     const userData = await userRes.json();
 
-    const kakaoId = String(userData.id);
+    const kakaoId = String(userData.id || "");
+    if (!kakaoId) {
+      throw new Error("카카오 사용자 식별자 누락");
+    }
     const nickname =
       userData.kakao_account?.profile?.nickname ||
       userData.properties?.nickname ||
@@ -60,35 +78,34 @@ export async function GET(request: NextRequest) {
       name: nickname,
     });
 
-    const userPayload = Buffer.from(
-      JSON.stringify({
-        id: saved.id,
-        email: saved.email,
-        name: saved.name || nickname,
-        company: saved.company || "",
-        provider: "kakao",
-      })
-    ).toString("base64");
+    const signedSessionToken = createSignedUserSessionToken({
+      id: saved.id,
+      email: saved.email,
+      name: saved.name || nickname,
+      company: saved.company || "",
+      provider: "kakao",
+    });
 
-    const encodedSession = encodeURIComponent(userPayload);
-    const webTargetUrl = `${protocol}://${host}/contracts?oauth_session=${encodedSession}`;
+    const encodedSession = encodeURIComponent(signedSessionToken);
+    const separator = stateInfo.returnTo.includes("?") ? "&" : "?";
+    const webTargetUrl = `${baseOrigin}${stateInfo.returnTo}${separator}oauth_session=${encodedSession}`;
 
-    // iOS ASWebAuthenticationSession 복귀 스킴
-    if (state === "ios") {
+    if (stateInfo.source === "ios") {
       return NextResponse.redirect(`maumdata://oauth?oauth_session=${encodedSession}`);
     }
 
-    // 안드로이드 네이티브 앱(Custom Tabs)에서 호출된 경우 앱 내부로 즉시 세션 복귀
-    if (state === "app") {
+    if (stateInfo.source === "app") {
       const appIntentUrl = `intent://oauth?oauth_session=${encodedSession}#Intent;scheme=maumdata;package=com.maumdata.dataapp;S.browser_fallback_url=${encodeURIComponent(
         webTargetUrl
       )};end`;
       return NextResponse.redirect(appIntentUrl);
     }
 
-    return NextResponse.redirect(webTargetUrl);
+    const res = NextResponse.redirect(webTargetUrl);
+    setUserSessionCookie(res, signedSessionToken);
+    return res;
   } catch (err) {
     console.error("Kakao OAuth error:", err);
-    return NextResponse.redirect(`${protocol}://${host}/contracts?auth_notice=oauth_failed`);
+    return NextResponse.redirect(`${baseOrigin}/contracts?auth_error=oauth_failed`);
   }
 }

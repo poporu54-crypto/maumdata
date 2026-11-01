@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { getEditRequestById, updateEditRequestStatus, query } from "@/lib/db";
+import { isAdminRequest, sanitizeHttpUrl } from "@/lib/sessionAuth";
+
+function normalizeHomepageInput(raw: string | null | undefined): string | null {
+  if (!raw || typeof raw !== "string") return null;
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  const withScheme =
+    /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  const sanitized = sanitizeHttpUrl(withScheme);
+  return sanitized || null;
+}
 
 export async function POST(
   req: NextRequest,
@@ -16,18 +26,15 @@ export async function POST(
       );
     }
 
-    // 어드민 세션 검증
-    const cookieStore = await cookies();
-    const session = cookieStore.get("admin_session");
-    if (!session || session.value !== "authenticated") {
+    if (!isAdminRequest(req)) {
       return NextResponse.json(
         { error: "권한이 없습니다. 관리자 로그인이 필요합니다." },
         { status: 401 }
       );
     }
 
-    const body = await req.json();
-    const { action } = body; // 'approve' 또는 'reject'
+    const body = await req.json().catch(() => ({}));
+    const { action } = body;
 
     if (action !== "approve" && action !== "reject") {
       return NextResponse.json(
@@ -56,49 +63,53 @@ export async function POST(
       return NextResponse.json({ success: true, message: "수정 제안이 반려되었습니다." });
     }
 
-    // 'approve' 액션 처리: 실제 DB 동기화
-    console.log(`[Admin Action] Approving request ${requestId} for business ${reqData.b_no}`);
-    
-    // 1. businesses 메인 필드 업데이트
-    await query(`
+    const safeHomepage = normalizeHomepageInput(reqData.proposedHomepage);
+    const safeBrandName = (reqData.proposedBrandName || "").trim().slice(0, 300) || null;
+    const safeDescription = (reqData.proposedDescription || "").trim().slice(0, 4000) || null;
+    const safeBusinessName = (reqData.proposedBusinessName || "").trim().slice(0, 200) || null;
+
+    await query(
+      `
       UPDATE businesses 
       SET brand_name = COALESCE($1, brand_name),
           homepage = COALESCE($2, homepage),
           description = COALESCE($3, description),
           b_nm = COALESCE($5, b_nm)
       WHERE b_no = $4
-    `, [
-      reqData.proposedBrandName || null,
-      reqData.proposedHomepage || null,
-      reqData.proposedDescription || null,
-      reqData.b_no,
-      reqData.proposedBusinessName || null
-    ]);
+    `,
+      [safeBrandName, safeHomepage, safeDescription, reqData.b_no, safeBusinessName]
+    );
 
-    // 2. 제안된 연혁 목록이 있는 경우 business_timeline에 반영
     if (reqData.proposedTimeline && Array.isArray(reqData.proposedTimeline)) {
       for (const ev of reqData.proposedTimeline) {
-        if (!ev.date || !ev.title || !ev.desc) continue;
-        const cleanDate = ev.date.replace(/[^0-9]/g, "");
+        if (!ev?.date || !ev?.title || !ev?.desc) continue;
+        const cleanDate = String(ev.date).replace(/[^0-9]/g, "");
         if (cleanDate.length !== 8) continue;
-        
-        await query(`
+
+        await query(
+          `
           INSERT INTO business_timeline (b_no, event_date, event_title, event_description)
           VALUES ($1, $2, $3, $4)
           ON CONFLICT (b_no, event_date, event_title) DO UPDATE SET
             event_description = EXCLUDED.event_description
-        `, [reqData.b_no, cleanDate, ev.title, ev.desc]);
+        `,
+          [
+            reqData.b_no,
+            cleanDate,
+            String(ev.title).trim().slice(0, 200),
+            String(ev.desc).trim().slice(0, 1000),
+          ]
+        );
       }
     }
 
-    // 3. 수정 요청 상태를 승인(approved)으로 갱신
     await updateEditRequestStatus(requestId, "approved");
 
     return NextResponse.json({
       success: true,
-      message: "수정 제안이 승인되었으며, 기업 상세 데이터에 반영되었습니다."
+      message: "수정 제안이 승인되었으며, 기업 상세 데이터에 반영되었습니다.",
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Failed to process request action:", error);
     return NextResponse.json(
       { error: "수정 제안 액션 처리 중 에러가 발생했습니다." },

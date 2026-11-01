@@ -99,14 +99,14 @@ export async function BidsSection({ companyNm, bNo }: { companyNm: string; bNo: 
         display: "grid",
         gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
         gap: "16px",
-        background: "linear-gradient(135deg, rgba(26, 32, 44, 0.7) 0%, rgba(17, 20, 28, 0.9) 100%)",
-        border: "1px solid rgba(255, 255, 255, 0.08)",
+        backgroundColor: "var(--bg-color-main)",
+        border: "1px solid var(--color-border)",
         borderRadius: "16px",
         padding: "24px",
-        boxShadow: "0 8px 25px rgba(0,0,0,0.3)"
+        boxShadow: "var(--shadow-sm)"
       }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: "6px", borderRight: "1px solid rgba(255,255,255,0.06)", paddingRight: "16px" }}>
-          <span style={{ fontSize: "0.82rem", color: "#a0aec0", fontWeight: 700 }}>B2G 정부 입찰 역량 등급</span>
+        <div style={{ display: "flex", flexDirection: "column", gap: "6px", borderRight: "1px solid var(--color-border)", paddingRight: "16px" }}>
+          <span style={{ fontSize: "0.82rem", color: "var(--color-text-sub)", fontWeight: 700 }}>B2G 정부 입찰 역량 등급</span>
           <div style={{ display: "flex", alignItems: "center", gap: "12px", marginTop: "4px" }}>
             <span style={{
               fontSize: "2.4rem",
@@ -125,46 +125,46 @@ export async function BidsSection({ companyNm, bNo }: { companyNm: string; bNo: 
               {b2gGrade}
             </span>
             <div>
-              <div style={{ fontSize: "1.05rem", fontWeight: 800, color: "#f7fafc" }}>{b2gGradeDesc}</div>
-              <div style={{ fontSize: "0.78rem", color: "#718096", marginTop: "2px" }}>최근 나라장터 수주 실적 기반</div>
+              <div style={{ fontSize: "1.05rem", fontWeight: 800, color: "var(--color-text-main)" }}>{b2gGradeDesc}</div>
+              <div style={{ fontSize: "0.78rem", color: "var(--color-text-desc)", marginTop: "2px" }}>최근 나라장터 수주 실적 기반</div>
             </div>
           </div>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "6px", paddingLeft: "8px", borderRight: "1px solid rgba(255,255,255,0.06)", paddingRight: "16px" }}>
-          <span style={{ fontSize: "0.82rem", color: "#a0aec0", fontWeight: 700 }}>누적 공공 수주 사업 규모</span>
+        <div style={{ display: "flex", flexDirection: "column", gap: "6px", paddingLeft: "8px", borderRight: "1px solid var(--color-border)", paddingRight: "16px" }}>
+          <span style={{ fontSize: "0.82rem", color: "var(--color-text-sub)", fontWeight: 700 }}>누적 공공 수주 사업 규모</span>
           <div style={{ marginTop: "12px" }}>
             <span style={{ fontSize: "1.7rem", fontWeight: 800, color: "var(--color-primary)" }}>
               {totalAmount >= 100000000 
                 ? `${(totalAmount / 100000000).toFixed(1)}억` 
                 : `${(totalAmount / 10000).toLocaleString()}만`}
             </span>
-            <span style={{ fontSize: "0.9rem", color: "#718096", fontWeight: 600, marginLeft: "4px" }}>원</span>
-            <div style={{ fontSize: "0.78rem", color: "#718096", marginTop: "8px" }}>
+            <span style={{ fontSize: "0.9rem", color: "var(--color-text-desc)", fontWeight: 600, marginLeft: "4px" }}>원</span>
+            <div style={{ fontSize: "0.78rem", color: "var(--color-text-desc)", marginTop: "8px" }}>
               총 {bids.length}개 사업 참여 매칭
             </div>
           </div>
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: "6px", paddingLeft: "8px" }}>
-          <span style={{ fontSize: "0.82rem", color: "#a0aec0", fontWeight: 700 }}>안정적 현금 흐름 지수</span>
+          <span style={{ fontSize: "0.82rem", color: "var(--color-text-sub)", fontWeight: 700 }}>안정적 현금 흐름 지수</span>
           <div style={{ marginTop: "8px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "6px" }}>
-              <span style={{ fontSize: "1.7rem", fontWeight: 800, color: bids.length > 0 ? (cashFlowScore >= 80 ? "#10b981" : "#f59e0b") : "#718096" }}>
+              <span style={{ fontSize: "1.7rem", fontWeight: 800, color: bids.length > 0 ? (cashFlowScore >= 80 ? "#10b981" : "#f59e0b") : "var(--color-text-desc)" }}>
                 {bids.length > 0 ? cashFlowScore : "-"}
               </span>
-              <span style={{ fontSize: "0.85rem", color: "#718096", fontWeight: 700 }}>/ 100 점</span>
+              <span style={{ fontSize: "0.85rem", color: "var(--color-text-desc)", fontWeight: 700 }}>/ 100 점</span>
             </div>
-            <div style={{ width: "100%", height: "6px", backgroundColor: "rgba(255,255,255,0.1)", borderRadius: "3px", overflow: "hidden" }}>
+            <div style={{ width: "100%", height: "6px", backgroundColor: "var(--color-border)", borderRadius: "3px", overflow: "hidden" }}>
               <div style={{
                 width: `${bids.length > 0 ? cashFlowScore : 0}%`,
                 height: "100%",
-                backgroundColor: bids.length > 0 ? (cashFlowScore >= 80 ? "#10b981" : "#f59e0b") : "#718096",
+                backgroundColor: bids.length > 0 ? (cashFlowScore >= 80 ? "#10b981" : "#f59e0b") : "var(--color-text-desc)",
                 borderRadius: "3px",
                 boxShadow: bids.length > 0 ? `0 0 8px ${cashFlowScore >= 80 ? "#10b981" : "#f59e0b"}99` : "none"
               }} />
             </div>
-            <div style={{ fontSize: "0.75rem", color: "#718096", marginTop: "8px" }}>
+            <div style={{ fontSize: "0.75rem", color: "var(--color-text-desc)", marginTop: "8px" }}>
               대금 조기 회수 및 안정적 매출 기여
             </div>
           </div>
@@ -216,7 +216,7 @@ export async function BidsSection({ companyNm, bNo }: { companyNm: string; bNo: 
                 gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
                 gap: "6px 12px",
                 padding: "10px 14px",
-                backgroundColor: "rgba(255, 255, 255, 0.015)",
+                backgroundColor: "var(--bg-color-main)",
                 borderRadius: "10px",
                 fontSize: "0.85rem"
               }}>
@@ -324,14 +324,14 @@ export async function PatentsSection({ companyNm, pNm, bNo }: { companyNm: strin
         display: "grid",
         gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
         gap: "16px",
-        background: "linear-gradient(135deg, rgba(26, 32, 44, 0.7) 0%, rgba(17, 20, 28, 0.9) 100%)",
-        border: "1px solid rgba(255, 255, 255, 0.08)",
+        backgroundColor: "var(--bg-color-main)",
+        border: "1px solid var(--color-border)",
         borderRadius: "16px",
         padding: "24px",
-        boxShadow: "0 8px 25px rgba(0,0,0,0.3)"
+        boxShadow: "var(--shadow-sm)"
       }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: "6px", borderRight: "1px solid rgba(255,255,255,0.06)", paddingRight: "16px" }}>
-          <span style={{ fontSize: "0.82rem", color: "#a0aec0", fontWeight: 700 }}>기술 독점력 & R&D 혁신도</span>
+        <div style={{ display: "flex", flexDirection: "column", gap: "6px", borderRight: "1px solid var(--color-border)", paddingRight: "16px" }}>
+          <span style={{ fontSize: "0.82rem", color: "var(--color-text-sub)", fontWeight: 700 }}>기술 독점력 & R&D 혁신도</span>
           <div style={{ display: "flex", alignItems: "center", gap: "12px", marginTop: "4px" }}>
             <span style={{
               fontSize: "1.3rem",
@@ -352,26 +352,26 @@ export async function PatentsSection({ companyNm, pNm, bNo }: { companyNm: strin
               {rndTier}
             </span>
             <div>
-              <div style={{ fontSize: "1.05rem", fontWeight: 800, color: "#f7fafc" }}>{rndTierTitle}</div>
-              <div style={{ fontSize: "0.78rem", color: "#718096", marginTop: "2px" }}>지식재산권(IP) 보유 규모 분석</div>
+              <div style={{ fontSize: "1.05rem", fontWeight: 800, color: "var(--color-text-main)" }}>{rndTierTitle}</div>
+              <div style={{ fontSize: "0.78rem", color: "var(--color-text-desc)", marginTop: "2px" }}>지식재산권(IP) 보유 규모 분석</div>
             </div>
           </div>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "6px", paddingLeft: "8px", borderRight: "1px solid rgba(255,255,255,0.06)", paddingRight: "16px" }}>
-          <span style={{ fontSize: "0.82rem", color: "#a0aec0", fontWeight: 700 }}>원천 기술 가치 스코어</span>
+        <div style={{ display: "flex", flexDirection: "column", gap: "6px", paddingLeft: "8px", borderRight: "1px solid var(--color-border)", paddingRight: "16px" }}>
+          <span style={{ fontSize: "0.82rem", color: "var(--color-text-sub)", fontWeight: 700 }}>원천 기술 가치 스코어</span>
           <div style={{ marginTop: "8px" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "6px" }}>
-              <span style={{ fontSize: "1.7rem", fontWeight: 800, color: patents.length > 0 ? tierColor : "#718096" }}>
+              <span style={{ fontSize: "1.7rem", fontWeight: 800, color: patents.length > 0 ? tierColor : "var(--color-text-desc)" }}>
                 {patents.length > 0 ? rndScore : "-"}
               </span>
-              <span style={{ fontSize: "0.85rem", color: "#718096", fontWeight: 700 }}>/ 100 점</span>
+              <span style={{ fontSize: "0.85rem", color: "var(--color-text-desc)", fontWeight: 700 }}>/ 100 점</span>
             </div>
-            <div style={{ width: "100%", height: "6px", backgroundColor: "rgba(255,255,255,0.1)", borderRadius: "3px", overflow: "hidden" }}>
+            <div style={{ width: "100%", height: "6px", backgroundColor: "var(--color-border)", borderRadius: "3px", overflow: "hidden" }}>
               <div style={{
                 width: `${patents.length > 0 ? rndScore : 0}%`,
                 height: "100%",
-                backgroundColor: patents.length > 0 ? tierColor : "#718096",
+                backgroundColor: patents.length > 0 ? tierColor : "var(--color-text-desc)",
                 borderRadius: "3px",
                 boxShadow: patents.length > 0 ? `0 0 8px ${tierColor}99` : "none"
               }} />
@@ -380,14 +380,14 @@ export async function PatentsSection({ companyNm, pNm, bNo }: { companyNm: strin
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: "6px", paddingLeft: "8px" }}>
-          <span style={{ fontSize: "0.82rem", color: "#a0aec0", fontWeight: 700 }}>원천 기술 특허 도메인</span>
+          <span style={{ fontSize: "0.82rem", color: "var(--color-text-sub)", fontWeight: 700 }}>원천 기술 특허 도메인</span>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "8px" }}>
             {tags.length > 0 ? (
               tags.map(tag => (
                 <span key={tag} style={{
-                  backgroundColor: "rgba(168, 85, 247, 0.1)",
-                  color: "#c084fc",
-                  border: "1px solid rgba(168, 85, 247, 0.2)",
+                  backgroundColor: "rgba(168, 85, 247, 0.12)",
+                  color: "#9333ea",
+                  border: "1px solid rgba(168, 85, 247, 0.25)",
                   padding: "4px 8px",
                   borderRadius: "6px",
                   fontSize: "0.75rem",
@@ -397,7 +397,7 @@ export async function PatentsSection({ companyNm, pNm, bNo }: { companyNm: strin
                 </span>
               ))
             ) : (
-              <span style={{ fontSize: "0.8rem", color: "#718096" }}>추출된 기술 도메인 없음</span>
+              <span style={{ fontSize: "0.8rem", color: "var(--color-text-desc)" }}>추출된 기술 도메인 없음</span>
             )}
           </div>
         </div>
@@ -669,12 +669,14 @@ export async function DartKeyDisclosuresSection({ dartCode }: { dartCode: string
 export function TimelineSection({
   timeline,
   bNo,
+  currentBusinessName,
   brandName,
   homepage,
   description
 }: {
   timeline?: BusinessData["historyTimeline"];
   bNo: string;
+  currentBusinessName?: string;
   brandName: string;
   homepage: string;
   description: string;
@@ -745,7 +747,7 @@ export function TimelineSection({
         <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "12px", borderTop: "1px solid var(--color-border)", paddingTop: "20px" }}>
           <EditRequestTrigger
             bNo={bNo}
-            currentBusinessName={brandName}
+            currentBusinessName={currentBusinessName || brandName}
             currentBrandName={brandName}
             currentHomepage={homepage}
             currentDescription={description}

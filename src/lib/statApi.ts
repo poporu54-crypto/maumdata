@@ -258,20 +258,23 @@ async function computeRealPortalStats(): Promise<RealPortalStats> {
       GROUP BY grp
     `),
 
-    // 3. 국민연금 월별 실고용 시계열 (표본 100개사 이상 확보된 기준월만 추출)
+    // 3. 국민연금 월별 실고용 시계열 (표본 100개사 이상 확보된 최근 12개월 추출)
     query(`
-      SELECT
-        record_month,
-        COUNT(DISTINCT b_no)::int AS company_count,
-        COALESCE(SUM(employees), 0)::int AS total_employees,
-        COALESCE(SUM(new_acquisitions), 0)::int AS total_new_hires,
-        COALESCE(SUM(losses), 0)::int AS total_losses
-      FROM business_employment_history
-      WHERE record_month ~ '^202[0-9]-(0[1-9]|1[0-2])$'
-      GROUP BY record_month
-      HAVING COUNT(DISTINCT b_no) >= 100
+      SELECT * FROM (
+        SELECT
+          record_month,
+          COUNT(DISTINCT b_no)::int AS company_count,
+          COALESCE(SUM(employees), 0)::int AS total_employees,
+          COALESCE(SUM(new_acquisitions), 0)::int AS total_new_hires,
+          COALESCE(SUM(losses), 0)::int AS total_losses
+        FROM business_employment_history
+        WHERE record_month ~ '^202[0-9]-(0[1-9]|1[0-2])$'
+        GROUP BY record_month
+        HAVING COUNT(DISTINCT b_no) >= 100
+        ORDER BY record_month DESC
+        LIMIT 12
+      ) sub
       ORDER BY record_month ASC
-      LIMIT 12
     `),
 
     // 4. 최근 월 신규 채용(입사자) 상위 TOP 15 계속사업자
@@ -301,7 +304,7 @@ async function computeRealPortalStats(): Promise<RealPortalStats> {
       WHERE b_stt_cd = '01'
         AND b_nm IS NOT NULL
         AND b_nm NOT IN ('', '상호 정보 없음', '상호 미등록 사업자')
-        AND start_dt ~ '^202[3-6](0[1-9]|1[0-2])(0[1-9]|[12][0-9]|3[01])$'
+        AND start_dt ~ '^202[3-9](0[1-9]|1[0-2])(0[1-9]|[12][0-9]|3[01])$'
       ORDER BY
         CASE WHEN b_nm ~ '(기업인수목적|유동화|제[일이기삼사오육칠팔구십0-9]+차)' THEN 1 ELSE 0 END ASC,
         CASE WHEN COALESCE(nps_sbscrb_nmps, 0) > 0 THEN 0 ELSE 1 END ASC,
@@ -463,7 +466,7 @@ async function computeRealPortalStats(): Promise<RealPortalStats> {
       ORDER BY biz_cnt DESC
     `),
 
-    // 11. 설립연도별 실제 법인 분포 (최근 10개년: 2016~2025)
+    // 11. 설립연도별 실제 법인 분포 (최근 연도 포함: 2016~2029)
     query(`
       SELECT
         SUBSTRING(start_dt, 1, 4) AS yr,
@@ -472,7 +475,7 @@ async function computeRealPortalStats(): Promise<RealPortalStats> {
       WHERE b_stt_cd = '01'
         AND b_nm IS NOT NULL
         AND b_nm NOT IN ('', '상호 정보 없음', '상호 미등록 사업자')
-        AND start_dt ~ '^(201[6-9]|202[0-5])(0[1-9]|1[0-2])(0[1-9]|[12][0-9]|3[01])$'
+        AND start_dt ~ '^(201[6-9]|202[0-9])(0[1-9]|1[0-2])(0[1-9]|[12][0-9]|3[01])$'
       GROUP BY SUBSTRING(start_dt, 1, 4)
       ORDER BY yr ASC
     `),
@@ -733,7 +736,6 @@ export async function getOfficialKosisSurvey(): Promise<OfficialKosisSurvey | nu
         const res = await fetch(surveyUrl, {
           method: "GET",
           headers: { Accept: "application/json" },
-          next: { revalidate: 21600 },
           signal: controller.signal,
         });
         clearTimeout(timer);

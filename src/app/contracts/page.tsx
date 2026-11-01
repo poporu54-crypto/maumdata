@@ -7,6 +7,7 @@ import {
   removeContractFromLocal,
   getLoggedInUser,
   setLoggedInUser,
+  getContractAuthHeaders,
   ContractUser,
 } from "@/lib/contractStorage";
 import { vibrateDevice, showAppToast } from "@/lib/appBridge";
@@ -55,10 +56,8 @@ export default function ContractsDashboardPage() {
 
       const res = await fetch("/api/contracts/my", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getContractAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({
-          userId: user?.id || "",
-          userEmail: user?.email || "",
           contractIds: localIds,
         }),
       });
@@ -73,47 +72,94 @@ export default function ContractsDashboardPage() {
     }
   }, []);
 
-  // 초기 세션 및 소셜 로그인 콜백 파라미터 처리
+  // 초기 세션 검증 및 소셜 로그인 서명 토큰 교환 처리
   useEffect(() => {
-    let activeUser = getLoggedInUser();
+    let isCancelled = false;
 
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      const oauthSession = params.get("oauth_session");
-      const authError = params.get("auth_error");
+    const bootstrapSessionAndVault = async () => {
+      let activeUser = getLoggedInUser();
 
-      if (oauthSession) {
-        try {
-          const decoded = oauthSession.trim().startsWith("{")
-            ? oauthSession
-            : decodeURIComponent(escape(window.atob(oauthSession)));
-          const parsed = JSON.parse(decoded) as ContractUser;
-          if (parsed && parsed.id) {
-            setLoggedInUser(parsed);
-            activeUser = parsed;
-            showAppToast(`${parsed.name}님 환영합니다! 영구 계약 보관함이 연결되었습니다.`);
+      if (typeof window !== "undefined") {
+        const params = new URLSearchParams(window.location.search);
+        const oauthSession = params.get("oauth_session");
+        const authError = params.get("auth_error") || params.get("auth_notice");
+
+        if (oauthSession) {
+          window.history.replaceState({}, "", "/contracts");
+          try {
+            const exRes = await fetch("/api/auth/session", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                action: "exchange_oauth",
+                oauthToken: oauthSession,
+              }),
+            });
+            const exData = await exRes.json();
+            if (exRes.ok && exData.success && exData.user?.id) {
+              setLoggedInUser(exData.user);
+              activeUser = exData.user;
+              showAppToast(`${exData.user.name}님 환영합니다! 영구 계약 보관함이 연결되었습니다.`);
+            } else {
+              showAppToast("소셜 로그인 세션 검증에 실패했습니다. 다시 로그인해 주세요.");
+            }
+          } catch (err) {
+            console.error("Failed to exchange oauth session", err);
           }
-        } catch (err) {
-          console.error("Failed to parse oauth session", err);
+        } else if (authError) {
+          window.history.replaceState({}, "", "/contracts");
+          if (authError === "kakao_not_configured" || authError === "google_not_configured") {
+            alert(
+              "소셜 로그인 키가 아직 설정되지 않았습니다.\n아래 '이메일 1초 간편 시작'으로 바로 이용하실 수 있습니다."
+            );
+            setIsAuthModalOpen(true);
+          } else {
+            showAppToast("소셜 로그인 인증이 취소되었거나 만료되었습니다. 다시 시도해 주세요.");
+          }
         }
-        window.history.replaceState({}, "", "/contracts");
-      } else if (authError) {
-        if (authError === "kakao_not_configured" || authError === "google_not_configured") {
-          alert(
-            "소셜 로그인 키가 아직 설정되지 않았습니다.\n아래 '이메일 1초 간편 시작'으로 바로 이용하실 수 있습니다."
-          );
-          setIsAuthModalOpen(true);
-        }
-        window.history.replaceState({}, "", "/contracts");
       }
-    }
 
-    setCurrentUser(activeUser);
-    fetchMyVault(activeUser);
+      // 구버전(무서명) 로컬 세션 보유 시 서버 세션 쿠키 유효성 확인
+      if (activeUser && !activeUser.sessionToken) {
+        try {
+          const chkRes = await fetch("/api/auth/session");
+          const chkData = await chkRes.json();
+          if (chkRes.ok && chkData.authenticated && chkData.user) {
+            setLoggedInUser(chkData.user);
+            activeUser = chkData.user;
+          } else {
+            setLoggedInUser(null);
+            activeUser = null;
+          }
+        } catch {
+          setLoggedInUser(null);
+          activeUser = null;
+        }
+      }
+
+      if (!isCancelled) {
+        setCurrentUser(activeUser);
+        fetchMyVault(activeUser);
+      }
+    };
+
+    bootstrapSessionAndVault();
+    return () => {
+      isCancelled = true;
+    };
   }, [fetchMyVault]);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     vibrateDevice(20);
+    try {
+      await fetch("/api/auth/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "logout" }),
+      });
+    } catch {
+      // ignore
+    }
     setLoggedInUser(null);
     setCurrentUser(null);
     fetchMyVault(null);
@@ -131,14 +177,11 @@ export default function ContractsDashboardPage() {
     try {
       const res = await fetch("/api/auth/session", {
         method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: currentUser.id,
-          email: currentUser.email,
-        }),
+        headers: getContractAuthHeaders({ "Content-Type": "application/json" }),
       });
+      const resData = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error("계정 탈퇴 처리에 실패했습니다.");
+        throw new Error(resData.error || "계정 탈퇴 처리에 실패했습니다.");
       }
       setLoggedInUser(null);
       setCurrentUser(null);
@@ -152,23 +195,24 @@ export default function ContractsDashboardPage() {
   const handleDeleteContract = async (contractId: string, title: string) => {
     vibrateDevice(25);
     const ok = window.confirm(
-      `'${title}' 계약서를 내 보관함에서 삭제하시겠습니까?\n(삭제하면 내 보관함 목록에서 영구히 제외됩니다)`
+      `'${title}' 계약서를 내 보관함에서 삭제하시겠습니까?\n(삭제하면 내 보관함 목록에서 제외됩니다)`
     );
     if (!ok) return;
 
     try {
       removeContractFromLocal(contractId);
-      await fetch("/api/contracts/my", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "delete",
-          contractId,
-          userId: currentUser?.id || "",
-        }),
-      });
+      if (currentUser) {
+        await fetch("/api/contracts/my", {
+          method: "POST",
+          headers: getContractAuthHeaders({ "Content-Type": "application/json" }),
+          body: JSON.stringify({
+            action: "delete",
+            contractId,
+          }),
+        });
+      }
       setContracts((prev) => prev.filter((c) => c.id !== contractId));
-      showAppToast("계약서가 보관함에서 삭제되었습니다.");
+      showAppToast("계약서가 내 보관함에서 삭제되었습니다.");
     } catch (err) {
       alert("삭제 중 오류가 발생했습니다.");
     }

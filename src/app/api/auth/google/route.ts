@@ -1,31 +1,33 @@
 import { NextResponse, NextRequest } from "next/server";
+import {
+  createSignedOAuthState,
+  getSafeBaseOrigin,
+  sanitizeReturnToPath,
+} from "@/lib/sessionAuth";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const source = searchParams.get("source") || "";
+  const returnTo = sanitizeReturnToPath(searchParams.get("returnTo"));
+  const baseOrigin = getSafeBaseOrigin(request);
 
-  const clientId =
-    process.env.GOOGLE_CLIENT_ID ||
-    "370947680580-jhif5cev0i9h7fd6do2gijcev3tsjfm3.apps.googleusercontent.com";
-  const host = request.headers.get("host") || "www.maumdata.com";
-  const protocol = request.headers.get("x-forwarded-proto") || "https";
-  const redirectUri = `${protocol}://${host}/api/auth/google/callback`;
+  const clientId = (process.env.GOOGLE_CLIENT_ID || "").trim();
+  const redirectUri = `${baseOrigin}/api/auth/google/callback`;
 
   if (!clientId) {
-    return NextResponse.redirect(`${protocol}://${host}/contracts?auth_notice=google_not_configured`);
+    return NextResponse.redirect(`${baseOrigin}/contracts?auth_error=google_not_configured`);
   }
 
-  const stateParam =
-    source === "app" || source === "ios"
-      ? `&state=${encodeURIComponent(source)}`
-      : "";
+  const signedState = createSignedOAuthState({ source, returnTo });
   const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(
     clientId
   )}&redirect_uri=${encodeURIComponent(
     redirectUri
-  )}&response_type=code&scope=${encodeURIComponent("openid email profile")}${stateParam}`;
+  )}&response_type=code&scope=${encodeURIComponent(
+    "openid email profile"
+  )}&state=${encodeURIComponent(signedState)}`;
 
   return NextResponse.redirect(googleAuthUrl);
 }

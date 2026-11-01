@@ -1,10 +1,27 @@
 import React from "react";
+import { Metadata } from "next";
 import AdBanner from "@/components/AdBanner";
 import StatsRelatedNav from "@/components/StatsRelatedNav";
 import InsightsTabsClient from "@/components/InsightsTabsClient";
 import { getRealPortalStats } from "@/lib/statApi";
 
 export const revalidate = 600;
+
+export const metadata: Metadata = {
+  title: "대한민국 기업 실데이터 인사이트 | 마음데이타",
+  description:
+    "국세청 계속사업자 납세상태, 국민연금 가입 임직원 및 월별 채용 추이, 금융감독원 DART 결산 재무·전자공시 실데이터를 집계한 기업 빅데이터 인사이트 리포트입니다.",
+  alternates: {
+    canonical: "/insights",
+  },
+  openGraph: {
+    title: "대한민국 기업 실데이터 인사이트 | 마음데이타",
+    description:
+      "국세청 계속사업자 납세상태, 국민연금 가입 임직원 및 월별 채용 추이, 금융감독원 DART 결산 재무·전자공시 실데이터를 집계한 기업 빅데이터 인사이트 리포트입니다.",
+    url: "https://www.maumdata.com/insights",
+    type: "website",
+  },
+};
 
 export default async function InsightsPage() {
   const stats = await getRealPortalStats();

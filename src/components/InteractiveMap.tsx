@@ -20,6 +20,34 @@ interface InteractiveMapProps {
   onMarkerClick?: (marker: MapMarker) => void;
 }
 
+function escapeHtml(raw: unknown): string {
+  return String(raw ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function sanitizeMapLink(rawUrl?: string): string {
+  if (!rawUrl || typeof rawUrl !== "string") return "";
+  const trimmed = rawUrl.trim();
+  if (!trimmed) return "";
+  // 안전한 내부 상대 경로 허용 ("//evil.com" 프로토콜 상대 URL 차단)
+  if (trimmed.startsWith("/") && !trimmed.startsWith("//")) {
+    return trimmed;
+  }
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+      return parsed.toString();
+    }
+  } catch {
+    return "";
+  }
+  return "";
+}
+
 export default function InteractiveMap({
   markers,
   centerLat,
@@ -33,19 +61,25 @@ export default function InteractiveMap({
   const ptrUnlockRef = useRef<(() => void) | null>(null);
   const [leafletLoaded, setLeafletLoaded] = useState(false);
 
-  // 컴포넌트 언마운트 시 당겨서 새로고침 잠금 안전 해제
+  // 컴포넌트 언마운트 시 당겨서 새로고침 잠금 및 Leaflet 인스턴스 안전 해제
   useEffect(() => {
     return () => {
       if (ptrUnlockRef.current) {
         ptrUnlockRef.current();
         ptrUnlockRef.current = null;
       }
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+      markersGroupRef.current = null;
     };
   }, []);
 
   // Load Leaflet Script & CSS
   useEffect(() => {
     if (typeof window === "undefined") return;
+    let pollInterval: ReturnType<typeof setInterval> | null = null;
 
     const loadLeaflet = () => {
       // 1. CSS Load
@@ -69,16 +103,24 @@ export default function InteractiveMap({
       } else if ((window as any).L) {
         setLeafletLoaded(true);
       } else {
-        const interval = setInterval(() => {
+        pollInterval = setInterval(() => {
           if ((window as any).L) {
             setLeafletLoaded(true);
-            clearInterval(interval);
+            if (pollInterval) {
+              clearInterval(pollInterval);
+              pollInterval = null;
+            }
           }
         }, 100);
       }
     };
 
     loadLeaflet();
+    return () => {
+      if (pollInterval) {
+        clearInterval(pollInterval);
+      }
+    };
   }, []);
 
   // Map Initialization
@@ -148,6 +190,11 @@ export default function InteractiveMap({
 
       const marker = L.marker([m.lat, m.lng], { icon: customIcon }).addTo(markersGroup);
 
+      const safeTitle = escapeHtml(m.title);
+      const safeCategory = escapeHtml(m.category);
+      const safeAddress = escapeHtml(m.address);
+      const safeLink = sanitizeMapLink(m.link);
+
       const popupContent = `
         <div style="
           font-family: 'Inter', -apple-system, sans-serif;
@@ -158,7 +205,7 @@ export default function InteractiveMap({
           color: var(--color-text-main);
         ">
           <div style="font-size: 14px; font-weight: 800; color: var(--color-text-main); margin-bottom: 4px; line-height: 1.3;">
-            ${m.title}
+            ${safeTitle}
           </div>
           <div style="
             display: inline-block;
@@ -170,14 +217,14 @@ export default function InteractiveMap({
             border-radius: 6px;
             margin-bottom: 8px;
           ">
-            ${m.category}
+            ${safeCategory}
           </div>
           <div style="font-size: 11px; color: var(--color-text-sub); line-height: 1.4; margin-bottom: 8px;">
-            ${m.address}
+            ${safeAddress}
           </div>
           ${
-            m.link
-              ? `<a href="${m.link}" style="
+            safeLink
+              ? `<a href="${escapeHtml(safeLink)}" style="
                   display: block;
                   text-align: center;
                   background-color: var(--color-primary-light);
@@ -188,7 +235,7 @@ export default function InteractiveMap({
                   border-radius: 8px;
                   text-decoration: none;
                   transition: background-color 0.2s;
-                " onmouseover="this.style.filter='brightness(0.9)'" onmouseout="this.style.filter='none'">
+                ">
                   상권 리포트 보기
                 </a>`
               : ""
@@ -279,7 +326,7 @@ export default function InteractiveMap({
         }}
       />
       
-      <style jsx global>{`
+      <style>{`
         .custom-leaflet-popup .leaflet-popup-content-wrapper {
           background-color: var(--bg-color-card) !important;
           color: var(--color-text-main) !important;
@@ -294,7 +341,7 @@ export default function InteractiveMap({
         .custom-leaflet-popup .leaflet-popup-tip {
           background-color: var(--bg-color-card) !important;
           border-left: 1px solid var(--color-border);
-          border-down: 1px solid var(--color-border);
+          border-bottom: 1px solid var(--color-border);
         }
       `}</style>
     </div>

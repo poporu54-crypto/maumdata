@@ -22,30 +22,29 @@ export function SalarySection({ business }: { business: BusinessData }) {
 
   const emps = business.npsSbscrbNmps;
   const chrgAmt = business.npsChrgAmt; // 당월 고지 보험료 총액
-  const avgPremium = chrgAmt / emps;
+  const perPersonChrg = chrgAmt / emps;
   
   // 국민연금 보험료율 9% (근로자 4.5% + 회사 4.5% = 총 9% 고지)
-  let avgMonthlySalary = avgPremium / 0.09;
-  let isMaxed = false;
+  let avgMonthlySalary = perPersonChrg / 0.09;
+  let isCapped = false;
   let isMinified = false;
 
-  // 국민연금 기준 상/하한액 보정
-  if (avgPremium >= 555300) {
-    isMaxed = true;
+  // 국민연금 기준 상/하한액 보정 (월 기준소득월액 상한 617만원)
+  if (avgMonthlySalary >= 6170000) {
+    isCapped = true;
     avgMonthlySalary = 6170000;
-  } else if (avgPremium <= 33300) {
+  } else if (avgMonthlySalary <= 370000) {
     isMinified = true;
     avgMonthlySalary = 370000;
   }
 
   const avgYearlySalary = Math.round((avgMonthlySalary * 12) / 10000); // 만원 단위
-  const formattedSalary = isMaxed 
+  const formattedSalary = isCapped 
     ? "7,400만원 이상 (국민연금 상한액 도달)" 
     : isMinified 
       ? "2,400만원 미만 (최저임금 수준)" 
       : `${avgYearlySalary.toLocaleString()}만원`;
 
-  const hires = business.newAcqsNmps || 0;
   const exits = business.lossSbscrbNmps || 0;
   const exitRate = ((exits / emps) * 100).toFixed(1);
 
@@ -81,7 +80,7 @@ export function SalarySection({ business }: { business: BusinessData }) {
             </span>
           </div>
           <span style={{ fontSize: "0.75rem", color: "var(--color-text-desc)", lineHeight: 1.4 }}>
-            * 당월 국민연금 고지총액({(chrgAmt/10000).toLocaleString()}만원)과 상시 가입자수({emps}명)의 9% 요율 역산 추정치입니다.
+            * 당월 국민연금 고지총액({Math.round(chrgAmt / 10000).toLocaleString()}만원)과 상시 가입자수({emps}명)의 9% 요율 역산 추정치입니다.
           </span>
         </div>
 
@@ -97,11 +96,11 @@ export function SalarySection({ business }: { business: BusinessData }) {
         }}>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem", color: "var(--color-text-sub)" }}>
             <span>상시 근로자수</span>
-            <span style={{ fontWeight: 700, color: "var(--color-text-main)" }}>{emps}명</span>
+            <span style={{ fontWeight: 700, color: "var(--color-text-main)" }}>{emps.toLocaleString()}명</span>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem", color: "var(--color-text-sub)" }}>
-            <span>월평균 고지 보험료</span>
-            <span style={{ fontWeight: 700, color: "var(--color-text-main)" }}>{(avgPremium/1000).toLocaleString()}천원</span>
+            <span>1인당 월평균 고지 보험료</span>
+            <span style={{ fontWeight: 700, color: "var(--color-text-main)" }}>{Math.round(perPersonChrg).toLocaleString()}원</span>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem", color: "var(--color-text-sub)" }}>
             <span>HR 안정성 등급</span>
@@ -200,7 +199,7 @@ export async function IndustrySection({ bSector, bNo }: { bSector: string; bNo: 
                 <div style={{
                   width: "100%",
                   height: "10px",
-                  backgroundColor: "rgba(255, 255, 255, 0.06)",
+                  backgroundColor: "var(--color-border)",
                   borderRadius: "5px",
                   overflow: "hidden"
                 }}>
@@ -341,39 +340,51 @@ export async function IndustrySection({ bSector, bNo }: { bSector: string; bNo: 
 // 3. 차트 1 (매출액/영업이익 추이) 렌더링 헬퍼 컴포넌트
 function DualChart({ history }: { history: BusinessData["history"] }) {
   if (!history || history.length === 0) return null;
-  const width = 320;
+  const chartWidth = 320;
   const height = 130;
   const padding = 25;
-  
-  const maxVal = Math.max(...history.map(d => d.revenue)) * 1.15;
-  const minVal = Math.min(...history.map(d => Math.min(d.revenue, d.operatingIncome))) * 0.85;
-  const valRange = maxVal === minVal ? 10 : (maxVal - minVal);
+
+  const revenues = history.map((d) => d.revenue);
+  const incomes = history.map((d) => d.operatingIncome);
+  const rawMax = Math.max(...revenues, ...incomes, 0);
+  const maxVal = rawMax > 0 ? rawMax * 1.15 : 10;
+  const minVal = Math.min(...revenues, ...incomes, 0) * 1.15;
+  const valRange = maxVal === minVal ? 10 : maxVal - minVal;
+
+  const getX = (index: number) =>
+    history.length === 1
+      ? chartWidth / 2
+      : padding + (index * (chartWidth - 2 * padding)) / (history.length - 1);
 
   const revenuePoints = history.map((d, index) => {
-    const x = padding + (index * (width - 2 * padding)) / (history.length - 1);
+    const x = getX(index);
     const y = height - padding - ((d.revenue - minVal) / valRange) * (height - 2 * padding);
     return { x, y, val: d.revenue, year: d.year };
   });
 
   const incomePoints = history.map((d, index) => {
-    const x = padding + (index * (width - 2 * padding)) / (history.length - 1);
+    const x = getX(index);
     const y = height - padding - ((d.operatingIncome - minVal) / valRange) * (height - 2 * padding);
     return { x, y, val: d.operatingIncome };
   });
 
-  const revenueLine = revenuePoints.map(p => `${p.x},${p.y}`).join(" ");
-  const incomeLine = incomePoints.map(p => `${p.x},${p.y}`).join(" ");
+  const revenueLine = revenuePoints.map((p) => `${p.x},${p.y}`).join(" ");
+  const incomeLine = incomePoints.map((p) => `${p.x},${p.y}`).join(" ");
 
   return (
-    <svg width="100%" height="100%" viewBox={`0 0 ${width} ${height}`} style={{ overflow: "visible" }}>
-      <line x1={padding} y1={padding} x2={width - padding} y2={padding} stroke="var(--color-border)" strokeWidth="0.5" strokeDasharray="2 2" />
-      <line x1={padding} y1={height/2} x2={width - padding} y2={height/2} stroke="var(--color-border)" strokeWidth="0.5" strokeDasharray="2 2" />
-      <line x1={padding} y1={height - padding} x2={width - padding} y2={height - padding} stroke="var(--color-border)" strokeWidth="1" />
+    <svg width="100%" height="100%" viewBox={`0 0 ${chartWidth} ${height}`} style={{ overflow: "visible" }}>
+      <line x1={padding} y1={padding} x2={chartWidth - padding} y2={padding} stroke="var(--color-border)" strokeWidth="0.5" strokeDasharray="2 2" />
+      <line x1={padding} y1={height / 2} x2={chartWidth - padding} y2={height / 2} stroke="var(--color-border)" strokeWidth="0.5" strokeDasharray="2 2" />
+      <line x1={padding} y1={height - padding} x2={chartWidth - padding} y2={height - padding} stroke="var(--color-border)" strokeWidth="1" />
 
       {/* 매출액 선 (Blue) */}
-      <polyline fill="none" stroke="var(--color-primary)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" points={revenueLine} />
+      {history.length > 1 && (
+        <polyline fill="none" stroke="var(--color-primary)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" points={revenueLine} />
+      )}
       {/* 영업이익 선 (Purple) */}
-      <polyline fill="none" stroke="#a855f7" strokeWidth="2" strokeDasharray="3 3" strokeLinecap="round" strokeLinejoin="round" points={incomeLine} />
+      {history.length > 1 && (
+        <polyline fill="none" stroke="#a855f7" strokeWidth="2" strokeDasharray="3 3" strokeLinecap="round" strokeLinejoin="round" points={incomeLine} />
+      )}
 
       {/* 매출액 포인트 */}
       {revenuePoints.map((p, i) => (
@@ -404,13 +415,20 @@ export function InsightSection({ business }: { business: BusinessData }) {
     ? business.history[business.history.length - 1]
     : null;
     
+  const isCapitalImpaired = Boolean(latestFinance && latestFinance.totalEquity <= 0);
   const debtRatio = latestFinance && latestFinance.totalEquity > 0
     ? Math.round((latestFinance.totalLiabilities / latestFinance.totalEquity) * 100)
-    : 0;
+    : null;
     
+  const operatingMarginNum = latestFinance && latestFinance.revenue > 0
+    ? (latestFinance.operatingIncome / latestFinance.revenue) * 100
+    : 0;
   const operatingMargin = latestFinance && latestFinance.revenue > 0
-    ? ((latestFinance.operatingIncome / latestFinance.revenue) * 100).toFixed(1)
+    ? operatingMarginNum.toFixed(1)
     : "0.0";
+  const isOperatingLoss = Boolean(
+    latestFinance && (latestFinance.operatingIncome < 0 || operatingMarginNum < 0)
+  );
 
   return (
     <div className="card" style={{ padding: "32px" }}>
@@ -545,7 +563,7 @@ export function InsightSection({ business }: { business: BusinessData }) {
                           {alertBadge}
                         </span>
                         <div style={{ textAlign: "right" }}>
-                          <span style={{ fontSize: "0.78rem", color: "#a0aec0", fontWeight: 700, marginRight: "6px" }}>성장 안정도</span>
+                          <span style={{ fontSize: "0.78rem", color: "var(--color-text-sub)", fontWeight: 700, marginRight: "6px" }}>성장 안정도</span>
                           <span style={{ fontSize: "1.2rem", fontWeight: 800, color: alertColor }}>
                             {stabilityScore}점
                           </span>
@@ -553,19 +571,19 @@ export function InsightSection({ business }: { business: BusinessData }) {
                       </div>
 
                       <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", color: "#a0aec0", fontWeight: 700 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", color: "var(--color-text-sub)", fontWeight: 700 }}>
                           <span>당월 입사율: {hireRate}% (+{hires}명)</span>
                           <span>당월 퇴사율: {exitRate}% (-{exits}명)</span>
                         </div>
                         
-                        <div style={{ display: "flex", height: "8px", borderRadius: "4px", overflow: "hidden", backgroundColor: "rgba(255, 255, 255, 0.08)" }}>
+                        <div style={{ display: "flex", height: "8px", borderRadius: "4px", overflow: "hidden", backgroundColor: "var(--color-border)" }}>
                           <div style={{ width: `${Math.min(100, hireRate * 2)}%`, backgroundColor: "#3182f6", boxShadow: "0 0 8px #3182f6aa" }} />
                           <div style={{ flex: 1, backgroundColor: "transparent" }} />
                           <div style={{ width: `${Math.min(100, exitRate * 2)}%`, backgroundColor: "#ef4444", boxShadow: "0 0 8px #ef4444aa" }} />
                         </div>
                       </div>
 
-                      <div style={{ fontSize: "0.78rem", color: "#718096", lineHeight: 1.4, textAlign: "center" }}>
+                      <div style={{ fontSize: "0.78rem", color: "var(--color-text-desc)", lineHeight: 1.4, textAlign: "center" }}>
                         전체 가입 상시 근로자 <strong>{emps.toLocaleString()}명</strong> 기준 당월 유출입 추이 분석
                       </div>
                     </div>
@@ -622,8 +640,16 @@ export function InsightSection({ business }: { business: BusinessData }) {
               <div style={{ fontSize: "0.85rem", color: "var(--color-text-desc)", fontWeight: 700, marginBottom: "4px" }}>
                 부채비율 (건전성)
               </div>
-              <div style={{ fontSize: "1.6rem", fontWeight: 800, color: debtRatio > 150 ? "var(--color-danger)" : "var(--color-success)" }}>
-                {debtRatio}%
+              <div style={{
+                fontSize: isCapitalImpaired ? "1.35rem" : "1.6rem",
+                fontWeight: 800,
+                color: isCapitalImpaired
+                  ? "var(--color-danger)"
+                  : debtRatio !== null && debtRatio > 150
+                    ? "var(--color-danger)"
+                    : "var(--color-success)"
+              }}>
+                {isCapitalImpaired ? "완전자본잠식" : debtRatio !== null ? `${debtRatio}%` : "-"}
               </div>
             </div>
 
@@ -637,7 +663,11 @@ export function InsightSection({ business }: { business: BusinessData }) {
               <div style={{ fontSize: "0.85rem", color: "var(--color-text-desc)", fontWeight: 700, marginBottom: "4px" }}>
                 최근 영업이익률
               </div>
-              <div style={{ fontSize: "1.6rem", fontWeight: 800, color: "var(--color-primary)" }}>
+              <div style={{
+                fontSize: "1.6rem",
+                fontWeight: 800,
+                color: isOperatingLoss ? "var(--color-danger)" : "var(--color-primary)"
+              }}>
                 {operatingMargin}%
               </div>
             </div>
@@ -683,15 +713,15 @@ export function InsightSection({ business }: { business: BusinessData }) {
                   display: "grid",
                   gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
                   gap: "24px",
-                  background: "linear-gradient(135deg, rgba(26, 32, 44, 0.6) 0%, rgba(17, 20, 28, 0.8) 100%)",
-                  border: "1px solid rgba(255, 255, 255, 0.06)",
+                  backgroundColor: "var(--bg-color-main)",
+                  border: "1px solid var(--color-border)",
                   borderRadius: "16px",
                   padding: "24px",
-                  boxShadow: "0 8px 25px rgba(0,0,0,0.25)"
+                  boxShadow: "var(--shadow-sm)"
                 }}>
                   <div style={{ display: "flex", flexDirection: "column", gap: "10px", justifyContent: "center" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <span style={{ fontSize: "0.85rem", color: "#a0aec0", fontWeight: 700 }}>실시간 국민연금 고용 지표</span>
+                      <span style={{ fontSize: "0.85rem", color: "var(--color-text-sub)", fontWeight: 700 }}>실시간 국민연금 고용 지표</span>
                       <span style={{
                         backgroundColor: alertBg,
                         color: alertColor,
@@ -706,29 +736,29 @@ export function InsightSection({ business }: { business: BusinessData }) {
                     </div>
                     <div style={{ display: "flex", gap: "20px", marginTop: "8px", alignItems: "baseline" }}>
                       <div>
-                        <span style={{ fontSize: "2.1rem", fontWeight: 900, color: "#f7fafc" }}>
+                        <span style={{ fontSize: "2.1rem", fontWeight: 900, color: "var(--color-text-main)" }}>
                           {emps.toLocaleString()}
                         </span>
-                        <span style={{ fontSize: "0.85rem", color: "#718096", fontWeight: 700, marginLeft: "4px" }}>명</span>
+                        <span style={{ fontSize: "0.85rem", color: "var(--color-text-desc)", fontWeight: 700, marginLeft: "4px" }}>명</span>
                       </div>
-                      <div style={{ fontSize: "0.8rem", color: "#a0aec0", fontWeight: 600 }}>
+                      <div style={{ fontSize: "0.8rem", color: "var(--color-text-sub)", fontWeight: 600 }}>
                         당월 입사 <span style={{ color: "#3182f6", fontWeight: 700 }}>+{hires}명</span> | 퇴사 <span style={{ color: "#ef4444", fontWeight: 700 }}>-{exits}명</span>
                       </div>
                     </div>
                   </div>
 
-                  <div style={{ display: "flex", flexDirection: "column", gap: "10px", borderLeft: "1px solid rgba(255,255,255,0.06)", paddingLeft: "20px" }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "10px", borderLeft: "1px solid var(--color-border)", paddingLeft: "20px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                      <span style={{ fontSize: "0.85rem", color: "#a0aec0", fontWeight: 700 }}>고용 성장 안정도</span>
+                      <span style={{ fontSize: "0.85rem", color: "var(--color-text-sub)", fontWeight: 700 }}>고용 성장 안정도</span>
                       <span style={{ fontSize: "1.4rem", fontWeight: 900, color: alertColor }}>{stabilityScore} 점</span>
                     </div>
 
                     <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginTop: "4px" }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem", color: "#718096" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem", color: "var(--color-text-desc)" }}>
                         <span>입사율: {hireRate}%</span>
                         <span>퇴사율: {exitRate}%</span>
                       </div>
-                      <div style={{ display: "flex", height: "6px", borderRadius: "3px", overflow: "hidden", backgroundColor: "rgba(255,255,255,0.08)" }}>
+                      <div style={{ display: "flex", height: "6px", borderRadius: "3px", overflow: "hidden", backgroundColor: "var(--color-border)" }}>
                         <div style={{ width: `${Math.min(100, hireRate * 2)}%`, backgroundColor: "#3182f6" }} />
                         <div style={{ flex: 1, backgroundColor: "transparent" }} />
                         <div style={{ width: `${Math.min(100, exitRate * 2)}%`, backgroundColor: "#ef4444" }} />
@@ -819,7 +849,7 @@ export function FinancialTableSection({ business }: { business: BusinessData }) 
                 <tr style={{ borderBottom: "1px solid var(--color-border)" }}>
                   <td style={{ padding: "12px 16px", textAlign: "left", color: "var(--color-text-sub)" }}>자본 총계</td>
                   {business.history.map((h, i) => (
-                    <td key={i} style={{ padding: "12px 16px", color: "var(--color-text-sub)" }}>{formatMoney(h.totalEquity)}</td>
+                    <td key={i} style={{ padding: "12px 16px", color: h.totalEquity <= 0 ? "var(--color-danger)" : "var(--color-text-sub)", fontWeight: h.totalEquity <= 0 ? 600 : 400 }}>{formatMoney(h.totalEquity)}</td>
                   ))}
                 </tr>
                 <tr style={{ borderBottom: "1px solid var(--color-border)", backgroundColor: "rgba(49, 130, 246, 0.02)" }}>

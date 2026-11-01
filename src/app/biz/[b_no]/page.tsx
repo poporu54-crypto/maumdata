@@ -147,7 +147,10 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
   const latestFinance = business?.history && business.history.length > 0
     ? business.history[business.history.length - 1]
     : null;
-  const latestEmployees = latestFinance?.employees || 0;
+  const latestEmployees =
+    latestFinance?.employees && latestFinance.employees > 0
+      ? latestFinance.employees
+      : (business?.npsSbscrbNmps || 0);
 
   const cleanFoundingDt = business?.start_dt ? business.start_dt.replace(/[^0-9]/g, "") : "";
   const formattedFoundingDt =
@@ -181,7 +184,7 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
       {jsonLd && (
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
         />
       )}
 
@@ -827,6 +830,7 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                     <TimelineSection
                       timeline={timelineData}
                       bNo={cleanBNo}
+                      currentBusinessName={business?.b_nm || ""}
                       brandName={business?.brand_name || ""}
                       homepage={business?.homepage || ""}
                       description={business?.description || ""}

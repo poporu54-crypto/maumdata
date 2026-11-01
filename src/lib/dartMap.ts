@@ -93,15 +93,19 @@ export async function updateDartCodesCache(): Promise<void> {
     }
 
     const cacheData: DartMapData = { byName, byStock };
-    
-    // src/data 디렉토리 생성 보장
-    const dirPath = path.dirname(CACHE_FILE_PATH);
-    if (!fs.existsSync(dirPath)) {
-      fs.mkdirSync(dirPath, { recursive: true });
+    // 읽기 전용 서버리스(Vercel 등) 파일시스템에서도 즉시 동작하도록 인메모리 캐시 최우선 할당
+    global.__maumdataDartMapCache = cacheData;
+
+    try {
+      const dirPath = path.dirname(CACHE_FILE_PATH);
+      if (!fs.existsSync(dirPath)) {
+        fs.mkdirSync(dirPath, { recursive: true });
+      }
+      await fs.promises.writeFile(CACHE_FILE_PATH, JSON.stringify(cacheData), "utf-8");
+    } catch (fsErr) {
+      console.warn("[DART Map] Disk cache write skipped (read-only environment):", fsErr);
     }
 
-    await fs.promises.writeFile(CACHE_FILE_PATH, JSON.stringify(cacheData), "utf-8");
-    global.__maumdataDartMapCache = cacheData;
     console.log(`[DART Map] Cache successfully updated. Parsed ${count} companies.`);
   } catch (error) {
     console.error("[DART Map] Failed to update DART codes cache:", error);

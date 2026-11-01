@@ -1,19 +1,64 @@
 import { NextResponse, NextRequest } from "next/server";
-import { getContractBySignToken, completePartyBSignature, bindUserToContract } from "@/lib/db";
+import {
+  getContractBySignToken,
+  completePartyBSignature,
+  bindUserToContract,
+  getTemplateByIdFromDB,
+} from "@/lib/db";
+import { getTemplateById } from "@/app/form/templatesData";
 import { uploadContractSnapshotToR2 } from "@/lib/r2";
+import {
+  checkRateLimit,
+  getAuthenticatedContractUser,
+  getClientIp,
+  safeStringEqual,
+  SessionUserPayload,
+} from "@/lib/sessionAuth";
 
 export const dynamic = "force-dynamic";
 
+function isValidSignatureImage(val: unknown): val is string {
+  if (typeof val !== "string" || val.length < 32 || val.length > 700_000) {
+    return false;
+  }
+  return /^data:image\/(png|jpeg|jpg|webp);base64,[A-Za-z0-9+/=\s]+$/.test(val);
+}
+
+function isUserVerifiedParty(contract: any, authUser: SessionUserPayload | null): boolean {
+  if (!authUser) return false;
+  if (contract.party_a_user_id && contract.party_a_user_id === authUser.id) return true;
+  if (contract.party_b_user_id && contract.party_b_user_id === authUser.id) return true;
+
+  const parsedForm =
+    typeof contract.form_data === "string"
+      ? (() => {
+          try {
+            return JSON.parse(contract.form_data);
+          } catch {
+            return {};
+          }
+        })()
+      : contract.form_data || {};
+
+  const emailLower = authUser.email.toLowerCase();
+  if (parsedForm.partyAEmail && String(parsedForm.partyAEmail).toLowerCase() === emailLower) {
+    return true;
+  }
+  if (parsedForm.partyBEmail && String(parsedForm.partyBEmail).toLowerCase() === emailLower) {
+    return true;
+  }
+  return false;
+}
+
 export async function GET(
   request: NextRequest,
-  { params }: { params: any }
+  { params }: { params: Promise<{ token: string }> }
 ) {
   try {
     const resolvedParams = await params;
     const token = resolvedParams.token;
     const { searchParams } = new URL(request.url);
-    const inputPin = searchParams.get("pin") || "";
-    const bypassOwnerId = searchParams.get("userId") || "";
+    const inputPin = (searchParams.get("pin") || "").trim();
 
     if (!token) {
       return NextResponse.json({ error: "유효하지 않은 토큰입니다." }, { status: 400 });
@@ -25,37 +70,85 @@ export async function GET(
     }
 
     const storedPin = (contract.access_pin || "").trim();
-    const isPartyAOrB =
-      bypassOwnerId &&
-      (contract.party_a_user_id === bypassOwnerId || contract.party_b_user_id === bypassOwnerId);
+    const authUser = getAuthenticatedContractUser(request);
+    const verifiedParty = isUserVerifiedParty(contract, authUser);
 
-    // 계약 진행 중(WAITING_PARTY_B)에 임시 비밀번호가 설정되어 있고, 아직 인증되지 않은 경우
-    if (
-      contract.status !== "COMPLETED" &&
-      storedPin.length > 0 &&
-      !isPartyAOrB &&
-      inputPin.trim() !== storedPin
-    ) {
-      return NextResponse.json({
-        success: true,
-        requiresPin: true,
-        pinError: inputPin.trim().length > 0 ? "임시 비밀번호가 일치하지 않습니다." : undefined,
-        contract: {
-          id: contract.id,
-          title: contract.title,
-          status: contract.status,
-          partyAName: contract.party_a_name,
-          partyACompany: contract.party_a_company,
-          partyBName: contract.party_b_name,
-          partyBCompany: contract.party_b_company,
-          createdAt: contract.created_at,
-        },
-      });
+    if (storedPin.length > 0 && !verifiedParty) {
+      if (inputPin.length === 0) {
+        return NextResponse.json({
+          success: true,
+          requiresPin: true,
+          contract: {
+            id: contract.id,
+            title: contract.title,
+            status: contract.status,
+            partyAName: contract.party_a_name,
+            partyACompany: contract.party_a_company,
+            partyBName: contract.party_b_name,
+            partyBCompany: contract.party_b_company,
+            createdAt: contract.created_at,
+          },
+        });
+      }
+
+      const ip = getClientIp(request);
+      const pinRate = checkRateLimit(`pin_verify:${token}:${ip}`, 10, 300_000);
+      if (!pinRate.allowed) {
+        return NextResponse.json({
+          success: true,
+          requiresPin: true,
+          pinError: `비밀번호 입력 횟수를 초과했습니다. ${pinRate.retryAfterSec}초 후 다시 시도해 주세요.`,
+          contract: {
+            id: contract.id,
+            title: contract.title,
+            status: contract.status,
+            partyAName: contract.party_a_name,
+            partyACompany: contract.party_a_company,
+            partyBName: contract.party_b_name,
+            partyBCompany: contract.party_b_company,
+            createdAt: contract.created_at,
+          },
+        });
+      }
+
+      if (!safeStringEqual(inputPin, storedPin)) {
+        return NextResponse.json({
+          success: true,
+          requiresPin: true,
+          pinError: "임시 비밀번호가 일치하지 않습니다.",
+          contract: {
+            id: contract.id,
+            title: contract.title,
+            status: contract.status,
+            partyAName: contract.party_a_name,
+            partyACompany: contract.party_a_company,
+            partyBName: contract.party_b_name,
+            partyBCompany: contract.party_b_company,
+            createdAt: contract.created_at,
+          },
+        });
+      }
     }
+
+    // 계약 서식의 조항 레이아웃 및 한글 필드 스키마 함께 로드
+    const rawTemplate =
+      getTemplateById(contract.template_id) ||
+      (await getTemplateByIdFromDB(contract.template_id));
+
+    const templateMeta = rawTemplate
+      ? {
+          id: rawTemplate.id,
+          title: rawTemplate.title,
+          category: rawTemplate.category,
+          fields: Array.isArray(rawTemplate.fields) ? rawTemplate.fields : [],
+          layout: (rawTemplate as any).layout || null,
+        }
+      : null;
 
     return NextResponse.json({
       success: true,
       requiresPin: false,
+      template: templateMeta,
       contract: {
         id: contract.id,
         templateId: contract.template_id,
@@ -81,44 +174,94 @@ export async function GET(
         createdAt: contract.created_at,
       },
     });
-  } catch (err: any) {
+  } catch (err) {
     console.error("Failed to get contract:", err);
-    return NextResponse.json({ error: "계약서 조회 실패: " + err.message }, { status: 500 });
+    return NextResponse.json(
+      { error: "계약서 조회 중 일시적인 오류가 발생했습니다." },
+      { status: 500 }
+    );
   }
 }
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: any }
+  { params }: { params: Promise<{ token: string }> }
 ) {
   try {
     const resolvedParams = await params;
     const token = resolvedParams.token;
-    const body = await request.json();
-    const { signatureImage, signerName, partyBUserId, action } = body;
+    const body = await request.json().catch(() => ({}));
+    const { signatureImage, signerName, action, pin } = body || {};
 
-    // 보관함 영구 등록 전용 액션 (을이 로그인 후 내 보관함에 묶기)
-    if (action === "bind_user" && partyBUserId) {
-      await bindUserToContract(token, partyBUserId, "B");
-      return NextResponse.json({ success: true });
+    if (!token) {
+      return NextResponse.json({ error: "유효하지 않은 토큰입니다." }, { status: 400 });
     }
-
-    if (!token || !signatureImage) {
-      return NextResponse.json(
-        { error: "서명 데이터가 누락되었습니다." },
-        { status: 400 }
-      );
-    }
-
-    const forwardedFor = request.headers.get("x-forwarded-for");
-    const clientIp = forwardedFor ? forwardedFor.split(",")[0].trim() : "127.0.0.1";
 
     const existing = await getContractBySignToken(token);
     if (!existing) {
       return NextResponse.json({ error: "계약서를 찾을 수 없습니다." }, { status: 404 });
     }
 
-    // Cloudflare R2에 체결 완료 최종본 스냅샷 영구 보관
+    const storedPin = (existing.access_pin || "").trim();
+    const authUser = getAuthenticatedContractUser(request);
+    const verifiedParty = isUserVerifiedParty(existing, authUser);
+    const inputPin = typeof pin === "string" ? pin.trim() : "";
+
+    if (storedPin.length > 0 && !verifiedParty) {
+      const ip = getClientIp(request);
+      const pinRate = checkRateLimit(`pin_post:${token}:${ip}`, 10, 300_000);
+      if (!pinRate.allowed) {
+        return NextResponse.json(
+          { error: `비밀번호 인증 시도가 너무 많습니다. ${pinRate.retryAfterSec}초 후 시도해 주세요.` },
+          { status: 429 }
+        );
+      }
+      if (!inputPin || !safeStringEqual(inputPin, storedPin)) {
+        return NextResponse.json(
+          { error: "계약서 보호 비밀번호가 일치하지 않습니다." },
+          { status: 403 }
+        );
+      }
+    }
+
+    // 1. 보관함 영구 등록 전용 액션 (서버 검증된 로그인 사용자만 본인 ID로 바인딩 허용)
+    if (action === "bind_user") {
+      if (!authUser) {
+        return NextResponse.json(
+          { error: "보관함 등록을 위해 본인 로그인이 필요합니다." },
+          { status: 401 }
+        );
+      }
+      await bindUserToContract(token, authUser.id, "B");
+      return NextResponse.json({ success: true });
+    }
+
+    // 2. 이미 체결 완료된 계약서 재서명/덮어쓰기 원천 차단
+    if (existing.status === "COMPLETED") {
+      return NextResponse.json(
+        { error: "이미 양측 서명이 완료되어 영구 봉인된 계약서입니다." },
+        { status: 409 }
+      );
+    }
+
+    if (!isValidSignatureImage(signatureImage)) {
+      return NextResponse.json(
+        { error: "유효한 전자서명 이미지가 누락되었거나 형식이 올바르지 않습니다." },
+        { status: 400 }
+      );
+    }
+
+    const clientIp = getClientIp(request);
+    const safeSignerName =
+      typeof signerName === "string" ? signerName.trim().slice(0, 120) : "";
+    const signedAtIso = new Date().toISOString();
+
+    const parsedFormData =
+      typeof existing.form_data === "string"
+        ? JSON.parse(existing.form_data)
+        : existing.form_data;
+
+    // Cloudflare R2에 체결 완료 최종본 불변 스냅샷 영구 보관 (completed.json)
     const r2Key = await uploadContractSnapshotToR2(existing.id, {
       id: existing.id,
       templateId: existing.template_id,
@@ -131,33 +274,30 @@ export async function POST(
       partyASignature: existing.party_a_signature,
       partyASignedAt: existing.party_a_signed_at,
       partyAIp: existing.party_a_ip,
-      partyBName: signerName || existing.party_b_name,
+      partyBName: safeSignerName || existing.party_b_name,
       partyBCompany: existing.party_b_company,
       partyBBno: existing.party_b_bno,
       partyBPhone: existing.party_b_phone,
       partyBSignature: signatureImage,
-      partyBSignedAt: new Date().toISOString(),
+      partyBSignedAt: signedAtIso,
       partyBIp: clientIp,
-      formData:
-        typeof existing.form_data === "string"
-          ? JSON.parse(existing.form_data)
-          : existing.form_data,
-      completedAt: new Date().toISOString(),
+      formData: parsedFormData,
+      completedAt: signedAtIso,
     });
 
     const completed = await completePartyBSignature(
       token,
       signatureImage,
       clientIp,
-      signerName,
-      partyBUserId || "",
+      safeSignerName,
+      authUser?.id || "",
       r2Key || existing.r2_key || ""
     );
 
     if (!completed) {
       return NextResponse.json(
-        { error: "해당 계약을 체결할 수 없습니다." },
-        { status: 404 }
+        { error: "이미 체결되었거나 서명 가능한 상태가 아닙니다." },
+        { status: 409 }
       );
     }
 
@@ -168,10 +308,10 @@ export async function POST(
       signedAt: completed.party_b_signed_at,
       r2Key: completed.r2_key || "",
     });
-  } catch (err: any) {
+  } catch (err) {
     console.error("Failed to complete contract:", err);
     return NextResponse.json(
-      { error: "서명 처리 중 오류가 발생했습니다: " + err.message },
+      { error: "서명 처리 중 일시적인 오류가 발생했습니다." },
       { status: 500 }
     );
   }

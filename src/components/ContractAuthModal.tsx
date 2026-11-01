@@ -7,6 +7,7 @@ import {
   showAppToast,
   startSocialLogin,
   useAppModalBack,
+  isAppEnvironment,
   isIOSAppEnvironment,
 } from "@/lib/appBridge";
 
@@ -14,6 +15,11 @@ interface ContractAuthModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: (user: ContractUser) => void;
+}
+
+function isInAppMessengerWebView(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return /KAKAOTALK|NAVER|Instagram|FBAN|FBAV|Line|DaumApps/i.test(navigator.userAgent);
 }
 
 export default function ContractAuthModal({
@@ -40,7 +46,7 @@ export default function ContractAuthModal({
       return;
     }
     if (password.trim().length < 4) {
-      setErrorMsg("보안 비밀번호를 4자리 이상 입력해 주세요.");
+      setErrorMsg("보안 비밀번호를 입력해 주세요. (신규 생성 시 6자리 이상)");
       return;
     }
 
@@ -80,7 +86,39 @@ export default function ContractAuthModal({
   };
 
   const handleSocialLogin = (provider: "kakao" | "google") => {
-    startSocialLogin(provider);
+    setErrorMsg("");
+
+    if (isAppEnvironment()) {
+      startSocialLogin(provider);
+      return;
+    }
+
+    const currentPath =
+      typeof window !== "undefined"
+        ? `${window.location.pathname}${window.location.search}`
+        : "/contracts";
+
+    // 카카오톡·네이버·인스타그램 인앱 브라우저 내 Google 403 disallowed_useragent 방어
+    if (provider === "google" && isInAppMessengerWebView()) {
+      const ua = navigator.userAgent || "";
+      if (/Android/i.test(ua)) {
+        const target = `${window.location.origin}/api/auth/google?returnTo=${encodeURIComponent(
+          currentPath
+        )}`;
+        const hostAndPath = target.replace(/^https?:\/\//, "");
+        const scheme = target.startsWith("https") ? "https" : "http";
+        window.location.href = `intent://${hostAndPath}#Intent;scheme=${scheme};package=com.android.chrome;S.browser_fallback_url=${encodeURIComponent(
+          target
+        )};end`;
+        return;
+      }
+      setErrorMsg(
+        "카카오톡·인앱 브라우저에서는 Google 보안 정책상 구글 로그인이 차단됩니다. 위의 [카카오로 1초 시작하기] 또는 아래 [이메일 간편 시작]을 이용해 주세요."
+      );
+      return;
+    }
+
+    window.location.href = `/api/auth/${provider}?returnTo=${encodeURIComponent(currentPath)}`;
   };
 
   // Apple App Store 가이드라인 4.8 준수: iOS 네이티브 앱에서는 당사 자체 보안 이메일 인증을 기본 제공
@@ -90,6 +128,7 @@ export default function ContractAuthModal({
     <div
       role="dialog"
       aria-modal="true"
+      aria-label="내 계약 보관함 로그인"
       onClick={onClose}
       style={{
         position: "fixed",
@@ -162,7 +201,7 @@ export default function ContractAuthModal({
           </button>
         </div>
 
-        {/* 소셜 로그인 버튼 (웹·안드로이드 앱 노출 / iOS 앱은 당사 1st-party 전용 보관함 인증 사용) */}
+        {/* 소셜 로그인 버튼 */}
         {!hideThirdPartyOAuthOnIOS && (
           <>
             <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
@@ -250,7 +289,7 @@ export default function ContractAuthModal({
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
             <div>
               <label style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--color-text-main)", display: "block", marginBottom: "4px" }}>
-                비밀번호 (4자리 이상)
+                비밀번호 (신규 6자 이상)
               </label>
               <input
                 type="password"
@@ -292,13 +331,13 @@ export default function ContractAuthModal({
           </div>
 
           {errorMsg && (
-            <div style={{ fontSize: "0.8rem", color: "var(--color-danger)", fontWeight: 600 }}>
+            <div style={{ fontSize: "0.8rem", color: "var(--color-danger)", fontWeight: 600, lineHeight: 1.45 }}>
               ⚠️ {errorMsg}
             </div>
           )}
 
           <div style={{ fontSize: "0.74rem", color: "var(--color-text-desc)", lineHeight: 1.4 }}>
-            🔒 처음 입력하시면 해당 비밀번호로 내 전용 보관함이 자동 생성되며, 이후에는 비밀번호가 일치해야만 열람할 수 있어 타인의 접근이 100% 차단됩니다.
+            🔒 처음 입력하시면 암호화 해싱된 비밀번호로 내 전용 보관함이 생성되며, 서버 서명 세션으로만 본인 계약서를 열람할 수 있습니다.
           </div>
 
           <button

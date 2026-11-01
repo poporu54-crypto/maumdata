@@ -81,21 +81,21 @@ export default function SyncTrigger({ bNo, isNew }: SyncTriggerProps) {
       case "syncing":
         return {
           borderColor: "rgba(49, 130, 246, 0.4)",
-          textColor: "#1e293b",
+          textColor: "var(--color-text-main)",
           barColor: "linear-gradient(90deg, #3182f6, #60a5fa)",
           spinnerBorder: "#3182f6"
         };
       case "success":
         return {
           borderColor: "rgba(45, 202, 115, 0.4)",
-          textColor: "#14532d",
+          textColor: "var(--color-success)",
           barColor: "#2dca73",
           spinnerBorder: "#2dca73"
         };
       case "error":
         return {
           borderColor: "rgba(240, 68, 56, 0.4)",
-          textColor: "#7f1d1d",
+          textColor: "var(--color-danger)",
           barColor: "#f04438",
           spinnerBorder: "#f04438"
         };
@@ -109,11 +109,11 @@ export default function SyncTrigger({ bNo, isNew }: SyncTriggerProps) {
       position: "relative",
       padding: "20px 24px",
       borderRadius: "16px",
-      background: "rgba(255, 255, 255, 0.65)",
+      backgroundColor: "var(--bg-color-card)",
       backdropFilter: "blur(16px)",
       WebkitBackdropFilter: "blur(16px)",
       border: `1px solid ${theme.borderColor}`,
-      boxShadow: "0 10px 30px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.02)",
+      boxShadow: "var(--shadow-sm)",
       display: "flex",
       flexDirection: "column",
       gap: "14px",
@@ -129,13 +129,15 @@ export default function SyncTrigger({ bNo, isNew }: SyncTriggerProps) {
           height: "4px",
           width: "100%",
           background: "rgba(49, 130, 246, 0.08)",
+          overflow: "hidden",
         }}>
           <div style={{
+            position: "relative",
             height: "100%",
             width: "35%",
             background: theme.barColor,
             borderRadius: "2px",
-            animation: "progressPulse 1.8s infinite ease-in-out"
+            animation: "mdSyncProgressPulse 1.8s infinite ease-in-out"
           }} />
         </div>
       )}
@@ -161,7 +163,7 @@ export default function SyncTrigger({ bNo, isNew }: SyncTriggerProps) {
               border: "3px solid rgba(49, 130, 246, 0.15)",
               borderTop: `3px solid ${theme.spinnerBorder}`,
               borderRadius: "50%",
-              animation: "spin 0.8s linear infinite"
+              animation: "mdSyncSpin 0.8s linear infinite"
             }} />
           ) : status === "success" ? (
             <div style={{
@@ -209,7 +211,7 @@ export default function SyncTrigger({ bNo, isNew }: SyncTriggerProps) {
           {status === "syncing" && (
             <div style={{
               fontSize: "0.78rem",
-              color: "#64748b",
+              color: "var(--color-text-desc)",
               marginTop: "4px",
               fontWeight: 500
             }}>
@@ -219,14 +221,14 @@ export default function SyncTrigger({ bNo, isNew }: SyncTriggerProps) {
         </div>
       </div>
 
-      <style jsx global>{`
-        @keyframes spin {
+      <style>{`
+        @keyframes mdSyncSpin {
           0% { transform: rotate(0deg); }
           100% { transform: rotate(360deg); }
         }
-        @keyframes progressPulse {
-          0% { left: -35%; }
-          100% { left: 100%; }
+        @keyframes mdSyncProgressPulse {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(300%); }
         }
         @keyframes pulse {
           0%, 100% { opacity: 1; }

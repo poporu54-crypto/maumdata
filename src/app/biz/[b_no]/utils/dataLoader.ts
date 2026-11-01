@@ -90,6 +90,8 @@ export interface BusinessData {
     losses: number;
     npsChargeAmount: number;
   }>;
+  bids?: Array<any>;
+  patents?: Array<any>;
   ntsLastSyncAt?: any;
   npsLastSyncAt?: any;
   patentsLastSyncAt?: any;
@@ -101,9 +103,12 @@ export interface BusinessData {
   bSttCd?: string;
 }
 
+const BOT_OR_PREVIEW_UA_REGEX =
+  /bot|crawl|spider|slurp|yeti|kakaotalk-scrap|facebookexternalhit|preview|lighthouse|headlesschrome|whatsapp|telegrambot|discordbot|slackbot/i;
+
 /**
- * 현재 요청이 브라우저/Next.js 라우터의 백그라운드 프리패치 요청인지 판별합니다.
- * 프리패치 요청일 때는 조회수 증가 및 외부 공공 API 백그라운드 동기화를 일체 실행하지 않습니다.
+ * 현재 요청이 브라우저/Next.js 라우터의 백그라운드 프리패치 요청 또는 봇/크롤러/미리보기 요청인지 판별합니다.
+ * 프리패치·봇 요청일 때는 조회수 증가 및 외부 공공 API 백그라운드 동기화를 일체 실행하지 않습니다.
  */
 export async function isPrefetchRequest(): Promise<boolean> {
   try {
@@ -113,18 +118,22 @@ export async function isPrefetchRequest(): Promise<boolean> {
     const purpose = (hdrs.get("purpose") || "").toLowerCase();
     const secPurpose = (hdrs.get("sec-purpose") || "").toLowerCase();
     const moz = (hdrs.get("x-moz") || "").toLowerCase();
+    const userAgent = hdrs.get("user-agent") || "";
 
     return (
       routerPrefetch === "1" ||
       middlewarePrefetch === "1" ||
       purpose.includes("prefetch") ||
       secPurpose.includes("prefetch") ||
-      moz === "prefetch"
+      moz === "prefetch" ||
+      BOT_OR_PREVIEW_UA_REGEX.test(userAgent)
     );
   } catch {
     return false;
   }
 }
+
+export const isBotOrPrefetchRequest = isPrefetchRequest;
 
 // 로컬 Neon DB에서 사업자 번호로 기업 조회
 export async function getLocalBusiness(bNo: string): Promise<BusinessData | null> {
@@ -414,9 +423,12 @@ const loadUnifiedBusinessCached = cache(async (cleanBNo: string, isPrefetch: boo
  * 국세청 API, 금융위 API, 로컬 DB 통합 코어 헬퍼 함수
  * (새로운 사업자 번호 최초 등록 시에만 실시간 외부 API 조회를 발생시키고 캐싱을 실행합니다)
  */
-export async function getUnifiedBusinessData(bNo: string): Promise<UnifiedBusinessResult> {
+export async function getUnifiedBusinessData(
+  bNo: string,
+  options?: { skipViewRecord?: boolean }
+): Promise<UnifiedBusinessResult> {
   const cleanBNo = bNo.replace(/[^0-9]/g, "");
-  const isPrefetch = await isPrefetchRequest();
+  const isPrefetch = options?.skipViewRecord ? true : await isPrefetchRequest();
   return loadUnifiedBusinessCached(cleanBNo, isPrefetch);
 }
 

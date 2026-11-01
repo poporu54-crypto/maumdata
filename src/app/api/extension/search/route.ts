@@ -1,23 +1,46 @@
 import { NextResponse, NextRequest } from "next/server";
 import { searchCorpOutline } from "@/lib/corpApi";
 import { searchBusinesses } from "@/lib/db";
+import { checkRateLimit, getClientIp } from "@/lib/sessionAuth";
 
-export const dynamic = "force-dynamic";
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+};
+
+function isRateLimitAllowed(result: unknown): boolean {
+  if (typeof result === "boolean") return result;
+  if (typeof result === "object" && result !== null) {
+    if ("allowed" in result) return Boolean((result as { allowed?: boolean }).allowed);
+    if ("ok" in result) return Boolean((result as { ok?: boolean }).ok);
+  }
+  return true;
+}
 
 export async function GET(request: NextRequest) {
+  const ip = getClientIp(request);
+  const rateResult: unknown = checkRateLimit(`extsearch:${ip}`, 60, 60_000);
+  if (rateResult instanceof Response) return rateResult;
+  if (!isRateLimitAllowed(rateResult)) {
+    return NextResponse.json(
+      { error: "검색 요청 한도를 초과했습니다. 잠시 후 다시 시도해 주세요." },
+      {
+        status: 429,
+        headers: CORS_HEADERS,
+      }
+    );
+  }
+
   const { searchParams } = new URL(request.url);
-  const searchQuery = searchParams.get("query") || "";
+  const searchQuery = searchParams.get("query") || searchParams.get("q") || "";
 
   if (searchQuery.trim().length < 2) {
     return NextResponse.json(
       { error: "검색어는 2글자 이상 입력해 주세요." },
-      { 
+      {
         status: 400,
-        headers: {
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "GET, OPTIONS",
-          "Access-Control-Allow-Headers": "Content-Type",
-        }
+        headers: CORS_HEADERS,
       }
     );
   }
@@ -79,22 +102,17 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(results, {
       headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
+        ...CORS_HEADERS,
+        "Cache-Control": "public, s-maxage=120, stale-while-revalidate=600",
       }
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Extension Search Error:", error);
     return NextResponse.json(
       { error: "검색 중 오류가 발생했습니다." },
-      { 
+      {
         status: 500,
-        headers: {
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "GET, OPTIONS",
-          "Access-Control-Allow-Headers": "Content-Type",
-        }
+        headers: CORS_HEADERS,
       }
     );
   }
@@ -104,10 +122,6 @@ export async function GET(request: NextRequest) {
 export async function OPTIONS() {
   return new NextResponse(null, {
     status: 200,
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
-    }
+    headers: CORS_HEADERS,
   });
 }

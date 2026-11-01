@@ -14,7 +14,6 @@ import NavigationProgressBar from "@/components/NavigationProgressBar";
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.maumdata.com"),
   alternates: {
-    canonical: "/",
     types: {
       "application/rss+xml": [
         {
@@ -28,12 +27,12 @@ export const metadata: Metadata = {
     template: "%s | 마음데이타",
     default: "마음데이타(MaumData)",
   },
-  description: "국세청 실시간 사업자 상태 조회 및 트랜드, 기업분석, 업종분석, 통계, 무료제공 사업자 정보조회 사이트.",
+  description: "국세청 실시간 사업자 상태 조회 및 트렌드, 기업분석, 업종분석, 통계, 무료제공 사업자 정보조회 사이트.",
   keywords: ["사업자등록번호 조회", "실시간 사업자 상태", "계속사업자", "휴업", "폐업", "기업 정보 검색", "민간 데이터 포털"],
   authors: [{ name: "MaumData Team" }],
   openGraph: {
     title: "마음데이타(MaumData)",
-    description: "국세청 실시간 사업자 상태 조회 및 트랜드, 기업분석, 업종분석, 통계, 무료제공 사업자 정보조회 사이트.",
+    description: "국세청 실시간 사업자 상태 조회 및 트렌드, 기업분석, 업종분석, 통계, 무료제공 사업자 정보조회 사이트.",
     url: "https://www.maumdata.com",
     siteName: "마음데이타",
     locale: "ko_KR",
@@ -50,7 +49,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "마음데이타(MaumData)",
-    description: "국세청 실시간 사업자 상태 조회 및 트랜드, 기업분석, 업종분석, 통계, 무료제공 사업자 정보조회 사이트.",
+    description: "국세청 실시간 사업자 상태 조회 및 트렌드, 기업분석, 업종분석, 통계, 무료제공 사업자 정보조회 사이트.",
     images: ["/og-image.png"],
   },
 };

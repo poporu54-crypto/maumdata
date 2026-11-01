@@ -19,7 +19,7 @@ export interface NpsBplcInfo {
 }
 
 const SERVICE_KEY = process.env.DATA_PORTAL_SERVICE_KEY || "";
-const API_URL = "http://apis.data.go.kr/B552015/NpsBplcInfoInqireServiceV2/getBassInfoSearchV2";
+const API_URL = "https://apis.data.go.kr/B552015/NpsBplcInfoInqireServiceV2/getBassInfoSearchV2";
 
 /**
  * 국민연금공단 V2 API를 통해 사업자등록번호(10자리) 기준의 국민연금 가입 기본 정보(가입자수 등)를 실시간 조회합니다.
@@ -102,8 +102,8 @@ async function searchNpsBplcList(queryName: string, targetBNo6: string, limit = 
 }
 
 async function fetchNpsMonthDetail(seq: string | number, dataCrtYm?: string) {
-  const detailUrl = `http://apis.data.go.kr/B552015/NpsBplcInfoInqireServiceV2/getDetailInfoSearchV2?serviceKey=${SERVICE_KEY}&dataType=json&seq=${seq}`;
-  const periodUrl = `http://apis.data.go.kr/B552015/NpsBplcInfoInqireServiceV2/getPdAcctoSttusInfoSearchV2?serviceKey=${SERVICE_KEY}&dataType=json&seq=${seq}`;
+  const detailUrl = `https://apis.data.go.kr/B552015/NpsBplcInfoInqireServiceV2/getDetailInfoSearchV2?serviceKey=${SERVICE_KEY}&dataType=json&seq=${seq}`;
+  const periodUrl = `https://apis.data.go.kr/B552015/NpsBplcInfoInqireServiceV2/getPdAcctoSttusInfoSearchV2?serviceKey=${SERVICE_KEY}&dataType=json&seq=${seq}`;
 
   try {
     const [detailResponse, periodResponse] = await Promise.all([

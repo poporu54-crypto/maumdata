@@ -1,16 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { updateFeedbackStatus, deleteFeedback } from "@/lib/db";
-
-const VALID_PASSWORDS = [
-  process.env.ADMIN_PASSWORD,
-  "akdmaepdlxk#1",
-  "마음데이타#1",
-].filter(Boolean) as string[];
-
-function isValidAdminKey(key: string | null | undefined): boolean {
-  if (!key) return false;
-  return VALID_PASSWORDS.some(p => p.trim() === key.trim());
-}
+import { isAdminRequest } from "@/lib/sessionAuth";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -19,16 +9,20 @@ interface RouteParams {
 // 1. 상태 변경 (해결 완료 / 대기 중)
 export async function PATCH(req: NextRequest, { params }: RouteParams) {
   try {
-    const { id } = await params;
-    const body = await req.json();
-    const { status, adminKey } = body;
-
-    const requestKey = adminKey || req.headers.get("x-admin-key");
-    if (!isValidAdminKey(requestKey)) {
+    if (!isAdminRequest(req)) {
       return NextResponse.json({ error: "관리자 인증 실패" }, { status: 403 });
     }
 
-    const updated = await updateFeedbackStatus(parseInt(id, 10), status);
+    const { id } = await params;
+    const feedbackId = parseInt(id, 10);
+    if (isNaN(feedbackId)) {
+      return NextResponse.json({ error: "유효하지 않은 피드백 ID" }, { status: 400 });
+    }
+
+    const body = await req.json().catch(() => ({}));
+    const status = body?.status === "RESOLVED" ? "RESOLVED" : "PENDING";
+
+    const updated = await updateFeedbackStatus(feedbackId, status);
     return NextResponse.json({ success: true, updated });
   } catch (error) {
     console.error("Failed to update feedback status:", error);
@@ -39,15 +33,17 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
 // 2. 피드백 삭제
 export async function DELETE(req: NextRequest, { params }: RouteParams) {
   try {
-    const { id } = await params;
-    const { searchParams } = new URL(req.url);
-    const adminKey = searchParams.get("adminKey") || req.headers.get("x-admin-key");
-
-    if (!isValidAdminKey(adminKey)) {
+    if (!isAdminRequest(req)) {
       return NextResponse.json({ error: "관리자 인증 실패" }, { status: 403 });
     }
 
-    await deleteFeedback(parseInt(id, 10));
+    const { id } = await params;
+    const feedbackId = parseInt(id, 10);
+    if (isNaN(feedbackId)) {
+      return NextResponse.json({ error: "유효하지 않은 피드백 ID" }, { status: 400 });
+    }
+
+    await deleteFeedback(feedbackId);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Failed to delete feedback:", error);

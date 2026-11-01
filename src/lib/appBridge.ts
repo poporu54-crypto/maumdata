@@ -164,7 +164,7 @@ export function vibrateDevice(durationMs: number = 30): void {
  */
 let webToastTimer: ReturnType<typeof setTimeout> | null = null;
 
-export function showAppToast(message: string): void {
+export function showAppToast(message: string, durationMs: number = 2400): void {
   if (typeof window === "undefined" || !message) return;
 
   if (window.AndroidBridge?.showToast) {
@@ -208,7 +208,7 @@ export function showAppToast(message: string): void {
     if (webToastTimer) clearTimeout(webToastTimer);
     webToastTimer = setTimeout(() => {
       if (el) el.style.opacity = "0";
-    }, 2400);
+    }, durationMs);
   } catch {
     // ignore
   }
@@ -357,14 +357,41 @@ export async function saveOrDownloadBlob({
     }
   }
 
+  const ua = typeof navigator !== "undefined" ? navigator.userAgent || "" : "";
+  const isInAppWebView = /KAKAOTALK|NAVER|Instagram|FBAN|FBAV|Line\//i.test(ua);
+  const cleanMimeType = (mimeType || blob.type || "application/octet-stream").split(";")[0].trim();
+
+  if (isInAppWebView && typeof File !== "undefined" && typeof navigator.share === "function") {
+    try {
+      const shareFile = new File([blob], fileName, { type: cleanMimeType });
+      if (!navigator.canShare || navigator.canShare({ files: [shareFile] })) {
+        await navigator.share({
+          files: [shareFile],
+          title: fileName,
+        });
+        return;
+      }
+    } catch (err: any) {
+      if (err?.name === "AbortError") return;
+    }
+  }
+
+  if (isInAppWebView) {
+    showAppToast(
+      "인앱 브라우저에서는 다운로드가 제한될 수 있습니다. 우측 상단 메뉴에서 '다른 브라우저로 열기'를 이용해 주세요.",
+      4500
+    );
+  }
+
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
   link.download = fileName;
+  link.rel = "noopener";
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-  setTimeout(() => URL.revokeObjectURL(url), 1500);
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
 /**

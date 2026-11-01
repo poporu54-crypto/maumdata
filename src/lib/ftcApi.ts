@@ -61,9 +61,17 @@ export async function getFtcMailOrderInfo(bNo: string): Promise<FtcMailOrderBusi
       return null;
     }
 
-    const items = json?.items || json?.response?.body?.items?.item || json?.response?.body?.items;
-    if (items && items.length > 0) {
-      const item = items[0];
+    const items = json?.items ?? json?.response?.body?.items?.item ?? json?.response?.body?.items;
+    const itemList = Array.isArray(items)
+      ? items
+      : items && typeof items === "object" && Object.keys(items).length > 0
+        ? [items]
+        : [];
+    if (itemList.length > 0) {
+      const item = itemList[0];
+      if (!item || (!item.bzmnNm && !item.brno && !item.prmmiMnno)) {
+        return null;
+      }
       return {
         brno: item.brno || cleanBNo,
         cmpNm: item.bzmnNm || "",

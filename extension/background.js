@@ -1,30 +1,16 @@
 const PROD_API_BASE = "https://www.maumdata.com";
-const LOCAL_API_BASE = "http://localhost:3000";
 
-// API 호출 헬퍼 (실서버 우선 호출 → 실패 시 로컬 개발서버 폴백)
+// API 호출 헬퍼 (실서버 전용 호출)
 async function fetchFromMaumData(path) {
-  try {
-    const res = await fetch(`${PROD_API_BASE}${path}`, {
-      method: "GET",
-      headers: { "Accept": "application/json" }
-    });
-    if (res.ok || res.status === 404 || res.status === 400) {
-      const data = await res.json().catch(() => ({}));
-      return { ok: res.ok, status: res.status, data };
-    }
-    throw new Error(`HTTP ${res.status}`);
-  } catch (prodErr) {
-    try {
-      const localRes = await fetch(`${LOCAL_API_BASE}${path}`, {
-        method: "GET",
-        headers: { "Accept": "application/json" }
-      });
-      const data = await localRes.json().catch(() => ({}));
-      return { ok: localRes.ok, status: localRes.status, data };
-    } catch (_) {
-      throw prodErr;
-    }
+  const res = await fetch(`${PROD_API_BASE}${path}`, {
+    method: "GET",
+    headers: { "Accept": "application/json" }
+  });
+  if (res.ok || res.status === 404 || res.status === 400) {
+    const data = await res.json().catch(() => ({}));
+    return { ok: res.ok, status: res.status, data };
   }
+  throw new Error(`HTTP ${res.status}`);
 }
 
 // 컨텍스트 메뉴 등록

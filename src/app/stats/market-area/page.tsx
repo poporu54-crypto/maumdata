@@ -205,6 +205,7 @@ export default function MarketAreaHub() {
 
   return (
     <div className="animate-fade-in" style={{ padding: "40px 0 80px 0" }}>
+      <link rel="canonical" href="https://www.maumdata.com/stats/market-area" />
       <div className="container" style={{ maxWidth: "1000px" }}>
         
         {/* 타이틀 및 소개글 */}
@@ -219,7 +220,7 @@ export default function MarketAreaHub() {
             display: "inline-block",
             marginBottom: "12px"
           }}>
-            대한민국 1,000만 상업 시설 실시간 데이터베이스
+            대한민국 상권 빅데이터 디렉토리
           </span>
           <h1 style={{
             fontSize: "2.4rem",
@@ -314,7 +315,7 @@ export default function MarketAreaHub() {
                   href={`/stats/market-area/${matched?.cd || "1168064000"}`}
                   prefetch={false}
                   style={{
-                    backgroundColor: "rgba(255, 255, 255, 0.04)",
+                    backgroundColor: "var(--bg-color-main)",
                     border: "1px solid var(--color-border)",
                     padding: "6px 12px",
                     borderRadius: "30px",
@@ -377,7 +378,7 @@ export default function MarketAreaHub() {
                 marginBottom: "16px",
                 alignSelf: "flex-start"
               }}>
-                🗺️ 대한민국 실시간 상권 맵
+                🗺️ 대한민국 주요 상권 맵
               </h3>
               
               <div style={{ flex: 1, width: "100%", position: "relative", marginBottom: "16px" }}>
@@ -457,7 +458,7 @@ export default function MarketAreaHub() {
                     {activeRegion.fullName}
                   </h2>
                   <p style={{ fontSize: "0.85rem", color: "var(--color-text-desc)", margin: "4px 0 0 0" }}>
-                    실시간 API 검증 완료된 상권 리스트
+                    공공 상권 데이터 기준 대표 상권 리스트
                   </p>
                 </div>
                 <span style={{
@@ -495,7 +496,7 @@ export default function MarketAreaHub() {
                         borderRadius: "14px",
                         padding: "16px 20px",
                         cursor: "pointer",
-                        backgroundColor: "rgba(255, 255, 255, 0.005)",
+                        backgroundColor: "var(--bg-color-main)",
                         display: "flex",
                         flexDirection: "column",
                         gap: "6px",
@@ -522,7 +523,7 @@ export default function MarketAreaHub() {
                           color: "var(--color-text-desc)",
                           fontWeight: 600
                         }}>
-                          실시간 점포 {dong.stores.toLocaleString()}개소
+                          기준 점포 {dong.stores.toLocaleString()}개소
                         </span>
                       </div>
                       <p style={{
@@ -542,7 +543,7 @@ export default function MarketAreaHub() {
           </div>
         </div>
 
-        {/* 핫 토크 - 인기 급상승 상권 바로가기 섹션 */}
+        {/* 주요 핵심 인기 상권 바로가기 섹션 */}
         <div>
           <h2 style={{
             fontSize: "1.35rem",
@@ -550,7 +551,7 @@ export default function MarketAreaHub() {
             color: "var(--color-text-main)",
             marginBottom: "20px"
           }}>
-            🔥 실시간 급상승 인기 상권 TOP 5
+            🔥 전국 주요 핵심 인기 상권 TOP 5
           </h2>
           <div style={{
             display: "grid",

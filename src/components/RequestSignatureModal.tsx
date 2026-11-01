@@ -1,9 +1,27 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { vibrateDevice, showAppToast, shareTextOrUrl, useAppModalBack } from "@/lib/appBridge";
-import { saveContractToLocal, getLoggedInUser, ContractUser } from "@/lib/contractStorage";
-import ContractAuthModal from "@/components/ContractAuthModal";
+import {
+  saveContractToLocal,
+  getLoggedInUser,
+  getContractAuthHeaders,
+  ContractUser,
+} from "@/lib/contractStorage";
+
+const ContractAuthModal = dynamic(() => import("@/components/ContractAuthModal"), {
+  ssr: false,
+});
+
+function generateSecurePin(): string {
+  if (typeof window !== "undefined" && window.crypto?.getRandomValues) {
+    const arr = new Uint32Array(1);
+    window.crypto.getRandomValues(arr);
+    return String(1000 + (arr[0] % 9000));
+  }
+  return String(Math.floor(1000 + Math.random() * 9000));
+}
 
 interface RequestSignatureModalProps {
   isOpen: boolean;
@@ -45,10 +63,8 @@ export default function RequestSignatureModal({
   );
   const [partyBEmail, setPartyBEmail] = useState("");
 
-  // 진행 중 임시 비밀번호 (기본 4자리 숫자 자동생성)
-  const [accessPin, setAccessPin] = useState(() =>
-    String(Math.floor(1000 + Math.random() * 9000))
-  );
+  // 진행 중 임시 비밀번호 (기본 암호학적 4자리 난수 자동생성)
+  const [accessPin, setAccessPin] = useState(() => generateSecurePin());
 
   const [loading, setLoading] = useState(false);
   const [createdResult, setCreatedResult] = useState<{
@@ -62,11 +78,47 @@ export default function RequestSignatureModal({
     if (isOpen) {
       const user = getLoggedInUser();
       setCurrentUser(user);
-      if (user?.email && !partyAEmail) {
+      setCreatedResult(null);
+
+      const nextAName =
+        formData?.employerCEO ||
+        formData?.ceo ||
+        formData?.name ||
+        formData?.partyA_owner ||
+        formData?.owner ||
+        formData?.representative ||
+        user?.name ||
+        "대표자";
+      const nextACompany =
+        formData?.employerName ||
+        formData?.companyName ||
+        formData?.company ||
+        formData?.partyA_name ||
+        user?.company ||
+        "마음데이타 파트너";
+      const nextBName =
+        formData?.workerName ||
+        formData?.client ||
+        formData?.partyB_owner ||
+        formData?.receiver ||
+        "";
+      const nextBCompany =
+        formData?.customer ||
+        formData?.target_company ||
+        formData?.partyB_name ||
+        "";
+
+      setPartyAName(nextAName);
+      setPartyACompany(nextACompany);
+      if (user?.email) {
         setPartyAEmail(user.email);
+      } else if (formData?.email) {
+        setPartyAEmail(formData.email);
       }
+      if (nextBName) setPartyBName(nextBName);
+      if (nextBCompany) setPartyBCompany(nextBCompany);
     }
-  }, [isOpen]);
+  }, [isOpen, formData]);
 
   useAppModalBack(isOpen, onClose);
 
@@ -91,7 +143,7 @@ export default function RequestSignatureModal({
     try {
       const res = await fetch("/api/contracts/create", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getContractAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({
           templateId,
           title: templateTitle,
@@ -400,7 +452,7 @@ ${createdResult.signUrl}${pinLine}`;
                     </label>
                     <button
                       type="button"
-                      onClick={() => setAccessPin(String(Math.floor(1000 + Math.random() * 9000)))}
+                      onClick={() => setAccessPin(generateSecurePin())}
                       style={{
                         background: "none",
                         border: "none",
@@ -624,14 +676,16 @@ ${createdResult.signUrl}${pinLine}`;
         </div>
       </div>
 
-      <ContractAuthModal
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
-        onSuccess={(user) => {
-          setCurrentUser(user);
-          if (user.email) setPartyAEmail(user.email);
-        }}
-      />
+      {isAuthModalOpen && (
+        <ContractAuthModal
+          isOpen={isAuthModalOpen}
+          onClose={() => setIsAuthModalOpen(false)}
+          onSuccess={(user) => {
+            setCurrentUser(user);
+            if (user.email) setPartyAEmail(user.email);
+          }}
+        />
+      )}
     </>
   );
 }

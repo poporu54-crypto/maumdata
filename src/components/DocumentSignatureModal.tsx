@@ -35,7 +35,7 @@ export default function DocumentSignatureModal({
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasDrawn, setHasDrawn] = useState(false);
 
-  // 자필 서명 캔버스 초기화
+  // 자필 서명 캔버스 크기/해상도 초기화 (펜 색상 변경 시에는 기존 획이 지워지지 않도록 분리)
   useEffect(() => {
     if (isOpen && activeTab === "draw" && canvasRef.current) {
       const canvas = canvasRef.current;
@@ -48,6 +48,18 @@ export default function DocumentSignatureModal({
         ctx.lineCap = "round";
         ctx.lineJoin = "round";
         ctx.lineWidth = 3;
+        ctx.strokeStyle = penColor;
+        setHasDrawn(false);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, activeTab]);
+
+  // 펜 색상 변경 시 캔버스 버퍼 리셋 없이 strokeStyle만 갱신
+  useEffect(() => {
+    if (isOpen && activeTab === "draw" && canvasRef.current) {
+      const ctx = canvasRef.current.getContext("2d");
+      if (ctx) {
         ctx.strokeStyle = penColor;
       }
     }
@@ -221,6 +233,20 @@ export default function DocumentSignatureModal({
     }
   };
 
+  const hasNonTransparentPixels = (canvas: HTMLCanvasElement): boolean => {
+    try {
+      const ctx = canvas.getContext("2d");
+      if (!ctx || canvas.width === 0 || canvas.height === 0) return false;
+      const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+      for (let i = 3; i < pixels.length; i += 4) {
+        if (pixels[i] > 10) return true;
+      }
+      return false;
+    } catch {
+      return hasDrawn;
+    }
+  };
+
   const handleApply = () => {
     vibrateDevice(40);
     if (activeTab === "upload") {
@@ -231,7 +257,8 @@ export default function DocumentSignatureModal({
       onApplySignature(processedUploadUrl);
     } else if (activeTab === "draw") {
       const canvas = canvasRef.current;
-      if (!canvas || !hasDrawn) {
+      if (!canvas || !hasDrawn || !hasNonTransparentPixels(canvas)) {
+        setHasDrawn(false);
         alert("서명을 먼저 화면에 작성해 주세요.");
         return;
       }

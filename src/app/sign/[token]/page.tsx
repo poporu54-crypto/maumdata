@@ -1,12 +1,92 @@
 "use client";
 
-import React, { useEffect, useState, use } from "react";
+import React, { useEffect, useState, use, useMemo } from "react";
 import Link from "next/link";
-import DocumentSignatureModal from "@/components/DocumentSignatureModal";
-import ContractAuthModal from "@/components/ContractAuthModal";
+import dynamic from "next/dynamic";
 import { vibrateDevice, showAppToast, printDocument } from "@/lib/appBridge";
-import { saveContractToLocal, getLoggedInUser, ContractUser } from "@/lib/contractStorage";
-import MaumDataLogo from "@/components/MaumDataLogo";
+import {
+  saveContractToLocal,
+  getLoggedInUser,
+  setLoggedInUser,
+  getContractAuthHeaders,
+  ContractUser,
+} from "@/lib/contractStorage";
+
+const DocumentSignatureModal = dynamic(
+  () => import("@/components/DocumentSignatureModal"),
+  { ssr: false }
+);
+const ContractAuthModal = dynamic(
+  () => import("@/components/ContractAuthModal"),
+  { ssr: false }
+);
+const LegacyTemplateRenderer = dynamic(
+  () => import("@/app/form/[templateId]/LegacyTemplateRenderer"),
+  { ssr: false }
+);
+
+const LEGACY_TEMPLATE_IDS = new Set([
+  "resignation",
+  "contract",
+  "contract_short_time",
+  "contract_minor",
+  "contract_freelance",
+  "estimate",
+  "order",
+  "transaction",
+  "iou",
+  "poa",
+  "proof_of_emp",
+  "career_cert",
+  "resume",
+]);
+
+const FALLBACK_KOREAN_LABELS: Record<string, string> = {
+  employerName: "사업주 상호 (회사명)",
+  employerCEO: "사업주 대표자명",
+  employerAddr: "사업주 소재지",
+  employerPhone: "사업주 연락처",
+  workerName: "근로자 성명",
+  workerAddr: "근로자 주소",
+  workerPhone: "근로자 연락처",
+  workerBirth: "근로자 생년월일",
+  workStartDate: "근로개시일",
+  workEndDate: "근로종료일",
+  workPlace: "근무장소",
+  jobDesc: "담당 업무 내용",
+  workStartTime: "시업 시각",
+  workEndTime: "종업 시각",
+  breakStartTime: "휴게 시작 시각",
+  breakEndTime: "휴게 종료 시각",
+  workDaysPerWeek: "주 소정근로일",
+  weeklyHoliday: "주휴일",
+  salaryType: "임금 유형",
+  salaryAmt: "임금액",
+  bonusYn: "상여금 여부",
+  bonusAmt: "상여금 금액",
+  otherPayYn: "기타급여 여부",
+  otherPayAmt: "기타급여 금액",
+  payDay: "임금 지급일",
+  payMethod: "임금 지급 방법",
+  contractDate: "계약 체결일",
+  companyName: "상호 (회사명)",
+  ceo: "대표자",
+  address: "주소",
+  bizNum: "사업자등록번호",
+  phone: "연락처",
+  email: "이메일",
+  name: "성명",
+  dept: "소속 부서",
+  rank: "직위 / 직급",
+  reason: "사유",
+  title: "문서 제목",
+  content: "상세 내용",
+  specialTerms: "특약 사항",
+  partyAEmail: "발송자(갑) 이메일",
+  partyBEmail: "수신자(을) 이메일",
+};
+
+const NOOP = () => {};
 
 export default function SignContractPage({ params }: { params: Promise<{ token: string }> }) {
   const resolvedParams = use(params);
@@ -14,8 +94,10 @@ export default function SignContractPage({ params }: { params: Promise<{ token: 
 
   const [loading, setLoading] = useState(true);
   const [contract, setContract] = useState<any>(null);
+  const [templateMeta, setTemplateMeta] = useState<any>(null);
   const [requiresPin, setRequiresPin] = useState(false);
   const [pinInput, setPinInput] = useState("");
+  const [verifiedPin, setVerifiedPin] = useState("");
   const [pinError, setPinError] = useState("");
   const [error, setError] = useState<string>("");
   const [isSignModalOpen, setIsSignModalOpen] = useState(false);
@@ -35,9 +117,10 @@ export default function SignContractPage({ params }: { params: Promise<{ token: 
 
       const query = new URLSearchParams();
       if (pinValue) query.set("pin", pinValue);
-      if (user?.id) query.set("userId", user.id);
 
-      const res = await fetch(`/api/contracts/${token}?${query.toString()}`);
+      const res = await fetch(`/api/contracts/${token}?${query.toString()}`, {
+        headers: getContractAuthHeaders(),
+      });
       const data = await res.json();
       if (!res.ok || !data.success) {
         throw new Error(data.error || "계약서를 불러올 수 없습니다.");
@@ -51,7 +134,9 @@ export default function SignContractPage({ params }: { params: Promise<{ token: 
       }
 
       setRequiresPin(false);
+      if (pinValue) setVerifiedPin(pinValue);
       setContract(data.contract);
+      setTemplateMeta(data.template || null);
       saveContractToLocal(data.contract.id);
 
       if (data.contract.status === "COMPLETED") {
@@ -65,8 +150,46 @@ export default function SignContractPage({ params }: { params: Promise<{ token: 
     }
   };
 
+  // OAuth 복귀 시 서명 토큰 교환 및 자동 보관함 바인딩 지원
   useEffect(() => {
-    loadContract();
+    const init = async () => {
+      if (typeof window !== "undefined") {
+        const searchParams = new URLSearchParams(window.location.search);
+        const oauthSession = searchParams.get("oauth_session");
+        if (oauthSession) {
+          window.history.replaceState({}, "", window.location.pathname);
+          try {
+            const exRes = await fetch("/api/auth/session", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                action: "exchange_oauth",
+                oauthToken: oauthSession,
+              }),
+            });
+            const exData = await exRes.json();
+            if (exRes.ok && exData.success && exData.user?.id) {
+              setLoggedInUser(exData.user);
+              setCurrentUser(exData.user);
+              await fetch(`/api/contracts/${token}`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${exData.user.sessionToken}`,
+                },
+                body: JSON.stringify({ action: "bind_user" }),
+              }).catch(() => {});
+              setBoundToVault(true);
+              showAppToast(`${exData.user.name}님의 영구 계약 보관함에 자동 연결되었습니다!`);
+            }
+          } catch {
+            // ignore
+          }
+        }
+      }
+      await loadContract();
+    };
+    init();
   }, [token]);
 
   const handlePinSubmit = (e: React.FormEvent) => {
@@ -80,19 +203,17 @@ export default function SignContractPage({ params }: { params: Promise<{ token: 
   };
 
   const handleApplySignature = async (sigDataUrl: string) => {
-    setPartyBSignature(sigDataUrl);
     setSubmitting(true);
     vibrateDevice(40);
 
     try {
-      const user = getLoggedInUser();
       const res = await fetch(`/api/contracts/${token}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getContractAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({
           signatureImage: sigDataUrl,
           signerName: contract?.partyBName || "",
-          partyBUserId: user?.id || "",
+          pin: verifiedPin,
         }),
       });
       const data = await res.json();
@@ -100,7 +221,9 @@ export default function SignContractPage({ params }: { params: Promise<{ token: 
         throw new Error(data.error || "서명 제출에 실패했습니다.");
       }
 
+      setPartyBSignature(sigDataUrl);
       setCompleted(true);
+      const user = getLoggedInUser();
       if (user?.id) setBoundToVault(true);
       saveContractToLocal(data.contractId || contract.id);
       vibrateDevice(50);
@@ -114,17 +237,22 @@ export default function SignContractPage({ params }: { params: Promise<{ token: 
 
   const handleBindToVault = async (user: ContractUser) => {
     try {
-      await fetch(`/api/contracts/${token}`, {
+      const res = await fetch(`/api/contracts/${token}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(user.sessionToken ? { Authorization: `Bearer ${user.sessionToken}` } : {}),
+        },
         body: JSON.stringify({
           action: "bind_user",
-          partyBUserId: user.id,
+          pin: verifiedPin,
         }),
       });
-      setCurrentUser(user);
-      setBoundToVault(true);
-      showAppToast("내 영구 계약 보관함(/contracts)에 등록되었습니다!");
+      if (res.ok) {
+        setCurrentUser(user);
+        setBoundToVault(true);
+        showAppToast("내 영구 계약 보관함(/contracts)에 등록되었습니다!");
+      }
     } catch (e) {
       console.error(e);
     }
@@ -133,6 +261,27 @@ export default function SignContractPage({ params }: { params: Promise<{ token: 
   const handlePrint = () => {
     printDocument(contract?.title || "마음데이타_전자계약서");
   };
+
+  // 필드 한글명 매핑 사전 생성
+  const fieldLabelMap = useMemo(() => {
+    const map: Record<string, string> = { ...FALLBACK_KOREAN_LABELS };
+    if (Array.isArray(templateMeta?.fields)) {
+      for (const f of templateMeta.fields) {
+        if (f?.key && f?.label) {
+          map[f.key] = f.label;
+        }
+        if (Array.isArray(f?.subFields)) {
+          for (const sf of f.subFields) {
+            if (sf?.key && sf?.label) {
+              map[`${f.key}.${sf.key}`] = sf.label;
+              if (!map[sf.key]) map[sf.key] = sf.label;
+            }
+          }
+        }
+      }
+    }
+    return map;
+  }, [templateMeta]);
 
   if (loading) {
     return (
@@ -159,13 +308,12 @@ export default function SignContractPage({ params }: { params: Promise<{ token: 
     );
   }
 
-  // 계약 진행 중 임시 비밀번호 입력 화면
   if (requiresPin) {
     return (
       <div style={{ backgroundColor: "var(--bg-color-main)", minHeight: "85vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
         <div
           style={{
-            backgroundColor: "var(--color-card)",
+            backgroundColor: "var(--bg-color-card)",
             width: "100%",
             maxWidth: "420px",
             borderRadius: "22px",
@@ -186,7 +334,7 @@ export default function SignContractPage({ params }: { params: Promise<{ token: 
               borderRadius: "6px",
             }}
           >
-            진행 중인 비대면 계약서 보호
+            비대면 전자계약서 열람 보호
           </span>
           <h2 style={{ margin: "10px 0 6px 0", fontSize: "1.3rem", fontWeight: 800, color: "var(--color-text-main)" }}>
             {contract.title}
@@ -200,7 +348,7 @@ export default function SignContractPage({ params }: { params: Promise<{ token: 
             <input
               type="password"
               inputMode="numeric"
-              maxLength={8}
+              maxLength={12}
               value={pinInput}
               onChange={(e) => setPinInput(e.target.value)}
               placeholder="임시 비밀번호 입력"
@@ -248,12 +396,26 @@ export default function SignContractPage({ params }: { params: Promise<{ token: 
   }
 
   const formData = contract.formData || {};
+  const isLegacyTemplate = LEGACY_TEMPLATE_IDS.has(contract.templateId);
+  const layoutElements: any[] = Array.isArray(templateMeta?.layout) ? templateMeta.layout : [];
+
+  const bindTemplateText = (rawText?: string) => {
+    if (!rawText) return "";
+    return String(rawText).replace(/\{(\w+)\}/g, (_match, key) => {
+      const val = formData[key];
+      if (val === undefined || val === null || val === "") return "________";
+      return String(val);
+    });
+  };
 
   return (
     <div style={{ backgroundColor: "var(--bg-color-main)", minHeight: "100vh", padding: "28px 0 110px 0" }}>
       <div className="container">
-        {/* 상단 브랜드 헤더 */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", flexWrap: "wrap", gap: "8px" }}>
+        {/* 상단 브랜드 헤더 (인쇄 시 자동 숨김) */}
+        <div
+          className="no-print"
+          style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", flexWrap: "wrap", gap: "8px" }}
+        >
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <span style={{ fontSize: "0.8rem", color: "#2563eb", fontWeight: 700, backgroundColor: "rgba(37, 99, 235, 0.08)", padding: "3px 10px", borderRadius: "6px" }}>
               안전한 단일 링크 전자계약
@@ -275,9 +437,10 @@ export default function SignContractPage({ params }: { params: Promise<{ token: 
           </div>
         </div>
 
-        {/* 상태 배너 */}
+        {/* 상태 배너 (인쇄 시 자동 숨김) */}
         {completed ? (
           <div
+            className="no-print"
             style={{
               padding: "20px 24px",
               borderRadius: "16px",
@@ -350,6 +513,7 @@ export default function SignContractPage({ params }: { params: Promise<{ token: 
           </div>
         ) : (
           <div
+            className="no-print"
             style={{
               padding: "18px 22px",
               borderRadius: "16px",
@@ -370,7 +534,7 @@ export default function SignContractPage({ params }: { params: Promise<{ token: 
                   {contract.partyACompany || contract.partyAName}님께서 작성한 계약서입니다
                 </div>
                 <div style={{ fontSize: "0.82rem", color: "#2563eb" }}>
-                  아래 내용을 확인하시고 하단 <strong>[서명하기]</strong> 버튼을 누르면 카톡으로 파일을 다시 보낼 필요 없이 즉시 체결됩니다.
+                  아래 계약 조항 전문을 확인하시고 하단 <strong>[서명하기]</strong> 버튼을 누르면 즉시 체결됩니다.
                 </div>
               </div>
             </div>
@@ -388,7 +552,7 @@ export default function SignContractPage({ params }: { params: Promise<{ token: 
             boxShadow: "0 8px 30px rgba(0,0,0,0.06)",
             color: "#1e293b",
             fontFamily: "var(--font-pretendard), sans-serif",
-            lineHeight: 1.6,
+            lineHeight: 1.65,
           }}
         >
           {/* 계약서 제목 */}
@@ -402,11 +566,10 @@ export default function SignContractPage({ params }: { params: Promise<{ token: 
           </div>
 
           {/* 당사자 개요 표 */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "28px" }}>
-            {/* 갑 */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "16px", marginBottom: "28px" }}>
             <div style={{ border: "1px solid #cbd5e1", borderRadius: "10px", padding: "14px", backgroundColor: "#f8fafc" }}>
               <div style={{ fontSize: "0.85rem", fontWeight: 800, color: "#2563eb", marginBottom: "6px" }}>
-                [갑] 의뢰인 / 공급자
+                [갑] 의뢰인 / 사용자 / 공급자
               </div>
               <div style={{ fontSize: "0.85rem" }}>상호: <strong>{contract.partyACompany || "-"}</strong></div>
               <div style={{ fontSize: "0.85rem" }}>성명: {contract.partyAName || "-"}</div>
@@ -414,10 +577,9 @@ export default function SignContractPage({ params }: { params: Promise<{ token: 
               {contract.partyAPhone && <div style={{ fontSize: "0.8rem", color: "#64748b" }}>연락처: {contract.partyAPhone}</div>}
             </div>
 
-            {/* 을 */}
             <div style={{ border: "1px solid #cbd5e1", borderRadius: "10px", padding: "14px", backgroundColor: "#f8fafc" }}>
               <div style={{ fontSize: "0.85rem", fontWeight: 800, color: "#059669", marginBottom: "6px" }}>
-                [을] 수임인 / 수신자
+                [을] 수임인 / 근로자 / 수신자
               </div>
               <div style={{ fontSize: "0.85rem" }}>상호: <strong>{contract.partyBCompany || "-"}</strong></div>
               <div style={{ fontSize: "0.85rem" }}>성명: {contract.partyBName || "-"}</div>
@@ -426,36 +588,223 @@ export default function SignContractPage({ params }: { params: Promise<{ token: 
             </div>
           </div>
 
-          {/* 본문 조항 및 폼 데이터 테이블 */}
+          {/* 계약 본문 조항 전문 렌더링 (표준 양식 렌더러 / 동적 조항 레이아웃 / 한글 항목 표) */}
           <div style={{ marginBottom: "32px" }}>
-            <h3 style={{ fontSize: "1.05rem", fontWeight: 800, borderLeft: "4px solid #2563eb", paddingLeft: "10px", marginBottom: "14px" }}>
-              주요 계약 조건 및 내역
-            </h3>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.88rem" }}>
-              <tbody>
-                {Object.entries(formData)
-                  .filter(([key, val]) => typeof val === "string" && val.trim().length > 0 && !["signatureImage", "stampImage"].includes(key))
-                  .map(([key, value]: [string, any], idx) => (
-                    <tr key={key} style={{ borderBottom: "1px solid #e2e8f0", backgroundColor: idx % 2 === 0 ? "#ffffff" : "#f8fafc" }}>
-                      <td style={{ padding: "10px 14px", width: "35%", fontWeight: 700, color: "#475569" }}>
-                        {key}
-                      </td>
-                      <td style={{ padding: "10px 14px", color: "#0f172a", whiteSpace: "pre-wrap" }}>
-                        {value}
-                      </td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
+            {isLegacyTemplate ? (
+              <div
+                style={{
+                  pointerEvents: "none",
+                  userSelect: "text",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: "12px",
+                  padding: "24px",
+                  backgroundColor: "#ffffff",
+                  color: "#0f172a",
+                }}
+              >
+                <LegacyTemplateRenderer
+                  templateId={contract.templateId}
+                  data={{
+                    ...formData,
+                    signatureImage: contract.partyASignature || formData.signatureImage,
+                    partyBSignatureImage: contract.partyBSignature || formData.partyBSignatureImage,
+                  }}
+                  readOnly={true}
+                  handleFieldInputDirect={NOOP}
+                  handleFieldChange={NOOP}
+                  handleArrayFieldChange={NOOP}
+                />
+              </div>
+            ) : layoutElements.length > 0 ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                {layoutElements.map((el: any, idx: number) => {
+                  if (!el || el.type === "page-break" || el.type === "title") return null;
+                  if (el.type === "spacer") {
+                    return <div key={idx} style={{ height: "12px" }} />;
+                  }
+                  if (el.type === "subtitle") {
+                    return (
+                      <h3
+                        key={idx}
+                        style={{
+                          fontSize: "1.02rem",
+                          fontWeight: 800,
+                          color: "#0f172a",
+                          borderLeft: "4px solid #2563eb",
+                          paddingLeft: "10px",
+                          margin: "16px 0 6px 0",
+                        }}
+                      >
+                        {bindTemplateText(el.value)}
+                      </h3>
+                    );
+                  }
+                  if (el.type === "paragraph") {
+                    return (
+                      <p
+                        key={idx}
+                        style={{
+                          fontSize: "0.92rem",
+                          color: "#1e293b",
+                          lineHeight: 1.7,
+                          margin: "4px 0 8px 0",
+                          whiteSpace: "pre-wrap",
+                          wordBreak: "keep-all",
+                        }}
+                      >
+                        {bindTemplateText(el.value)}
+                      </p>
+                    );
+                  }
+                  if (el.type === "table" && Array.isArray(el.rows)) {
+                    return (
+                      <table
+                        key={idx}
+                        style={{
+                          width: "100%",
+                          borderCollapse: "collapse",
+                          border: "1px solid #cbd5e1",
+                          margin: "8px 0 14px 0",
+                          fontSize: "0.88rem",
+                        }}
+                      >
+                        <tbody>
+                          {el.rows.flatMap((row: any, rIdx: number) => {
+                            if (row.repeatKey) {
+                              const items = Array.isArray(formData[row.repeatKey])
+                                ? formData[row.repeatKey]
+                                : [];
+                              return items.map((item: any, itemIdx: number) => (
+                                <tr key={`${rIdx}-${itemIdx}`}>
+                                  {row.cells?.map((cell: any, cIdx: number) => {
+                                    const val = cell.key
+                                      ? item?.[cell.key] ?? ""
+                                      : String(cell.label || "").replace(
+                                          /\{(\w+)\}/g,
+                                          (_m, k) => item?.[k] ?? ""
+                                        );
+                                    return (
+                                      <td
+                                        key={cIdx}
+                                        colSpan={cell.colSpan}
+                                        rowSpan={cell.rowSpan}
+                                        style={{
+                                          border: "1px solid #cbd5e1",
+                                          padding: "8px 10px",
+                                          textAlign: cell.align || "left",
+                                          whiteSpace: "pre-wrap",
+                                        }}
+                                      >
+                                        {val}
+                                      </td>
+                                    );
+                                  })}
+                                </tr>
+                              ));
+                            }
+
+                            return (
+                              <tr key={rIdx}>
+                                {row.cells?.map((cell: any, cIdx: number) => {
+                                  const isHeader =
+                                    cell.bg === "#f9fafb" || cell.bg === "var(--bg-color-app)" || cell.bold;
+                                  const val = cell.key
+                                    ? formData[cell.key] ?? bindTemplateText(cell.label)
+                                    : bindTemplateText(cell.label);
+                                  return (
+                                    <td
+                                      key={cIdx}
+                                      colSpan={cell.colSpan}
+                                      rowSpan={cell.rowSpan}
+                                      style={{
+                                        border: "1px solid #cbd5e1",
+                                        padding: "8px 10px",
+                                        backgroundColor: isHeader ? "#f8fafc" : "#ffffff",
+                                        fontWeight: isHeader ? 700 : 400,
+                                        textAlign: cell.align || "left",
+                                        width: cell.width,
+                                        whiteSpace: "pre-wrap",
+                                      }}
+                                    >
+                                      {val}
+                                    </td>
+                                  );
+                                })}
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    );
+                  }
+                  return null;
+                })}
+              </div>
+            ) : (
+              <>
+                <h3 style={{ fontSize: "1.05rem", fontWeight: 800, borderLeft: "4px solid #2563eb", paddingLeft: "10px", marginBottom: "14px" }}>
+                  주요 계약 조건 및 약정 내역
+                </h3>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.88rem", border: "1px solid #e2e8f0" }}>
+                  <tbody>
+                    {Object.entries(formData)
+                      .filter(
+                        ([key, val]) =>
+                          !["signatureImage", "stampImage", "brandLogo", "partyAEmail", "partyBEmail"].includes(key) &&
+                          val !== null &&
+                          val !== undefined &&
+                          (typeof val !== "string" || val.trim().length > 0) &&
+                          (!Array.isArray(val) || val.length > 0)
+                      )
+                      .map(([key, value]: [string, any], idx) => {
+                        const koreanLabel = fieldLabelMap[key] || key;
+                        return (
+                          <tr key={key} style={{ borderBottom: "1px solid #e2e8f0", backgroundColor: idx % 2 === 0 ? "#ffffff" : "#f8fafc" }}>
+                            <td style={{ padding: "10px 14px", width: "34%", fontWeight: 700, color: "#334155", borderRight: "1px solid #e2e8f0" }}>
+                              {koreanLabel}
+                            </td>
+                            <td style={{ padding: "10px 14px", color: "#0f172a", whiteSpace: "pre-wrap" }}>
+                              {Array.isArray(value) ? (
+                                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.82rem" }}>
+                                  <tbody>
+                                    {value.map((rowObj: any, rIdx: number) => (
+                                      <tr key={rIdx} style={{ borderBottom: "1px dashed #cbd5e1" }}>
+                                        {typeof rowObj === "object" && rowObj !== null ? (
+                                          Object.entries(rowObj).map(([subK, subV]) => (
+                                            <td key={subK} style={{ padding: "4px 6px" }}>
+                                              <span style={{ color: "#64748b", fontWeight: 600 }}>
+                                                {fieldLabelMap[`${key}.${subK}`] || fieldLabelMap[subK] || subK}:{" "}
+                                              </span>
+                                              <span>{String(subV ?? "-")}</span>
+                                            </td>
+                                          ))
+                                        ) : (
+                                          <td style={{ padding: "4px 6px" }}>{String(rowObj)}</td>
+                                        )}
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              ) : (
+                                String(value)
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
+              </>
+            )}
           </div>
 
-          {/* 서명 날인 블록 */}
-          <div style={{ borderTop: "2px solid #0f172a", paddingTop: "24px", marginTop: "32px" }}>
+          {/* 상호 전자서명 날인 블록 */}
+          <div style={{ borderTop: "2px solid #0f172a", paddingTop: "24px", marginTop: "32px", breakInside: "avoid" }}>
             <p style={{ textAlign: "center", fontSize: "0.9rem", color: "#475569", marginBottom: "24px" }}>
-              본 계약의 성립을 증명하기 위하여 계약 당사자는 위 계약 내용을 확인하고 전자서명법에 따라 상호 전자서명 날인합니다.
+              본 계약의 성립을 증명하기 위하여 계약 당사자는 위 계약 조항 전문을 확인하고 전자서명법에 따라 상호 전자서명 날인합니다.
             </p>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "20px" }}>
               {/* 갑 서명 */}
               <div style={{ border: "1px solid #e2e8f0", borderRadius: "12px", padding: "22px 16px", textAlign: "center", position: "relative" }}>
                 <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "#64748b", marginBottom: "14px" }}>
@@ -485,7 +834,7 @@ export default function SignContractPage({ params }: { params: Promise<{ token: 
                     )}
                   </span>
                 </div>
-                <div style={{ fontSize: "0.72rem", color: "#94a3b8", marginTop: "10px" }}>
+                <div style={{ fontSize: "0.72rem", color: "#64748b", marginTop: "10px" }}>
                   서명일시: {contract.partyASignedAt ? new Date(contract.partyASignedAt).toLocaleString("ko-KR") : "-"}
                 </div>
               </div>
@@ -519,7 +868,7 @@ export default function SignContractPage({ params }: { params: Promise<{ token: 
                     )}
                   </span>
                 </div>
-                <div style={{ fontSize: "0.72rem", color: partyBSignature ? "#94a3b8" : "#ef4444", fontWeight: partyBSignature ? 400 : 700, marginTop: "10px" }}>
+                <div style={{ fontSize: "0.72rem", color: partyBSignature ? "#64748b" : "#dc2626", fontWeight: partyBSignature ? 400 : 700, marginTop: "10px" }}>
                   {partyBSignature
                     ? `서명일시: ${contract.partyBSignedAt ? new Date(contract.partyBSignedAt).toLocaleString("ko-KR") : new Date().toLocaleString("ko-KR")}`
                     : "⚠️ 서명 대기 중 (하단 버튼을 눌러 날인해 주세요)"}
@@ -539,6 +888,7 @@ export default function SignContractPage({ params }: { params: Promise<{ token: 
               color: "#64748b",
               lineHeight: 1.5,
               border: "1px solid #e2e8f0",
+              breakInside: "avoid",
             }}
           >
             <div style={{ fontWeight: 800, color: "#1e293b", marginBottom: "4px" }}>
@@ -550,7 +900,7 @@ export default function SignContractPage({ params }: { params: Promise<{ token: 
           </div>
         </div>
 
-        {/* 하단 플로팅 서명 버튼 (미완료 시) */}
+        {/* 하단 플로팅 서명 버튼 (미완료 시, 인쇄 시 숨김) */}
         {!completed && (
           <div
             className="sign-floating-cta no-print"
@@ -588,26 +938,30 @@ export default function SignContractPage({ params }: { params: Promise<{ token: 
                 gap: "8px",
               }}
             >
-              <span>✍️ 위 내용에 동의하며 서명(도장) 날인하기</span>
+              <span>✍️ 위 계약 조항에 동의하며 서명(도장) 날인하기</span>
             </button>
           </div>
         )}
       </div>
 
-      {/* 전자 서명 모달 */}
-      <DocumentSignatureModal
-        isOpen={isSignModalOpen}
-        onClose={() => setIsSignModalOpen(false)}
-        onApplySignature={handleApplySignature}
-        defaultSignerName={contract?.partyBName || "수임인"}
-      />
+      {/* 전자 서명 모달 (열렸을 때만 마운트) */}
+      {isSignModalOpen && (
+        <DocumentSignatureModal
+          isOpen={isSignModalOpen}
+          onClose={() => setIsSignModalOpen(false)}
+          onApplySignature={handleApplySignature}
+          defaultSignerName={contract?.partyBName || "수임인"}
+        />
+      )}
 
-      {/* 영구 보관함 로그인 모달 */}
-      <ContractAuthModal
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
-        onSuccess={handleBindToVault}
-      />
+      {/* 영구 보관함 로그인 모달 (열렸을 때만 마운트) */}
+      {isAuthModalOpen && (
+        <ContractAuthModal
+          isOpen={isAuthModalOpen}
+          onClose={() => setIsAuthModalOpen(false)}
+          onSuccess={handleBindToVault}
+        />
+      )}
     </div>
   );
 }

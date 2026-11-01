@@ -1,25 +1,38 @@
 import { NextResponse, NextRequest } from "next/server";
 import { upsertContractUser } from "@/lib/db";
+import {
+  createSignedUserSessionToken,
+  getSafeBaseOrigin,
+  setUserSessionCookie,
+  verifySignedOAuthState,
+} from "@/lib/sessionAuth";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
-  const state = searchParams.get("state") || "";
-  const host = request.headers.get("host") || "www.maumdata.com";
-  const protocol = request.headers.get("x-forwarded-proto") || "https";
-  const redirectUri = `${protocol}://${host}/api/auth/google/callback`;
+  const rawState = searchParams.get("state") || "";
+  const baseOrigin = getSafeBaseOrigin(request);
+  const redirectUri = `${baseOrigin}/api/auth/google/callback`;
+
+  const stateInfo = verifySignedOAuthState(rawState);
 
   if (!code) {
-    return NextResponse.redirect(`${protocol}://${host}/contracts`);
+    return NextResponse.redirect(`${baseOrigin}${stateInfo.returnTo}`);
+  }
+
+  if (!stateInfo.valid) {
+    return NextResponse.redirect(`${baseOrigin}/contracts?auth_error=oauth_state_invalid`);
   }
 
   try {
-    const clientId =
-      process.env.GOOGLE_CLIENT_ID ||
-      "370947680580-jhif5cev0i9h7fd6do2gijcev3tsjfm3.apps.googleusercontent.com";
-    const clientSecret = process.env.GOOGLE_CLIENT_SECRET || "";
+    const clientId = (process.env.GOOGLE_CLIENT_ID || "").trim();
+    const clientSecret = (process.env.GOOGLE_CLIENT_SECRET || "").trim();
+
+    if (!clientId || !clientSecret) {
+      return NextResponse.redirect(`${baseOrigin}/contracts?auth_error=google_not_configured`);
+    }
 
     const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
       method: "POST",
@@ -43,7 +56,10 @@ export async function GET(request: NextRequest) {
     });
     const userData = await userRes.json();
 
-    const googleId = String(userData.id);
+    const googleId = String(userData.id || "");
+    if (!googleId) {
+      throw new Error("구글 사용자 식별자 누락");
+    }
     const name = userData.name || "구글 회원";
     const email = userData.email || `google_${googleId}@maumdata.user`;
 
@@ -54,35 +70,34 @@ export async function GET(request: NextRequest) {
       name,
     });
 
-    const userPayload = Buffer.from(
-      JSON.stringify({
-        id: saved.id,
-        email: saved.email,
-        name: saved.name || name,
-        company: saved.company || "",
-        provider: "google",
-      })
-    ).toString("base64");
+    const signedSessionToken = createSignedUserSessionToken({
+      id: saved.id,
+      email: saved.email,
+      name: saved.name || name,
+      company: saved.company || "",
+      provider: "google",
+    });
 
-    const encodedSession = encodeURIComponent(userPayload);
-    const webTargetUrl = `${protocol}://${host}/contracts?oauth_session=${encodedSession}`;
+    const encodedSession = encodeURIComponent(signedSessionToken);
+    const separator = stateInfo.returnTo.includes("?") ? "&" : "?";
+    const webTargetUrl = `${baseOrigin}${stateInfo.returnTo}${separator}oauth_session=${encodedSession}`;
 
-    // iOS ASWebAuthenticationSession 복귀 스킴
-    if (state === "ios") {
+    if (stateInfo.source === "ios") {
       return NextResponse.redirect(`maumdata://oauth?oauth_session=${encodedSession}`);
     }
 
-    // 안드로이드 네이티브 앱(Custom Tabs)에서 호출된 경우 앱 내부로 즉시 세션 복귀
-    if (state === "app") {
+    if (stateInfo.source === "app") {
       const appIntentUrl = `intent://oauth?oauth_session=${encodedSession}#Intent;scheme=maumdata;package=com.maumdata.dataapp;S.browser_fallback_url=${encodeURIComponent(
         webTargetUrl
       )};end`;
       return NextResponse.redirect(appIntentUrl);
     }
 
-    return NextResponse.redirect(webTargetUrl);
+    const res = NextResponse.redirect(webTargetUrl);
+    setUserSessionCookie(res, signedSessionToken);
+    return res;
   } catch (err) {
     console.error("Google OAuth error:", err);
-    return NextResponse.redirect(`${protocol}://${host}/contracts?auth_notice=oauth_failed`);
+    return NextResponse.redirect(`${baseOrigin}/contracts?auth_error=oauth_failed`);
   }
 }

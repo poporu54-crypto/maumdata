@@ -11,13 +11,19 @@ export interface ContractUser {
   name: string;
   company?: string;
   provider: "kakao" | "google" | "quick";
+  sessionToken?: string;
 }
 
 export function getLoggedInUser(): ContractUser | null {
   if (typeof window === "undefined") return null;
   try {
     const raw = localStorage.getItem(USER_STORAGE_KEY);
-    return raw ? JSON.parse(raw) : null;
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed.id !== "string" || typeof parsed.email !== "string") {
+      return null;
+    }
+    return parsed;
   } catch {
     return null;
   }
@@ -35,6 +41,15 @@ export function setLoggedInUser(user: ContractUser | null): void {
   } catch (e) {
     console.warn("Failed to set user in local storage", e);
   }
+}
+
+export function getContractAuthHeaders(extra?: Record<string, string>): Record<string, string> {
+  const headers: Record<string, string> = { ...(extra || {}) };
+  const user = getLoggedInUser();
+  if (user?.sessionToken) {
+    headers["Authorization"] = `Bearer ${user.sessionToken}`;
+  }
+  return headers;
 }
 
 export function saveContractToLocal(contractId: string): void {

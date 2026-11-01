@@ -16,7 +16,6 @@ const FORM_CATEGORIES = [
     key: "노무",
     title: "📋 인사 / 노무 서식",
     desc: "근로계약서, 사직서, 연차신청서, 이력서 등 노무 필수 양식",
-    count: "60+종",
     color: "linear-gradient(135deg, rgba(49, 130, 246, 0.03) 0%, rgba(49, 130, 246, 0.09) 100%)",
     borderColor: "rgba(49, 130, 246, 0.15)",
     subcategories: [
@@ -31,7 +30,6 @@ const FORM_CATEGORIES = [
     key: "행정",
     title: "📂 기획 / 행정 서식",
     desc: "기안서, 품의서, 회의록, 경위서 등 사내 행정 양식",
-    count: "45+종",
     color: "linear-gradient(135deg, rgba(0, 180, 216, 0.03) 0%, rgba(0, 180, 216, 0.09) 100%)",
     borderColor: "rgba(0, 180, 216, 0.15)",
     subcategories: [
@@ -46,7 +44,6 @@ const FORM_CATEGORIES = [
     key: "재무",
     title: "💰 세무 / 회계 / 경리",
     desc: "지출결의서, 영수증, 출납, 자금 관리 서식",
-    count: "25+종",
     color: "linear-gradient(135deg, rgba(45, 202, 115, 0.03) 0%, rgba(45, 202, 115, 0.09) 100%)",
     borderColor: "rgba(45, 202, 115, 0.15)",
     subcategories: [
@@ -60,7 +57,6 @@ const FORM_CATEGORIES = [
     key: "계약",
     title: "🤝 계약 / 영업 / 구매",
     desc: "견적서, 발주서, 표준 계약서 및 거래 양식",
-    count: "100+종",
     color: "linear-gradient(135deg, rgba(255, 157, 0, 0.03) 0%, rgba(255, 157, 0, 0.09) 100%)",
     borderColor: "rgba(255, 157, 0, 0.15)",
     subcategories: [
@@ -75,7 +71,6 @@ const FORM_CATEGORIES = [
     key: "법률",
     title: "⚖️ 법률 / 민사 서식",
     desc: "차용증, 내용증명, 위임장 등 법적 권리 증빙 서식",
-    count: "55+종",
     color: "linear-gradient(135deg, rgba(160, 32, 240, 0.03) 0%, rgba(160, 32, 240, 0.09) 100%)",
     borderColor: "rgba(160, 32, 240, 0.15)",
     subcategories: [
@@ -90,7 +85,6 @@ const FORM_CATEGORIES = [
     key: "정부",
     title: "🏛️ 정부 / 공공 민원 서식",
     desc: "정부24, 대법원, 국세청 등의 대한민국 공식 민원 양식",
-    count: "35+종",
     color: "linear-gradient(135deg, rgba(49, 130, 246, 0.03) 0%, rgba(49, 130, 246, 0.09) 100%)",
     borderColor: "rgba(49, 130, 246, 0.15)",
     subcategories: [
@@ -142,6 +136,14 @@ export default function FormCatalogClient({
       gridSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 50);
   };
+
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const tpl of initialSummaries) {
+      counts[tpl.category] = (counts[tpl.category] || 0) + 1;
+    }
+    return counts;
+  }, [initialSummaries]);
 
   const allTemplates = useMemo(() => {
     const qLower = searchQuery.trim().toLowerCase();
@@ -265,7 +267,7 @@ export default function FormCatalogClient({
                 boxShadow: isCatActive ? "0 4px 12px rgba(49, 130, 246, 0.25)" : "var(--shadow-sm)",
               }}
             >
-              {cat.title.split(" ")[0]} {cat.key} ({cat.count})
+              {cat.title.split(" ")[0]} {cat.key} ({categoryCounts[cat.key] || 0}종)
             </button>
           );
         })}
@@ -343,7 +345,7 @@ export default function FormCatalogClient({
                       border: "1px solid var(--color-border)",
                     }}
                   >
-                    {isCatActive ? "선택됨 ✓" : `전체 (${cat.count}) →`}
+                    {isCatActive ? "선택됨 ✓" : `전체 (${categoryCounts[cat.key] || 0}종) →`}
                   </span>
                 </div>
 
@@ -437,7 +439,7 @@ export default function FormCatalogClient({
         {visibleTemplates.length > 0 ? (
           <>
             <div className="docs-grid">
-              {visibleTemplates.map((tpl, idx) => {
+              {visibleTemplates.map((tpl) => {
                 const categoryBadge =
                   tpl.category === "노무"
                     ? "📋 노무"
@@ -452,14 +454,7 @@ export default function FormCatalogClient({
                             : "🤝 계약";
 
                 return (
-                  <React.Fragment key={tpl.id}>
-                    {idx === 6 && (
-                      <div style={{ gridColumn: "1 / -1", margin: "12px 0" }}>
-                        <AdSpace slot="8888888888" style={{ width: "100%" }} />
-                      </div>
-                    )}
-
-                    <div className="doc-card" style={{ position: "relative" }}>
+                  <div key={tpl.id} className="doc-card" style={{ position: "relative" }}>
                       {tpl.popular && (
                         <span
                           style={{
@@ -554,8 +549,7 @@ export default function FormCatalogClient({
                           웹에서 작성 &amp; PDF 저장
                         </Link>
                       </div>
-                    </div>
-                  </React.Fragment>
+                  </div>
                 );
               })}
             </div>

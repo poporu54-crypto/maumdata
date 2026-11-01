@@ -84,8 +84,13 @@ export async function getCorpBasicOutline(bizrNo: string, crno?: string): Promis
     }
 
     const items = json?.response?.body?.items?.item;
-    if (items && items.length > 0) {
-      const item = items[0];
+    const itemList = Array.isArray(items)
+      ? items
+      : items && typeof items === "object"
+        ? [items]
+        : [];
+    if (itemList.length > 0) {
+      const item = itemList[0];
       const baseAddr = (item.enpBsadr || "").trim();
       const dtlAddr = (item.enpDtadr || "").trim();
       const fullAddr = dtlAddr && !baseAddr.includes(dtlAddr) ? `${baseAddr} ${dtlAddr}`.trim() : baseAddr;
@@ -156,12 +161,17 @@ export async function getCorpFinanceInfo(crno: string): Promise<CorpFinanceDetai
     }
 
     const items = json?.response?.body?.items?.item;
-    if (!items || !Array.isArray(items)) return [];
+    const itemList = Array.isArray(items)
+      ? items
+      : items && typeof items === "object"
+        ? [items]
+        : [];
+    if (itemList.length === 0) return [];
 
     const history: CorpFinanceDetail[] = [];
     const yearMap = new Map<number, any>();
 
-    items.forEach((item: any) => {
+    itemList.forEach((item: any) => {
       const year = parseInt(item.bizYear || item.bsnsYear);
       if (!year) return;
 

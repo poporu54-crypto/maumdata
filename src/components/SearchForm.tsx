@@ -17,15 +17,17 @@ export default function SearchForm() {
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
-  // 사업자번호 포맷팅 (XXX-XX-XXXXX)
+  // 사업자번호(10자리: XXX-XX-XXXXX) 및 법인등록번호(11~13자리: XXXXXX-XXXXXXX) 자동 포맷팅
   const formatBusinessNumber = (value: string) => {
-    const cleanValue = value.replace(/[^0-9]/g, "");
+    const cleanValue = value.replace(/[^0-9]/g, "").slice(0, 13);
     if (cleanValue.length <= 3) {
       return cleanValue;
     } else if (cleanValue.length <= 5) {
       return `${cleanValue.slice(0, 3)}-${cleanValue.slice(3)}`;
-    } else {
+    } else if (cleanValue.length <= 10) {
       return `${cleanValue.slice(0, 3)}-${cleanValue.slice(3, 5)}-${cleanValue.slice(5, 10)}`;
+    } else {
+      return `${cleanValue.slice(0, 6)}-${cleanValue.slice(6, 13)}`;
     }
   };
 
@@ -34,9 +36,9 @@ export default function SearchForm() {
     const isNumericOrHyphen = /^[0-9-]*$/.test(rawValue);
     
     if (isNumericOrHyphen) {
-      const formatted = formatBusinessNumber(rawValue);
-      if (formatted.replace(/[^0-9]/g, "").length <= 10) {
-        setQuery(formatted);
+      const cleanDigits = rawValue.replace(/[^0-9]/g, "");
+      if (cleanDigits.length <= 13) {
+        setQuery(formatBusinessNumber(rawValue));
       }
     } else {
       setQuery(rawValue);
@@ -108,8 +110,10 @@ export default function SearchForm() {
         return;
       }
       navigateTo(`/biz/${cleanNumber}`);
+    } else if (isOnlyNumberInput && cleanNumber.length === 13) {
+      navigateTo(`/search?q=${cleanNumber}`);
     } else {
-      navigateTo(`/search?query=${encodeURIComponent(trimmed)}`);
+      navigateTo(`/search?q=${encodeURIComponent(trimmed)}`);
     }
   };
 
@@ -154,7 +158,7 @@ export default function SearchForm() {
 
           <input
             type="text"
-            placeholder="사업자번호(10자리), 상호명, 대표자 검색"
+            placeholder="사업자번호(10자리), 법인번호(13자리), 상호명 검색"
             value={query}
             onChange={handleInputChange}
             style={{

@@ -44,8 +44,8 @@ export default function BizStickyNav() {
   const scrollToSection = (id: string) => {
     const el = document.getElementById(id);
     if (el) {
-      const yOffset = -70; // 헤더 높이 및 여백 보정
-      const y = el.getBoundingClientRect().top + window.pageYOffset + yOffset;
+      const yOffset = -124; // 스티키 헤더 + 스티키 탭 바 높이 및 여백 보정
+      const y = el.getBoundingClientRect().top + window.scrollY + yOffset;
       window.scrollTo({ top: y, behavior: "smooth" });
       setActiveId(id);
     }

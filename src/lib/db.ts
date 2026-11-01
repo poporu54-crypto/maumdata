@@ -140,9 +140,13 @@ export async function getBusinessByBNo(bNo: string) {
   };
 }
 
-// 2. 전체 기업 기본정보 조회 (Sitemap / 전체 검색용)
-export async function getAllBusinesses() {
-  const result = await query("SELECT b_no, b_nm, p_nm, b_adr, b_sector, is_sme, listing_status, data_source FROM businesses");
+// 2. 기업 기본정보 제한 조회 (전체 무제한 스캔 차단)
+export async function getAllBusinesses(limit: number = 500) {
+  const safeLimit = Math.min(1000, Math.max(1, limit));
+  const result = await query(
+    "SELECT b_no, b_nm, p_nm, b_adr, b_sector, is_sme, listing_status, data_source FROM businesses LIMIT $1",
+    [safeLimit]
+  );
   return result.rows.map((row) => ({
     b_no: row.b_no,
     b_nm: row.b_nm,
@@ -155,7 +159,7 @@ export async function getAllBusinesses() {
   }));
 }
 
-// 3. 기업명 또는 업종 등 검색 (정확도 우선 정렬 및 대용량 전송 폭탄 방지를 위한 LIMIT 적용)
+// 3. 기업명 · 사업자번호 · 13자리 법인등록번호 검색 (정확도 우선 정렬 및 LIMIT 적용)
 export async function searchBusinesses(q: string, limit: number = 60) {
   const trimmed = q.trim();
   const searchWord = `%${trimmed}%`;
@@ -173,10 +177,15 @@ export async function searchBusinesses(q: string, limit: number = 60) {
          OR b_adr ILIKE $1
          OR brand_name ILIKE $1
          OR b_no = $2
+         OR ($2 != 'NOT_A_NUMBER' AND LENGTH($2) = 13 AND (
+           REPLACE(COALESCE(corp_no, ''), '-', '') = $2
+           OR REPLACE(COALESCE(crno, ''), '-', '') = $2
+         ))
        )
      ORDER BY
        CASE
          WHEN b_no = $2 THEN 0
+         WHEN LENGTH($2) = 13 AND (REPLACE(COALESCE(corp_no, ''), '-', '') = $2 OR REPLACE(COALESCE(crno, ''), '-', '') = $2) THEN 0
          WHEN b_nm = $3 THEN 1
          WHEN b_nm ILIKE $4 THEN 2
          WHEN brand_name ILIKE $4 THEN 3
@@ -388,24 +397,42 @@ export async function upsertBusiness(biz: any) {
     }
 
     if (uniqueHistoryMap.size > 0) {
-      await query(`DELETE FROM business_history WHERE b_no = $1`, [clean]);
-      for (const h of uniqueHistoryMap.values()) {
-        await query(`
-          INSERT INTO business_history (
-            b_no, year, revenue, operating_income, net_income, total_assets, total_liabilities, total_equity, employees
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-          ON CONFLICT (b_no, year) DO UPDATE SET
-            revenue = EXCLUDED.revenue,
-            operating_income = EXCLUDED.operating_income,
-            net_income = EXCLUDED.net_income,
-            total_assets = EXCLUDED.total_assets,
-            total_liabilities = EXCLUDED.total_liabilities,
-            total_equity = EXCLUDED.total_equity,
-            employees = EXCLUDED.employees
-        `, [
-          clean, h.year, h.revenue || 0, h.operatingIncome || 0, h.netIncome || 0,
-          h.totalAssets || 0, h.totalLiabilities || 0, h.totalEquity || 0, h.employees || 0
-        ]);
+      const client = await pool.connect();
+      try {
+        await client.query("BEGIN");
+        await client.query(`DELETE FROM business_history WHERE b_no = $1`, [clean]);
+        for (const h of uniqueHistoryMap.values()) {
+          await client.query(
+            `INSERT INTO business_history (
+              b_no, year, revenue, operating_income, net_income, total_assets, total_liabilities, total_equity, employees
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            ON CONFLICT (b_no, year) DO UPDATE SET
+              revenue = EXCLUDED.revenue,
+              operating_income = EXCLUDED.operating_income,
+              net_income = EXCLUDED.net_income,
+              total_assets = EXCLUDED.total_assets,
+              total_liabilities = EXCLUDED.total_liabilities,
+              total_equity = EXCLUDED.total_equity,
+              employees = EXCLUDED.employees`,
+            [
+              clean,
+              h.year,
+              h.revenue || 0,
+              h.operatingIncome || 0,
+              h.netIncome || 0,
+              h.totalAssets || 0,
+              h.totalLiabilities || 0,
+              h.totalEquity || 0,
+              h.employees || 0,
+            ]
+          );
+        }
+        await client.query("COMMIT");
+      } catch (txErr) {
+        await client.query("ROLLBACK").catch(() => {});
+        console.error("Failed to transactionally update business_history:", txErr);
+      } finally {
+        client.release();
       }
     }
   }
@@ -423,10 +450,11 @@ export function recordBusinessView(bNo: string) {
   });
 }
 
-// 5. 미등록/폐업 블랙리스트 조회
-export async function getInvalidBusinesses() {
-  const result = await query("SELECT b_no FROM invalid_businesses");
-  return result.rows.map(r => r.b_no);
+// 5. 미등록/폐업 블랙리스트 제한 조회 (단건 확인은 isInvalidBusiness 사용)
+export async function getInvalidBusinesses(limit: number = 500) {
+  const safeLimit = Math.min(2000, Math.max(1, limit));
+  const result = await query("SELECT b_no FROM invalid_businesses LIMIT $1", [safeLimit]);
+  return result.rows.map((r) => r.b_no);
 }
 
 // 5-1. 단일 사업자번호 블랙리스트 여부 초고속 단건 확인 (전체 테이블 풀스캔 방지)
@@ -784,31 +812,48 @@ export async function getPatentsByBNo(bNo: string) {
   return result.rows;
 }
 
-// 17. 특허 캐시 저장
+// 17. 특허 캐시 저장 (트랜잭션 보장 및 복합키 정합성 일치)
 export async function savePatents(bNo: string, patents: any[]) {
   const clean = bNo.replace(/[^0-9]/g, "");
-  await query("DELETE FROM business_patents WHERE b_no = $1", [clean]);
-  for (const p of patents) {
-    await query(`
-      INSERT INTO business_patents (
-        b_no, application_number, application_date, invention_title,
-        register_number, register_date, applicant_name, patent_status, detail_url
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-      ON CONFLICT (application_number) DO UPDATE SET
-        b_no = EXCLUDED.b_no,
-        application_date = EXCLUDED.application_date,
-        invention_title = EXCLUDED.invention_title,
-        register_number = EXCLUDED.register_number,
-        register_date = EXCLUDED.register_date,
-        applicant_name = EXCLUDED.applicant_name,
-        patent_status = EXCLUDED.patent_status,
-        detail_url = EXCLUDED.detail_url
-    `, [
-      clean, p.applicationNumber, p.applicationDate, p.inventionTitle,
-      p.registerNumber || null, p.registerDate || null, p.applicantName, p.patentStatus, p.detailUrl || null
-    ]);
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query("DELETE FROM business_patents WHERE b_no = $1", [clean]);
+    for (const p of patents) {
+      await client.query(
+        `INSERT INTO business_patents (
+          b_no, application_number, application_date, invention_title,
+          register_number, register_date, applicant_name, patent_status, detail_url
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        ON CONFLICT (b_no, application_number) DO UPDATE SET
+          application_date = EXCLUDED.application_date,
+          invention_title = EXCLUDED.invention_title,
+          register_number = EXCLUDED.register_number,
+          register_date = EXCLUDED.register_date,
+          applicant_name = EXCLUDED.applicant_name,
+          patent_status = EXCLUDED.patent_status,
+          detail_url = EXCLUDED.detail_url`,
+        [
+          clean,
+          p.applicationNumber,
+          p.applicationDate,
+          p.inventionTitle,
+          p.registerNumber || null,
+          p.registerDate || null,
+          p.applicantName,
+          p.patentStatus,
+          p.detailUrl || null,
+        ]
+      );
+    }
+    await client.query("UPDATE businesses SET patents_last_sync_at = CURRENT_TIMESTAMP WHERE b_no = $1", [clean]);
+    await client.query("COMMIT");
+  } catch (err) {
+    await client.query("ROLLBACK").catch(() => {});
+    throw err;
+  } finally {
+    client.release();
   }
-  await query("UPDATE businesses SET patents_last_sync_at = CURRENT_TIMESTAMP WHERE b_no = $1", [clean]);
 }
 
 // 18. 입찰/낙찰 캐시 조회
@@ -825,40 +870,58 @@ export async function getBidsByBNo(bNo: string) {
      ORDER BY bid_ntce_dt DESC`,
     [clean]
   );
-  return result.rows.map(r => ({
+  return result.rows.map((r) => ({
     ...r,
-    presmptPrce: parseFloat(r.presmptPrce || "0")
+    presmptPrce: parseFloat(r.presmptPrce || "0"),
   }));
 }
 
-// 19. 입찰/낙찰 캐시 저장
+// 19. 입찰/낙찰 캐시 저장 (트랜잭션 보장 및 복합키 정합성 일치)
 export async function saveBids(bNo: string, bids: any[]) {
   const clean = bNo.replace(/[^0-9]/g, "");
-  await query("DELETE FROM business_bids WHERE b_no = $1", [clean]);
-  for (const b of bids) {
-    await query(`
-      INSERT INTO business_bids (
-        b_no, bid_ntce_no, bid_ntce_ord, bid_ntce_nm, dminstt_nm,
-        opng_dt, bid_ntce_dt, cntrct_cncl_mthd_nm, presmpt_prce, detail_url
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-      ON CONFLICT (bid_ntce_no, bid_ntce_ord) DO UPDATE SET
-        b_no = EXCLUDED.b_no,
-        bid_ntce_nm = EXCLUDED.bid_ntce_nm,
-        dminstt_nm = EXCLUDED.dminstt_nm,
-        opng_dt = EXCLUDED.opng_dt,
-        bid_ntce_dt = EXCLUDED.bid_ntce_dt,
-        cntrct_cncl_mthd_nm = EXCLUDED.cntrct_cncl_mthd_nm,
-        presmpt_prce = EXCLUDED.presmpt_prce,
-        detail_url = EXCLUDED.detail_url
-    `, [
-      clean, b.bidNtceNo, b.bidNtceOrd, b.bidNtceNm, b.dminsttNm,
-      b.opngDt, b.bidNtceDt, b.cntrctCnclMthdNm, b.presmptPrce, b.detailUrl
-    ]);
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query("DELETE FROM business_bids WHERE b_no = $1", [clean]);
+    for (const b of bids) {
+      await client.query(
+        `INSERT INTO business_bids (
+          b_no, bid_ntce_no, bid_ntce_ord, bid_ntce_nm, dminstt_nm,
+          opng_dt, bid_ntce_dt, cntrct_cncl_mthd_nm, presmpt_prce, detail_url
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        ON CONFLICT (b_no, bid_ntce_no, bid_ntce_ord) DO UPDATE SET
+          bid_ntce_nm = EXCLUDED.bid_ntce_nm,
+          dminstt_nm = EXCLUDED.dminstt_nm,
+          opng_dt = EXCLUDED.opng_dt,
+          bid_ntce_dt = EXCLUDED.bid_ntce_dt,
+          cntrct_cncl_mthd_nm = EXCLUDED.cntrct_cncl_mthd_nm,
+          presmpt_prce = EXCLUDED.presmpt_prce,
+          detail_url = EXCLUDED.detail_url`,
+        [
+          clean,
+          b.bidNtceNo,
+          b.bidNtceOrd,
+          b.bidNtceNm,
+          b.dminsttNm,
+          b.opngDt,
+          b.bidNtceDt,
+          b.cntrctCnclMthdNm,
+          b.presmptPrce,
+          b.detailUrl,
+        ]
+      );
+    }
+    await client.query("UPDATE businesses SET bids_last_sync_at = CURRENT_TIMESTAMP WHERE b_no = $1", [clean]);
+    await client.query("COMMIT");
+  } catch (err) {
+    await client.query("ROLLBACK").catch(() => {});
+    throw err;
+  } finally {
+    client.release();
   }
-  await query("UPDATE businesses SET bids_last_sync_at = CURRENT_TIMESTAMP WHERE b_no = $1", [clean]);
 }
 
-// 20. 공시 캐시 조회
+// 20. 공시 캐시 조회 (동일 DART 고유번호를 공유하는 본·지점도 공시 누락 없이 조회)
 export async function getDisclosuresByBNo(bNo: string) {
   const clean = bNo.replace(/[^0-9]/g, "");
   const result = await query(
@@ -868,36 +931,68 @@ export async function getDisclosuresByBNo(bNo: string) {
             is_key_disclosure as "isKeyDisclosure"
      FROM business_disclosures
      WHERE b_no = $1
-     ORDER BY rcept_dt DESC`,
+        OR (
+          corp_code IS NOT NULL
+          AND corp_code != ''
+          AND corp_code = (
+            SELECT dart_code FROM businesses
+            WHERE b_no = $1 AND dart_code IS NOT NULL AND dart_code != ''
+            LIMIT 1
+          )
+        )
+     ORDER BY rcept_dt DESC
+     LIMIT 50`,
     [clean]
   );
   return result.rows;
 }
 
-// 21. 공시 캐시 저장
+// 21. 공시 캐시 저장 (트랜잭션 보장 및 본·지점 공유 corp_code 보존)
 export async function saveDisclosures(bNo: string, disclosures: any[]) {
   const clean = bNo.replace(/[^0-9]/g, "");
-  await query("DELETE FROM business_disclosures WHERE b_no = $1", [clean]);
-  for (const d of disclosures) {
-    await query(`
-      INSERT INTO business_disclosures (
-        b_no, rcept_no, corp_code, report_nm, flr_nm, rcept_dt, rm, detail_url, is_key_disclosure
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-      ON CONFLICT (rcept_no) DO UPDATE SET
-        b_no = EXCLUDED.b_no,
-        corp_code = EXCLUDED.corp_code,
-        report_nm = EXCLUDED.report_nm,
-        flr_nm = EXCLUDED.flr_nm,
-        rcept_dt = EXCLUDED.rcept_dt,
-        rm = EXCLUDED.rm,
-        detail_url = EXCLUDED.detail_url,
-        is_key_disclosure = EXCLUDED.is_key_disclosure
-    `, [
-      clean, d.rceptNo, d.corpCode || null, d.reportNm, d.flrNm,
-      d.rceptDt, d.rm || null, d.detailUrl, d.isKeyDisclosure || false
-    ]);
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query("DELETE FROM business_disclosures WHERE b_no = $1", [clean]);
+    for (const d of disclosures) {
+      await client.query(
+        `
+        INSERT INTO business_disclosures (
+          b_no, rcept_no, corp_code, report_nm, flr_nm, rcept_dt, rm, detail_url, is_key_disclosure
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        ON CONFLICT (rcept_no) DO UPDATE SET
+          corp_code = COALESCE(EXCLUDED.corp_code, business_disclosures.corp_code),
+          report_nm = EXCLUDED.report_nm,
+          flr_nm = EXCLUDED.flr_nm,
+          rcept_dt = EXCLUDED.rcept_dt,
+          rm = EXCLUDED.rm,
+          detail_url = EXCLUDED.detail_url,
+          is_key_disclosure = EXCLUDED.is_key_disclosure
+      `,
+        [
+          clean,
+          d.rceptNo,
+          d.corpCode || null,
+          d.reportNm,
+          d.flrNm,
+          d.rceptDt,
+          d.rm || null,
+          d.detailUrl,
+          d.isKeyDisclosure || false,
+        ]
+      );
+    }
+    await client.query(
+      "UPDATE businesses SET dart_last_sync_at = CURRENT_TIMESTAMP WHERE b_no = $1",
+      [clean]
+    );
+    await client.query("COMMIT");
+  } catch (err) {
+    await client.query("ROLLBACK").catch(() => {});
+    throw err;
+  } finally {
+    client.release();
   }
-  await query("UPDATE businesses SET dart_last_sync_at = CURRENT_TIMESTAMP WHERE b_no = $1", [clean]);
 }
 
 interface CachedIndustryGroupStats {
@@ -1103,11 +1198,13 @@ export async function getTemplateByIdFromDB(id: string) {
 export async function searchTemplatesFromDB(
   q: string = "",
   tag: string | null = null,
-  category: string | null = null
+  category: string | null = null,
+  limit: number = 150
 ) {
   try {
     let queryText = "SELECT id, title, category, description as desc, popular, tags FROM document_templates WHERE 1=1";
     const params: any[] = [];
+    const safeLimit = Math.min(350, Math.max(1, limit));
     
     // 1. 대분류 카테고리 필터
     if (category && category.trim().length > 0) {
@@ -1159,7 +1256,8 @@ export async function searchTemplatesFromDB(
       queryText += ` AND (title ILIKE $${params.length} OR description ILIKE $${params.length})`;
     }
     
-    queryText += " ORDER BY popular DESC, title ASC";
+    params.push(safeLimit);
+    queryText += ` ORDER BY popular DESC, title ASC LIMIT $${params.length}`;
     
     const res = await query(queryText, params);
     return res.rows;
@@ -1347,17 +1445,36 @@ export async function getContractUserByEmail(email: string) {
 
 export async function deleteContractUser(userId: string, email: string) {
   await ensureContractsTable();
-  await query(
-    `UPDATE electronic_contracts
-     SET party_a_user_id = CASE WHEN party_a_user_id = $1 THEN '' ELSE party_a_user_id END,
-         party_b_user_id = CASE WHEN party_b_user_id = $1 THEN '' ELSE party_b_user_id END
-     WHERE party_a_user_id = $1 OR party_b_user_id = $1`,
-    [userId]
-  );
-  await query(
-    `DELETE FROM contract_users WHERE id = $1 OR email = LOWER($2)`,
-    [userId, (email || "").trim()]
-  );
+  const cleanId = (userId || "").trim();
+  const cleanEmail = (email || "").trim().toLowerCase();
+  if (!cleanId && !cleanEmail) return;
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    if (cleanId) {
+      await client.query(
+        `UPDATE contracts
+         SET party_a_user_id = CASE WHEN party_a_user_id = $1 THEN '' ELSE party_a_user_id END,
+             party_b_user_id = CASE WHEN party_b_user_id = $1 THEN '' ELSE party_b_user_id END,
+             updated_at = NOW()
+         WHERE party_a_user_id = $1 OR party_b_user_id = $1`,
+        [cleanId]
+      );
+    }
+    await client.query(
+      `DELETE FROM contract_users
+       WHERE ($1 != '' AND id = $1)
+          OR ($2 != '' AND LOWER(email) = $2)`,
+      [cleanId, cleanEmail]
+    );
+    await client.query("COMMIT");
+  } catch (err) {
+    await client.query("ROLLBACK").catch(() => {});
+    throw err;
+  } finally {
+    client.release();
+  }
 }
 
 export async function createContract(data: {
@@ -1457,6 +1574,7 @@ export async function completePartyBSignature(
       status = 'COMPLETED',
       updated_at = NOW()
      WHERE sign_token = $6
+       AND status = 'WAITING_PARTY_B'
      RETURNING *`,
     [partyBSignature, partyBIp, partyBName || "", partyBUserId || "", r2Key || "", token]
   );
@@ -1465,14 +1583,19 @@ export async function completePartyBSignature(
 
 export async function bindUserToContract(token: string, userId: string, role: "A" | "B") {
   await ensureContractsTable();
+  if (!userId) return;
   if (role === "A") {
     await query(
-      `UPDATE contracts SET party_a_user_id = $1, deleted_by_a = FALSE WHERE sign_token = $2`,
+      `UPDATE contracts
+       SET party_a_user_id = $1, deleted_by_a = FALSE, updated_at = NOW()
+       WHERE sign_token = $2 AND (party_a_user_id IS NULL OR party_a_user_id = '' OR party_a_user_id = $1)`,
       [userId, token]
     );
   } else {
     await query(
-      `UPDATE contracts SET party_b_user_id = $1, deleted_by_b = FALSE WHERE sign_token = $2`,
+      `UPDATE contracts
+       SET party_b_user_id = $1, deleted_by_b = FALSE, updated_at = NOW()
+       WHERE sign_token = $2 AND (party_b_user_id IS NULL OR party_b_user_id = '' OR party_b_user_id = $1)`,
       [userId, token]
     );
   }
@@ -1487,17 +1610,19 @@ export async function getContractsByUserId(userId: string, userEmail?: string) {
     `SELECT id, template_id, title, status,
             party_a_name, party_a_company, party_a_bno, party_a_phone, party_a_signed_at, party_a_user_id,
             party_b_name, party_b_company, party_b_bno, party_b_phone, party_b_signed_at, party_b_user_id,
+            form_data->>'partyAEmail' AS party_a_email,
+            form_data->>'partyBEmail' AS party_b_email,
             sign_token, access_pin, r2_key, created_at, updated_at
      FROM contracts
      WHERE (
-       (party_a_user_id = $1 AND COALESCE(deleted_by_a, FALSE) = FALSE)
-       OR (party_b_user_id = $1 AND COALESCE(deleted_by_b, FALSE) = FALSE)
+       ($1 != '' AND party_a_user_id = $1 AND COALESCE(deleted_by_a, FALSE) = FALSE)
+       OR ($1 != '' AND party_b_user_id = $1 AND COALESCE(deleted_by_b, FALSE) = FALSE)
        OR ($2 != '' AND LOWER(form_data->>'partyAEmail') = $2 AND COALESCE(deleted_by_a, FALSE) = FALSE)
        OR ($2 != '' AND LOWER(form_data->>'partyBEmail') = $2 AND COALESCE(deleted_by_b, FALSE) = FALSE)
      )
      ORDER BY created_at DESC
      LIMIT 100`,
-    [userId, emailLower]
+    [userId || "", emailLower]
   );
   return res.rows;
 }
@@ -1507,9 +1632,9 @@ export async function getContractsByIds(ids: string[]) {
   await ensureContractsTable();
   const res = await query(
     `SELECT id, template_id, title, status,
-            party_a_name, party_a_company, party_a_bno, party_a_phone, party_a_signed_at, party_a_user_id,
-            party_b_name, party_b_company, party_b_bno, party_b_phone, party_b_signed_at, party_b_user_id,
-            sign_token, access_pin, r2_key, created_at, updated_at
+            party_a_name, party_a_company, party_a_signed_at, party_a_user_id,
+            party_b_name, party_b_company, party_b_signed_at, party_b_user_id,
+            sign_token, r2_key, created_at, updated_at
      FROM contracts
      WHERE id = ANY($1::varchar[])
        AND COALESCE(deleted_by_a, FALSE) = FALSE
@@ -1520,23 +1645,36 @@ export async function getContractsByIds(ids: string[]) {
   return res.rows;
 }
 
-export async function deleteContractForUser(contractId: string, userId?: string) {
+export async function deleteContractForUser(
+  contractId: string,
+  userId?: string,
+  userEmail?: string
+) {
   await ensureContractsTable();
-  if (userId) {
-    await query(
-      `UPDATE contracts SET
-        deleted_by_a = CASE WHEN party_a_user_id = $2 THEN TRUE ELSE deleted_by_a END,
-        deleted_by_b = CASE WHEN party_b_user_id = $2 THEN TRUE ELSE deleted_by_b END,
-        updated_at = NOW()
-       WHERE id = $1`,
-      [contractId, userId]
-    );
-  } else {
-    await query(
-      `UPDATE contracts SET deleted_by_a = TRUE, updated_at = NOW() WHERE id = $1`,
-      [contractId]
-    );
+  const cleanId = (userId || "").trim();
+  const cleanEmail = (userEmail || "").trim().toLowerCase();
+  if (!cleanId && !cleanEmail) {
+    return false;
   }
+
+  await query(
+    `UPDATE contracts SET
+      deleted_by_a = CASE
+        WHEN ($2 != '' AND party_a_user_id = $2)
+          OR ($3 != '' AND LOWER(form_data->>'partyAEmail') = $3)
+        THEN TRUE
+        ELSE deleted_by_a
+      END,
+      deleted_by_b = CASE
+        WHEN ($2 != '' AND party_b_user_id = $2)
+          OR ($3 != '' AND LOWER(form_data->>'partyBEmail') = $3)
+        THEN TRUE
+        ELSE deleted_by_b
+      END,
+      updated_at = NOW()
+     WHERE id = $1`,
+    [contractId, cleanId, cleanEmail]
+  );
   return true;
 }
 

@@ -13,6 +13,13 @@ export default function MaumDataLogo({
   showText = true,
   className = "",
 }: LogoProps) {
+  const rawId = React.useId();
+  const uid = rawId.replace(/:/g, "");
+  const grad1Id = `maumSymbolGrad1-${uid}`;
+  const grad2Id = `maumSymbolGrad2-${uid}`;
+  const bgGradId = `maumBgGrad-${uid}`;
+  const glowId = `maumGlow-${uid}`;
+
   // 크기별 심볼 및 텍스트 치수
   const dimensions = {
     sm: { symbol: 26, fontSize: "1.05rem", badgeSize: "0.65rem", gap: "8px" },
@@ -53,21 +60,21 @@ export default function MaumDataLogo({
         className="logo-symbol-svg"
       >
         <defs>
-          <linearGradient id="maumSymbolGrad1" x1="10" y1="10" x2="90" y2="90" gradientUnits="userSpaceOnUse">
+          <linearGradient id={grad1Id} x1="10" y1="10" x2="90" y2="90" gradientUnits="userSpaceOnUse">
             <stop offset="0%" stopColor="#38bdf8" />
             <stop offset="45%" stopColor="#3182f6" />
             <stop offset="100%" stopColor="#8b5cf6" />
           </linearGradient>
-          <linearGradient id="maumSymbolGrad2" x1="20" y1="80" x2="80" y2="20" gradientUnits="userSpaceOnUse">
+          <linearGradient id={grad2Id} x1="20" y1="80" x2="80" y2="20" gradientUnits="userSpaceOnUse">
             <stop offset="0%" stopColor="#8b5cf6" />
             <stop offset="60%" stopColor="#3182f6" />
             <stop offset="100%" stopColor="#06b6d4" />
           </linearGradient>
-          <linearGradient id="maumBgGrad" x1="0" y1="0" x2="100" y2="100" gradientUnits="userSpaceOnUse">
+          <linearGradient id={bgGradId} x1="0" y1="0" x2="100" y2="100" gradientUnits="userSpaceOnUse">
             <stop offset="0%" stopColor="#ffffff" stopOpacity="0.08" />
             <stop offset="100%" stopColor="#ffffff" stopOpacity="0.02" />
           </linearGradient>
-          <filter id="maumGlow" x="-20%" y="-20%" width="140%" height="140%">
+          <filter id={glowId} x="-20%" y="-20%" width="140%" height="140%">
             <feGaussianBlur stdDeviation="3" result="blur" />
             <feComposite in="SourceGraphic" in2="blur" operator="over" />
           </filter>
@@ -80,8 +87,8 @@ export default function MaumDataLogo({
           width="92"
           height="92"
           rx="24"
-          fill="url(#maumBgGrad)"
-          stroke="url(#maumSymbolGrad1)"
+          fill={`url(#${bgGradId})`}
+          stroke={`url(#${grad1Id})`}
           strokeWidth="2.5"
           strokeOpacity="0.35"
         />
@@ -89,7 +96,7 @@ export default function MaumDataLogo({
         {/* M 형태 우상향 성장 펄스 & 데이터 차트 라인 (두께감 있는 유기적 패스) */}
         <path
           d="M24 70 L24 44 C24 38 31 34 36 38 L48 49 C49.5 50.5 52 50.5 53.5 49 L67 36 C72 32 80 35 80 42 L80 70"
-          stroke="url(#maumSymbolGrad1)"
+          stroke={`url(#${grad1Id})`}
           strokeWidth="9"
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -98,14 +105,14 @@ export default function MaumDataLogo({
         {/* 우상향 피크 화살표 (미래 성장과 데이터 상승을 상징) */}
         <path
           d="M62 25 L80 25 L80 43"
-          stroke="url(#maumSymbolGrad2)"
+          stroke={`url(#${grad2Id})`}
           strokeWidth="8.5"
           strokeLinecap="round"
           strokeLinejoin="round"
         />
 
         {/* 데이터 노드 및 하트비트 펄스 포인트 */}
-        <circle cx="50" cy="49" r="6" fill="#38bdf8" filter="url(#maumGlow)" />
+        <circle cx="50" cy="49" r="6" fill="#38bdf8" filter={`url(#${glowId})`} />
         <circle cx="24" cy="70" r="5" fill="#8b5cf6" />
         <circle cx="80" cy="70" r="5" fill="#3182f6" />
       </svg>

@@ -91,12 +91,26 @@ export default function NavigationProgressBar() {
       if (anchor.hasAttribute("download")) return;
 
       const rawHref = anchor.getAttribute("href");
-      if (!rawHref || rawHref.startsWith("#") || rawHref.startsWith("mailto:") || rawHref.startsWith("tel:") || rawHref.startsWith("javascript:")) {
+      if (!rawHref) return;
+      const lowerRawHref = rawHref.trim().toLowerCase();
+      const lowerFullHref = (anchor.href || "").trim().toLowerCase();
+      if (
+        lowerRawHref.startsWith("#") ||
+        lowerRawHref.startsWith("mailto:") ||
+        lowerRawHref.startsWith("tel:") ||
+        lowerRawHref.startsWith("javascript:") ||
+        lowerRawHref.startsWith("blob:") ||
+        lowerRawHref.startsWith("data:") ||
+        lowerFullHref.startsWith("javascript:") ||
+        lowerFullHref.startsWith("blob:") ||
+        lowerFullHref.startsWith("data:")
+      ) {
         return;
       }
 
       try {
         const nextUrl = new URL(anchor.href, window.location.href);
+        if (nextUrl.protocol !== "http:" && nextUrl.protocol !== "https:") return;
         if (nextUrl.origin !== window.location.origin) return;
         if (nextUrl.pathname === window.location.pathname && nextUrl.search === window.location.search) {
           return;

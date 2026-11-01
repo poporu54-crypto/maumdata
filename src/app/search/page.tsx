@@ -2,28 +2,37 @@ import React, { Suspense } from "react";
 import { Metadata } from "next";
 import Link from "next/link";
 import SearchForm from "@/components/SearchForm";
-import { searchCorpOutline, CorpBasicOutline } from "@/lib/corpApi";
+import { searchCorpOutline, getCorpBasicOutline, CorpBasicOutline } from "@/lib/corpApi";
 import { searchBusinesses, getPopularQuickLinks } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
 interface SearchPageProps {
-  searchParams: Promise<{ query?: string }>;
+  searchParams: Promise<{ query?: string; q?: string }>;
+}
+
+function safeDecodeQuery(raw?: string): string {
+  if (!raw) return "";
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return raw;
+  }
 }
 
 export async function generateMetadata({ searchParams }: SearchPageProps): Promise<Metadata> {
-  const { query } = await searchParams;
-  const decodedQuery = query ? decodeURIComponent(query) : "";
-  const canonicalPath = decodedQuery ? `/search?query=${encodeURIComponent(decodedQuery)}` : "/search";
+  const resolved = await searchParams;
+  const rawQuery = resolved.q ?? resolved.query ?? "";
+  const decodedQuery = safeDecodeQuery(rawQuery).trim();
   return {
     title: decodedQuery
       ? `"${decodedQuery}" 기업 검색 결과`
       : "기업 및 사업자등록번호 검색",
     description: decodedQuery
       ? `마음데이타 포털에서 "${decodedQuery}"에 부합하는 실시간 기업 상태 및 3개년 종합 재무 분석 이력을 조회해보세요.`
-      : "대한민국 기업명, 브랜드명, 사업자등록번호로 실시간 납세 상태와 재무·고용 분석 정보를 검색하세요.",
+      : "대한민국 기업명, 브랜드명, 사업자등록번호, 법인등록번호로 실시간 납세 상태와 재무·고용 분석 정보를 검색하세요.",
     alternates: {
-      canonical: canonicalPath,
+      canonical: "/search",
     },
     robots: {
       index: false,
@@ -94,14 +103,14 @@ async function NoSearchResultSection({ searchQuery }: { searchQuery: string }) {
       padding: "80px 24px",
       border: "1px dashed var(--color-border)",
       borderRadius: "20px",
-      backgroundColor: "rgba(255, 255, 255, 0.005)"
+      backgroundColor: "var(--bg-color-main)"
     }}>
       <div style={{ fontSize: "2.5rem", marginBottom: "16px" }}>🔍</div>
       <h3 style={{ fontSize: "1.2rem", fontWeight: 700, color: "var(--color-text-main)", marginBottom: "8px" }}>
         &ldquo;{searchQuery}&rdquo; 검색 결과가 없습니다
       </h3>
       <p style={{ fontSize: "0.9rem", color: "var(--color-text-desc)", maxWidth: "400px", margin: "0 auto 24px auto" }}>
-        사업자등록번호(10자리), 법인 상호명 또는 대표자명을 다시 한 번 정확히 확인해 주세요.<br />
+        사업자등록번호(10자리), 법인등록번호(13자리), 법인 상호명 또는 대표자명을 다시 한 번 정확히 확인해 주세요.<br />
         <span style={{ display: "inline-block", marginTop: "10px", padding: "10px 14px", borderRadius: "10px", backgroundColor: "rgba(49, 130, 246, 0.06)", border: "1px solid rgba(49, 130, 246, 0.2)", fontSize: "0.82rem", color: "var(--color-text-sub)", lineHeight: 1.5 }}>
           💡 <strong style={{ color: "var(--color-primary)" }}>개인사업자(일반상사 등)를 찾으시나요?</strong> 정부 공공데이터 정책상 미등록 개인사업자는 한글 상호명만으로 사업자번호를 역조회할 수 없습니다. <strong>사업자등록번호 10자리 숫자</strong>로 검색하시거나 <strong>📷 스캔</strong>을 이용하시면 즉시 조회·등록됩니다.
         </span>
@@ -114,7 +123,7 @@ async function NoSearchResultSection({ searchQuery }: { searchQuery: string }) {
             {quickLinks.map(link => (
               <Link 
                 key={link.no}
-                href={`/search?query=${encodeURIComponent(link.name)}`}
+                href={`/search?q=${encodeURIComponent(link.name)}`}
                 prefetch={false}
                 style={{
                   padding: "6px 12px",
@@ -122,7 +131,7 @@ async function NoSearchResultSection({ searchQuery }: { searchQuery: string }) {
                   border: "1px solid var(--color-border)",
                   fontSize: "0.8rem",
                   fontWeight: 600,
-                  backgroundColor: "rgba(255, 255, 255, 0.02)",
+                  backgroundColor: "var(--bg-color-card)",
                   color: "var(--color-text-sub)"
                 }}
               >
@@ -141,9 +150,13 @@ async function SearchResultList({ searchQuery }: { searchQuery: string }) {
   let results: UnifiedSearchResult[] = [];
 
   if (searchQuery.length >= 2) {
+    const cleanDigits = searchQuery.replace(/[^0-9]/g, "");
+    const isNumericSearch = /^[0-9-\s]+$/.test(searchQuery) && (cleanDigits.length === 10 || cleanDigits.length === 13);
+    const effectiveDbQuery = isNumericSearch ? cleanDigits : searchQuery;
+
     let localMatches: UnifiedSearchResult[] = [];
     try {
-      const list = await searchBusinesses(searchQuery);
+      const list = await searchBusinesses(effectiveDbQuery);
       localMatches = list.map((item: any) => ({
         b_no: item.b_no,
         b_nm: item.b_nm,
@@ -161,8 +174,15 @@ async function SearchResultList({ searchQuery }: { searchQuery: string }) {
     let publicMatches: CorpBasicOutline[] = [];
     if (localMatches.length < 10) {
       try {
-        console.log(`[Search API] No local matches for "${searchQuery}". Querying public API...`);
-        publicMatches = await searchCorpOutline(searchQuery);
+        if (isNumericSearch && cleanDigits.length === 13) {
+          const outlineByCrno = await getCorpBasicOutline("", cleanDigits);
+          if (outlineByCrno) {
+            publicMatches = [outlineByCrno];
+          }
+        } else if (!isNumericSearch) {
+          console.log(`[Search API] Querying public API for "${searchQuery}"...`);
+          publicMatches = await searchCorpOutline(searchQuery);
+        }
       } catch (err) {
         console.error("Failed to fetch public api for search:", err);
       }
@@ -243,7 +263,7 @@ async function SearchResultList({ searchQuery }: { searchQuery: string }) {
                 </span>
               ) : (
                 <span style={{
-                  backgroundColor: "rgba(255, 255, 255, 0.04)",
+                  backgroundColor: "var(--bg-color-main)",
                   color: "var(--color-text-desc)",
                   fontSize: "0.75rem",
                   padding: "4px 10px",
@@ -270,7 +290,8 @@ async function SearchResultList({ searchQuery }: { searchQuery: string }) {
 
 export default async function SearchPage({ searchParams }: SearchPageProps) {
   const resolvedParams = await searchParams;
-  const searchQuery = resolvedParams.query ? decodeURIComponent(resolvedParams.query).trim() : "";
+  const rawQuery = resolvedParams.q ?? resolvedParams.query ?? "";
+  const searchQuery = safeDecodeQuery(rawQuery).trim();
 
   return (
     <div className="animate-fade-in" style={{ padding: "24px 0 80px 0" }}>
@@ -284,7 +305,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
             color: "var(--color-text-main)",
             marginBottom: "8px"
           }}>
-            &ldquo;{searchQuery}&rdquo; 검색 결과
+            {searchQuery ? <>&ldquo;{searchQuery}&rdquo; 검색 결과</> : "기업 · 사업자 통합 검색"}
           </h1>
           <p style={{ fontSize: "0.9rem", color: "var(--color-text-desc)" }}>
             로컬 검증 기업 DB 및 대한민국 금융위원회 법인공시 DB를 통합 검색한 결과입니다.
@@ -306,14 +327,14 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
             padding: "80px 24px",
             border: "1px dashed var(--color-border)",
             borderRadius: "20px",
-            backgroundColor: "rgba(255, 255, 255, 0.005)"
+            backgroundColor: "var(--bg-color-main)"
           }}>
             <div style={{ fontSize: "2.5rem", marginBottom: "16px" }}>🔍</div>
             <h3 style={{ fontSize: "1.2rem", fontWeight: 700, color: "var(--color-text-main)", marginBottom: "8px" }}>
               검색어를 입력해 주세요
             </h3>
             <p style={{ fontSize: "0.9rem", color: "var(--color-text-desc)", maxWidth: "400px", margin: "0 auto 0 auto" }}>
-              사업자등록번호, 상호명, 대표자명 또는 지역명을 입력하여 조회할 수 있습니다.
+              사업자등록번호(10자리), 법인등록번호(13자리), 상호명, 대표자명 또는 지역명을 입력하여 조회할 수 있습니다.
             </p>
           </div>
         )}

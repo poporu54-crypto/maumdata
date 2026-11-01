@@ -6,6 +6,14 @@ import AdSpace from "@/components/AdSpace";
 
 export const revalidate = 3600;
 
+function safeDecodeTag(rawTag: string): string {
+  try {
+    return decodeURIComponent(rawTag);
+  } catch {
+    return rawTag;
+  }
+}
+
 const loadTagSummariesCached = cache(async (decodedTag: string) => {
   return getTagTemplateSummariesServer(decodedTag);
 });
@@ -16,7 +24,7 @@ interface TagPageProps {
 
 export async function generateMetadata(props: TagPageProps): Promise<Metadata> {
   const { tag } = await props.params;
-  const decodedTag = decodeURIComponent(tag);
+  const decodedTag = safeDecodeTag(tag);
   const canonicalPath = `/form/tag/${encodeURIComponent(decodedTag)}`;
   const matched = await loadTagSummariesCached(decodedTag);
 
@@ -46,7 +54,7 @@ export async function generateMetadata(props: TagPageProps): Promise<Metadata> {
 
 export default async function TagPage(props: TagPageProps) {
   const { tag } = await props.params;
-  const decodedTag = decodeURIComponent(tag);
+  const decodedTag = safeDecodeTag(tag);
   const matchedTemplates = await loadTagSummariesCached(decodedTag);
 
   return (
@@ -88,7 +96,7 @@ export default async function TagPage(props: TagPageProps) {
 
         {matchedTemplates.length > 0 ? (
           <div className="docs-grid">
-            {matchedTemplates.map((tpl, idx) => {
+            {matchedTemplates.map((tpl) => {
               const categoryBadge =
                 tpl.category === "노무"
                   ? "📋 노무"
@@ -103,101 +111,102 @@ export default async function TagPage(props: TagPageProps) {
                           : "🤝 계약";
 
               return (
-                <React.Fragment key={tpl.id}>
-                  {idx === 6 && (
-                    <div style={{ gridColumn: "1 / -1", margin: "12px 0" }}>
-                      <AdSpace slot="8888888888" style={{ width: "100%" }} />
+                <div key={tpl.id} className="doc-card" style={{ position: "relative" }}>
+                  {tpl.popular && (
+                    <span
+                      style={{
+                        position: "absolute",
+                        top: "16px",
+                        right: "16px",
+                        backgroundColor: "var(--color-warning)",
+                        color: "#ffffff",
+                        fontSize: "0.7rem",
+                        fontWeight: 700,
+                        padding: "2px 8px",
+                        borderRadius: "4px",
+                      }}
+                    >
+                      인기
+                    </span>
+                  )}
+
+                  <span
+                    style={{
+                      fontSize: "0.75rem",
+                      color: "var(--color-primary)",
+                      fontWeight: 700,
+                      marginBottom: "6px",
+                      display: "inline-block",
+                    }}
+                  >
+                    {categoryBadge}
+                  </span>
+
+                  <Link
+                    href={`/form/${tpl.id}`}
+                    prefetch={false}
+                    className="doc-card-title"
+                    style={{
+                      fontSize: "1.1rem",
+                      textDecoration: "none",
+                      display: "block",
+                      color: "var(--color-text-main)",
+                    }}
+                  >
+                    {tpl.title}
+                  </Link>
+                  <div className="doc-card-desc" style={{ minHeight: "60px", marginBottom: "16px" }}>
+                    {tpl.desc}
+                  </div>
+
+                  {tpl.fieldLabels.length > 0 && (
+                    <div style={{ marginBottom: "20px" }}>
+                      <div
+                        style={{
+                          fontSize: "0.75rem",
+                          fontWeight: 700,
+                          color: "var(--color-text-desc)",
+                          marginBottom: "6px",
+                        }}
+                      >
+                        포함되는 표준 항목:
+                      </div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
+                        {tpl.fieldLabels.map((label, i) => (
+                          <span
+                            key={i}
+                            style={{
+                              backgroundColor: "var(--bg-color-main)",
+                              border: "1px solid var(--color-border)",
+                              color: "var(--color-text-sub)",
+                              fontSize: "0.7rem",
+                              padding: "1px 6px",
+                              borderRadius: "4px",
+                            }}
+                          >
+                            {label}
+                          </span>
+                        ))}
+                        {tpl.totalFields > 4 && (
+                          <span style={{ fontSize: "0.7rem", color: "var(--color-text-desc)", padding: "1px 4px" }}>
+                            외 {tpl.totalFields - 4}개
+                          </span>
+                        )}
+                      </div>
                     </div>
                   )}
 
-                  <Link href={`/form/${tpl.id}`} prefetch={false} style={{ textDecoration: "none", color: "inherit" }}>
-                    <div className="doc-card" style={{ position: "relative", cursor: "pointer", height: "100%" }}>
-                      {tpl.popular && (
-                        <span
-                          style={{
-                            position: "absolute",
-                            top: "16px",
-                            right: "16px",
-                            backgroundColor: "var(--color-warning)",
-                            color: "#ffffff",
-                            fontSize: "0.7rem",
-                            fontWeight: 700,
-                            padding: "2px 8px",
-                            borderRadius: "4px",
-                          }}
-                        >
-                          인기
-                        </span>
-                      )}
-
-                      <span
-                        style={{
-                          fontSize: "0.75rem",
-                          color: "var(--color-primary)",
-                          fontWeight: 700,
-                          marginBottom: "6px",
-                          display: "inline-block",
-                        }}
-                      >
-                        {categoryBadge}
-                      </span>
-
-                      <div className="doc-card-title" style={{ fontSize: "1.1rem" }}>
-                        {tpl.title}
-                      </div>
-                      <div className="doc-card-desc" style={{ minHeight: "60px", marginBottom: "16px" }}>
-                        {tpl.desc}
-                      </div>
-
-                      {tpl.fieldLabels.length > 0 && (
-                        <div style={{ marginBottom: "20px" }}>
-                          <div
-                            style={{
-                              fontSize: "0.75rem",
-                              fontWeight: 700,
-                              color: "var(--color-text-desc)",
-                              marginBottom: "6px",
-                            }}
-                          >
-                            포함되는 표준 항목:
-                          </div>
-                          <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
-                            {tpl.fieldLabels.map((label, i) => (
-                              <span
-                                key={i}
-                                style={{
-                                  backgroundColor: "var(--bg-color-main)",
-                                  border: "1px solid var(--color-border)",
-                                  color: "var(--color-text-sub)",
-                                  fontSize: "0.7rem",
-                                  padding: "1px 6px",
-                                  borderRadius: "4px",
-                                }}
-                              >
-                                {label}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      <div
-                        className="btn btn-outline"
-                        style={{
-                          width: "100%",
-                          textAlign: "center",
-                          padding: "10px",
-                          fontSize: "0.85rem",
-                          fontWeight: 700,
-                          borderRadius: "10px",
-                          marginTop: "auto",
-                        }}
-                      >
-                        ✍️ 서식 편집하기
-                      </div>
-                    </div>
-                  </Link>
-                </React.Fragment>
+                  <div className="doc-card-actions" style={{ marginTop: "auto" }}>
+                    <Link
+                      href={`/form/${tpl.id}`}
+                      prefetch={false}
+                      className="btn-card-action primary"
+                      style={{ display: "block" }}
+                    >
+                      ✍️ 웹에서 작성 &amp; PDF 저장
+                    </Link>
+                  </div>
+                </div>
               );
             })}
           </div>
@@ -214,7 +223,17 @@ export default async function TagPage(props: TagPageProps) {
             <p style={{ color: "var(--color-text-sub)", fontSize: "1rem", marginBottom: "16px" }}>
               현재 &apos;{decodedTag}&apos; 관련 등록된 서식이 없거나 제작 중입니다.
             </p>
-            <Link href="/form" prefetch={false} className="btn btn-primary" style={{ fontSize: "0.9rem", padding: "10px 24px" }}>
+            <Link
+              href="/form"
+              prefetch={false}
+              className="btn-primary"
+              style={{
+                display: "inline-block",
+                fontSize: "0.9rem",
+                padding: "10px 24px",
+                textDecoration: "none",
+              }}
+            >
               ← 전체 무료 서식 센터에서 검색하기
             </Link>
           </div>

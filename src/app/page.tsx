@@ -1,4 +1,5 @@
 import React from "react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { getRealPortalStats } from "@/lib/statApi";
 import SearchForm from "@/components/SearchForm";
@@ -9,6 +10,12 @@ import AdBanner from "@/components/AdBanner";
 import InteractiveDemoShowcase from "@/components/InteractiveDemoShowcase";
 
 export const revalidate = 300;
+
+export const metadata: Metadata = {
+  alternates: {
+    canonical: "/",
+  },
+};
 
 export default async function MainPage() {
   // 서버 사이드에서 마음데이타 실제 검증 기업 DB 통계 및 인기 기업 병렬 조회

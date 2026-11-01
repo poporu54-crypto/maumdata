@@ -7,7 +7,7 @@ import { useParams, useRouter } from "next/navigation";
 import type { LayoutElement } from "../templatesData";
 import AdSpace from "@/components/AdSpace";
 import {
-  shareDocumentPdf,
+  shareTextOrUrl,
   vibrateDevice,
   showAppToast,
   printDocument,
@@ -39,6 +39,235 @@ function buildInitialFormData(tpl: any): Record<string, any> | null {
   return base;
 }
 
+const SEAL_REGEX =
+  /(\(인\)|\(서명\)|\(서명\s*또는\s*인\)|\(인\s*또는\s*서명\)|\(서명\s*\/\s*인\)|\(인\s*\/\s*서명\)|\(서명·인\)|\(인·서명\)|\(직인\)|\(날인\))/;
+
+function applyCompanyToTemplateData(
+  baseData: Record<string, any>,
+  tplFields: any[] | undefined,
+  companyInfo: {
+    name?: string;
+    bno?: string;
+    ceo?: string;
+    address?: string;
+    phone?: string;
+  }
+): Record<string, any> {
+  const next: Record<string, any> = { ...baseData };
+  const fieldKeySet = new Set(
+    (tplFields || []).map((f: any) => f?.key).filter(Boolean)
+  );
+  const hasKey = (k: string) =>
+    Object.prototype.hasOwnProperty.call(next, k) || fieldKeySet.has(k);
+
+  const compName = (companyInfo.name || "").trim();
+  const rawBno = (companyInfo.bno || "").trim();
+  const cleanBno = rawBno.replace(/[^0-9]/g, "");
+  const formattedBno =
+    cleanBno.length === 10
+      ? cleanBno.replace(/(\d{3})(\d{2})(\d{5})/, "$1-$2-$3")
+      : rawBno;
+  const ceoName = (companyInfo.ceo || "").trim();
+  const addr = (companyInfo.address || "").trim();
+  const phone = (companyInfo.phone || "").trim();
+
+  if (compName) {
+    [
+      "company",
+      "companyName",
+      "corpName",
+      "orgName",
+      "bizName",
+      "employerName",
+      "employer",
+      "providerCompany",
+      "supplierCompany",
+      "supplier",
+      "supplierName",
+      "client",
+      "client_name",
+      "clientName",
+      "customer",
+      "customerName",
+      "target_company",
+      "receiver",
+      "receiverName",
+      "buyer",
+      "buyerName",
+      "creditorCompany",
+      "creditorName",
+    ].forEach((k) => {
+      if (hasKey(k)) next[k] = compName;
+    });
+  }
+
+  if (formattedBno) {
+    [
+      "b_no",
+      "bizNum",
+      "bizNo",
+      "business_number",
+      "registration_number",
+      "corpRegNo",
+      "employerBizNum",
+      "employerBno",
+      "providerBizNum",
+      "supplierBizNum",
+      "client_bno",
+      "clientBizNum",
+      "customerBizNum",
+      "buyerBizNum",
+      "creditorBizNum",
+    ].forEach((k) => {
+      if (hasKey(k)) next[k] = formattedBno;
+    });
+  }
+
+  if (ceoName) {
+    [
+      "ceo",
+      "ceoName",
+      "owner",
+      "representative",
+      "president",
+      "repName",
+      "employerCEO",
+      "employerRep",
+      "providerCEO",
+      "supplierCEO",
+      "client_rep",
+      "clientCEO",
+      "customerCEO",
+      "buyerCEO",
+    ].forEach((k) => {
+      if (hasKey(k)) next[k] = ceoName;
+    });
+  }
+
+  if (addr) {
+    [
+      "companyAddr",
+      "companyAddress",
+      "corpAddr",
+      "bizAddr",
+      "location",
+      "employerAddr",
+      "employerAddress",
+      "providerAddr",
+      "providerAddress",
+      "supplierAddr",
+      "client_address",
+      "clientAddr",
+      "customerAddr",
+      "buyerAddr",
+      "creditorAddr",
+      "creditorAddress",
+    ].forEach((k) => {
+      if (hasKey(k)) next[k] = addr;
+    });
+    if (hasKey("address") && !hasKey("birth") && !hasKey("employeeAddr")) {
+      next.address = addr;
+    }
+  }
+
+  if (phone) {
+    [
+      "companyPhone",
+      "corpPhone",
+      "tel",
+      "employerPhone",
+      "providerPhone",
+      "supplierPhone",
+      "clientPhone",
+      "creditorPhone",
+    ].forEach((k) => {
+      if (hasKey(k)) next[k] = phone;
+    });
+  }
+
+  // B2B(갑/을 기업 간) 계약서인지, 갑(기업)-을(개인 프리랜서/근로자) 계약서인지 판별하여 매핑
+  const hasPartyBCompany =
+    [
+      "partyB_bno",
+      "partyBBizNum",
+      "partyBCompany",
+      "partyB_company",
+      "partyB_owner",
+      "partyBCEO",
+    ].some(hasKey) ||
+    (hasKey("partyB_name") && !hasKey("partyBRegNo"));
+
+  if (hasPartyBCompany) {
+    if (compName) {
+      ["partyB_name", "partyBCompany", "partyB_company"].forEach((k) => {
+        if (hasKey(k)) next[k] = compName;
+      });
+      if (
+        !hasKey("partyBCompany") &&
+        !hasKey("partyB_company") &&
+        !hasKey("partyB_name") &&
+        hasKey("partyBName")
+      ) {
+        next.partyBName = compName;
+      }
+    }
+    if (formattedBno) {
+      ["partyB_bno", "partyBBizNum"].forEach((k) => {
+        if (hasKey(k)) next[k] = formattedBno;
+      });
+    }
+    if (ceoName) {
+      ["partyB_owner", "partyBCEO"].forEach((k) => {
+        if (hasKey(k)) next[k] = ceoName;
+      });
+    }
+    if (addr) {
+      ["partyB_address", "partyBAddr"].forEach((k) => {
+        if (hasKey(k)) next[k] = addr;
+      });
+    }
+    if (phone) {
+      ["partyBPhone", "partyB_phone"].forEach((k) => {
+        if (hasKey(k)) next[k] = phone;
+      });
+    }
+  } else {
+    if (compName) {
+      ["partyACompany", "partyA_company", "partyA_name"].forEach((k) => {
+        if (hasKey(k)) next[k] = compName;
+      });
+      if (hasKey("partyAName")) {
+        next.partyAName =
+          (hasKey("partyACompany") || hasKey("partyA_company")) && ceoName
+            ? ceoName
+            : compName;
+      }
+    }
+    if (formattedBno) {
+      ["partyA_bno", "partyABizNum"].forEach((k) => {
+        if (hasKey(k)) next[k] = formattedBno;
+      });
+    }
+    if (ceoName) {
+      ["partyA_owner", "partyACEO"].forEach((k) => {
+        if (hasKey(k)) next[k] = ceoName;
+      });
+    }
+    if (addr) {
+      ["partyA_address", "partyAAddr"].forEach((k) => {
+        if (hasKey(k)) next[k] = addr;
+      });
+    }
+    if (phone) {
+      ["partyAPhone", "partyA_phone"].forEach((k) => {
+        if (hasKey(k)) next[k] = phone;
+      });
+    }
+  }
+
+  return next;
+}
+
 interface DynamicDocumentRendererProps {
   layout: LayoutElement[];
   data: any;
@@ -52,6 +281,8 @@ interface DynamicDocumentRendererProps {
     spacerHeight: number;
     fontDelta: number;
   };
+  allowSealStamp?: boolean;
+  allowFallbackSeal?: boolean;
 }
 
 const THEME_TOKENS: Record<string, {
@@ -248,10 +479,13 @@ const DynamicDocumentRenderer: React.FC<DynamicDocumentRendererProps> = ({
   handleFieldChange,
   handleArrayFieldChange,
   theme,
-  spacing
+  spacing,
+  allowSealStamp = true,
+  allowFallbackSeal = true,
 }) => {
   if (!layout) return null;
   const tokens = THEME_TOKENS[theme] || THEME_TOKENS.classic;
+  const sigSrc = data?.signatureImage || data?.stampImage;
 
   const bindData = (text?: string) => {
     if (!text) return "";
@@ -262,9 +496,8 @@ const DynamicDocumentRenderer: React.FC<DynamicDocumentRendererProps> = ({
 
   let hasStampedSeal = false;
   const renderTextWithSeal = (text: string, forceFallbackAppend = false) => {
-    if (!data?.signatureImage || !text) return text;
-    const sealRegex = /(\(인\)|\(서명\s*또는\s*인\)|\(서명\s*\/\s*인\)|\(인\s*\/\s*서명\)|\(서명·인\)|\(직인\))/;
-    const match = !hasStampedSeal ? text.match(sealRegex) : null;
+    if (!allowSealStamp || !sigSrc || !text) return text;
+    const match = !hasStampedSeal ? text.match(SEAL_REGEX) : null;
     if (match && match.index !== undefined) {
       hasStampedSeal = true;
       const before = text.slice(0, match.index);
@@ -283,15 +516,17 @@ const DynamicDocumentRenderer: React.FC<DynamicDocumentRendererProps> = ({
           >
             <span>{sealText}</span>
             <img
-              src={data.signatureImage}
+              src={sigSrc}
               alt="전자서명/인감"
+              width={56}
+              height={56}
               style={{
                 position: "absolute",
                 top: "50%",
                 left: "50%",
                 transform: "translate(-50%, -50%)",
-                width: "54px",
-                height: "54px",
+                width: "56px",
+                height: "56px",
                 objectFit: "contain",
                 pointerEvents: "none",
                 opacity: 0.92,
@@ -319,11 +554,13 @@ const DynamicDocumentRenderer: React.FC<DynamicDocumentRendererProps> = ({
             }}
           >
             <img
-              src={data.signatureImage}
+              src={sigSrc}
               alt="전자서명/인감"
+              width={56}
+              height={56}
               style={{
-                width: "54px",
-                height: "54px",
+                width: "56px",
+                height: "56px",
                 objectFit: "contain",
                 pointerEvents: "none",
                 opacity: 0.92,
@@ -337,55 +574,53 @@ const DynamicDocumentRenderer: React.FC<DynamicDocumentRendererProps> = ({
     return text;
   };
 
-  return (
-    <div style={{ display: "flex", flexDirection: "column", flexGrow: 1, outline: "none", fontFamily: tokens.fontFamily, color: tokens.textColor }}>
-      {layout.map((element, elIdx) => {
-        if (element.type === "page-break") {
-          return null;
-        }
+  const renderedElements = layout.map((element, elIdx) => {
+    if (element.type === "page-break") {
+      return null;
+    }
 
-        if (element.type === "title") {
-          return (
-            <div key={elIdx} style={{ display: "flex", flexDirection: "column", alignItems: "center", margin: "10px 0 15px 0" }}>
-              <h1 style={{ textAlign: "center", fontSize: "22pt", fontWeight: 900, margin: 0, letterSpacing: tokens.titleLetterSpacing, color: tokens.titleColor, ...element.style }}>
-                {bindData(element.value)}
-              </h1>
-              {tokens.titleBorderBottom && (
-                <div style={{ width: "60px", height: "3px", backgroundColor: "#3b82f6", marginTop: "12px", borderRadius: "1.5px" }} />
-              )}
-            </div>
-          );
-        }
+    if (element.type === "title") {
+      return (
+        <div key={elIdx} style={{ display: "flex", flexDirection: "column", alignItems: "center", margin: "10px 0 15px 0" }}>
+          <h1 style={{ textAlign: "center", fontSize: "22pt", fontWeight: 900, margin: 0, letterSpacing: tokens.titleLetterSpacing, color: tokens.titleColor, ...element.style }}>
+            {bindData(element.value)}
+          </h1>
+          {tokens.titleBorderBottom && (
+            <div style={{ width: "60px", height: "3px", backgroundColor: "#3b82f6", marginTop: "12px", borderRadius: "1.5px" }} />
+          )}
+        </div>
+      );
+    }
 
-        if (element.type === "subtitle") {
-          return (
-            <h3 key={elIdx} style={{ borderLeft: tokens.subtitleBorderLeft, paddingLeft: "8px", fontWeight: "bold", fontSize: `${11 + spacing.fontDelta}pt`, margin: "14px 0 8px 0", textAlign: "left", color: tokens.titleColor, ...element.style }}>
-              {bindData(element.value)}
-            </h3>
-          );
-        }
+    if (element.type === "subtitle") {
+      return (
+        <h3 key={elIdx} style={{ borderLeft: tokens.subtitleBorderLeft, paddingLeft: "8px", fontWeight: "bold", fontSize: `${11 + spacing.fontDelta}pt`, margin: "14px 0 8px 0", textAlign: "left", color: tokens.titleColor, ...element.style }}>
+          {bindData(element.value)}
+        </h3>
+      );
+    }
 
-        if (element.type === "paragraph") {
-          const boundVal = bindData(element.value);
-          // 타이포그래피 계층 보강: 본문 번호 매기기(1., 2., 3.) 마다 문단 간 간격을 주어 가독성 극대화
-          const isNumbered = /^\s*\d+\./.test(boundVal);
-          return (
-            <p 
-              key={elIdx} 
-              style={{ 
-                fontSize: `${10 + spacing.fontDelta}pt`, 
-                lineHeight: spacing.lineHeight, 
-                marginTop: "4px",
-                marginBottom: isNumbered ? "14px" : "6px", // 번호 문단 간 더 넓은 간격 부여
-                textAlign: "justify", 
-                wordBreak: "keep-all", 
-                ...element.style 
-              }}
-            >
-              {boundVal}
-            </p>
-          );
-        }
+    if (element.type === "paragraph") {
+      const boundVal = bindData(element.value);
+      // 타이포그래피 계층 보강: 본문 번호 매기기(1., 2., 3.) 마다 문단 간 간격을 주어 가독성 극대화
+      const isNumbered = /^\s*\d+\./.test(boundVal);
+      return (
+        <p 
+          key={elIdx} 
+          style={{ 
+            fontSize: `${10 + spacing.fontDelta}pt`, 
+            lineHeight: spacing.lineHeight, 
+            marginTop: "4px",
+            marginBottom: isNumbered ? "14px" : "6px", // 번호 문단 간 더 넓은 간격 부여
+            textAlign: "justify", 
+            wordBreak: "keep-all", 
+            ...element.style 
+          }}
+        >
+          {renderTextWithSeal(boundVal)}
+        </p>
+      );
+    }
 
         if (element.type === "spacer") {
           return <div key={elIdx} style={{ height: `${spacing.spacerHeight}px`, ...element.style }}></div>;
@@ -575,8 +810,38 @@ const DynamicDocumentRenderer: React.FC<DynamicDocumentRendererProps> = ({
           );
         }
 
-        return null;
-      })}
+    return null;
+  });
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", flexGrow: 1, outline: "none", fontFamily: tokens.fontFamily, color: tokens.textColor }}>
+      {renderedElements}
+      {allowSealStamp && allowFallbackSeal && sigSrc && !hasStampedSeal && (
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "flex-end",
+            alignItems: "center",
+            marginTop: "16px",
+            paddingRight: "12px",
+          }}
+        >
+          <img
+            src={sigSrc}
+            alt="전자서명/인감"
+            width={56}
+            height={56}
+            style={{
+              width: "56px",
+              height: "56px",
+              objectFit: "contain",
+              pointerEvents: "none",
+              opacity: 0.92,
+              mixBlendMode: "multiply",
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 };
@@ -631,6 +896,39 @@ export default function DocumentEditor({ templateId, initialTemplate }: { templa
   const [isCompanySearchModalOpen, setIsCompanySearchModalOpen] = useState(false);
   const [isRequestSigModalOpen, setIsRequestSigModalOpen] = useState(false);
   const [signatureImage, setSignatureImage] = useState<string | null>(null);
+  const initialBlankSnapshotRef = useRef<string>("");
+  const initialLoadedSnapshotRef = useRef<string>("");
+
+  const hasUnsavedEdits = (): boolean => {
+    if (signatureImage || logoImage) return true;
+    if (!data || !initialLoadedSnapshotRef.current) return false;
+    try {
+      return JSON.stringify(data) !== initialLoadedSnapshotRef.current;
+    } catch {
+      return false;
+    }
+  };
+
+  const hasFilledFormContent = (): boolean => {
+    if (signatureImage || logoImage) return true;
+    if (!data || !initialBlankSnapshotRef.current) return false;
+    try {
+      return JSON.stringify(data) !== initialBlankSnapshotRef.current;
+    } catch {
+      return false;
+    }
+  };
+
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedEdits()) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  });
 
   // 상단 액션 바 마우스/터치 가로 드래그 스크롤 제어
   const actionsBarRef = useRef<HTMLDivElement>(null);
@@ -678,22 +976,14 @@ export default function DocumentEditor({ templateId, initialTemplate }: { templa
       ? cleanBno.replace(/(\d{3})(\d{2})(\d{5})/, "$1-$2-$3")
       : comp.b_no;
 
-    setData((prev: any) => {
-      const next = { ...prev };
-      ["company", "partyB_name", "client", "client_name", "target_company", "supplier", "receiver", "receiverName", "buyer"].forEach((k) => {
-        if (next.hasOwnProperty(k)) next[k] = comp.b_nm;
-      });
-      ["b_no", "partyB_bno", "business_number", "client_bno", "registration_number"].forEach((k) => {
-        if (next.hasOwnProperty(k)) next[k] = formattedBno || comp.b_no;
-      });
-      ["owner", "partyB_owner", "ceo", "representative", "client_rep", "president"].forEach((k) => {
-        if (next.hasOwnProperty(k)) next[k] = comp.p_nm;
-      });
-      ["address", "partyB_address", "location", "client_address"].forEach((k) => {
-        if (next.hasOwnProperty(k)) next[k] = comp.b_adr;
-      });
-      return next;
-    });
+    setData((prev: any) =>
+      applyCompanyToTemplateData(prev || {}, template?.fields, {
+        name: comp.b_nm,
+        bno: formattedBno || comp.b_no,
+        ceo: comp.p_nm,
+        address: comp.b_adr,
+      })
+    );
     showAppToast(`${comp.b_nm} 정보가 서식에 자동 입력되었습니다.`);
   };
 
@@ -707,14 +997,54 @@ export default function DocumentEditor({ templateId, initialTemplate }: { templa
     showAppToast("전자 서명/도장이 문서에 반영되었습니다.");
   };
 
+  const copyBlankTemplateUrlWithNotice = async (blankUrl: string) => {
+    try {
+      await navigator.clipboard.writeText(blankUrl);
+      showAppToast(
+        "빈 서식 양식 링크가 복사되었습니다. 작성된 내용으로 서명을 요청하려면 [비대면 서명 요청]을 이용해 주세요.",
+        3800
+      );
+    } catch {
+      showAppToast(
+        "작성된 내용으로 상대방 서명을 요청하려면 상단 [비대면 서명 요청] 버튼을 이용해 주세요.",
+        3800
+      );
+    }
+  };
+
   const handleShareDoc = async () => {
     vibrateDevice(30);
     const docTitle = template?.title || "마음데이타 서식";
-    await shareDocumentPdf({
-      title: docTitle,
-      text: `[${docTitle}] 마음데이타에서 생성된 문서입니다.`,
-      fileName: `${docTitle}.pdf`
-    });
+    const blankUrl =
+      typeof window !== "undefined"
+        ? `${window.location.origin}/form/${encodeURIComponent(templateId)}`
+        : `/form/${encodeURIComponent(templateId)}`;
+
+    if (hasFilledFormContent()) {
+      const wantSignRequest = window.confirm(
+        "현재 작성 중인 내용은 일반 서식 링크에 포함되지 않습니다.\n\n작성된 내용을 담아 상대방에게 서명을 요청하시겠습니까?\n([확인] 비대면 서명 요청 열기 / [취소] 빈 서식 양식 링크만 복사)"
+      );
+      if (wantSignRequest) {
+        setIsRequestSigModalOpen(true);
+        return;
+      }
+      await copyBlankTemplateUrlWithNotice(blankUrl);
+      return;
+    }
+
+    if (
+      typeof window !== "undefined" &&
+      (Boolean((window as any).AndroidBridge?.shareText) || typeof navigator.share === "function")
+    ) {
+      await shareTextOrUrl({
+        title: `${docTitle} 무료 양식 | 마음데이타`,
+        text: `[${docTitle}] 무료 양식 작성 링크입니다. (빈 양식 공유)`,
+        url: blankUrl,
+      });
+      return;
+    }
+
+    await copyBlankTemplateUrlWithNotice(blankUrl);
   };
   const logoInputRef = useRef<HTMLInputElement>(null);
 
@@ -781,7 +1111,7 @@ export default function DocumentEditor({ templateId, initialTemplate }: { templa
       const today = new Date();
       const formattedDate = `${today.getFullYear()}년 ${String(today.getMonth() + 1).padStart(2, "0")}월 ${String(today.getDate()).padStart(2, "0")}일`;
       
-      const initData: Record<string, any> = buildInitialFormData(tpl) || {};
+      let initData: Record<string, any> = buildInitialFormData(tpl) || {};
       // 날짜 키가 있는 경우 오늘 날짜 주입
       if (initData.hasOwnProperty("date")) {
         initData.date = formattedDate;
@@ -792,6 +1122,9 @@ export default function DocumentEditor({ templateId, initialTemplate }: { templa
       if (initData.hasOwnProperty("estDate")) {
         initData.estDate = formattedDate;
       }
+
+      initialBlankSnapshotRef.current = JSON.stringify(initData);
+
       // 기업 상세 또는 스캐너에서 전달된 기업 데이터 자동 주입 (클린 URL sessionStorage 및 쿼리 파라미터 모두 지원)
       if (typeof window !== "undefined") {
         let sessionPrefill: Record<string, string> | null = null;
@@ -812,27 +1145,22 @@ export default function DocumentEditor({ templateId, initialTemplate }: { templa
         const partyBOwner = urlParams.get("partyB_owner") || sessionPrefill?.partyB_owner || "";
         const partyBAddress = urlParams.get("partyB_address") || sessionPrefill?.partyB_address || "";
 
-        if (partyBName) {
-          ["company", "partyB_name", "client", "client_name", "target_company", "supplier", "receiver", "receiverName", "buyer"].forEach((k) => {
-            if (initData.hasOwnProperty(k)) initData[k] = partyBName;
-          });
-        }
-        if (partyBBno) {
-          ["b_no", "partyB_bno", "business_number", "client_bno", "registration_number"].forEach((k) => {
-            if (initData.hasOwnProperty(k)) initData[k] = partyBBno;
-          });
-        }
-        if (partyBOwner) {
-          ["owner", "partyB_owner", "ceo", "representative", "client_rep", "president"].forEach((k) => {
-            if (initData.hasOwnProperty(k)) initData[k] = partyBOwner;
-          });
-        }
-        if (partyBAddress) {
-          ["address", "partyB_address", "location", "client_address"].forEach((k) => {
-            if (initData.hasOwnProperty(k)) initData[k] = partyBAddress;
+        if (partyBName || partyBBno || partyBOwner || partyBAddress) {
+          const cleanPrefillBno = partyBBno ? partyBBno.replace(/[^0-9]/g, "") : "";
+          const formattedPrefillBno =
+            cleanPrefillBno.length === 10
+              ? cleanPrefillBno.replace(/(\d{3})(\d{2})(\d{5})/, "$1-$2-$3")
+              : partyBBno;
+          initData = applyCompanyToTemplateData(initData, tpl.fields, {
+            name: partyBName || undefined,
+            bno: formattedPrefillBno || undefined,
+            ceo: partyBOwner || undefined,
+            address: partyBAddress || undefined,
           });
         }
       }
+
+      initialLoadedSnapshotRef.current = JSON.stringify(initData);
       setData(initData);
     }
 
@@ -917,41 +1245,48 @@ export default function DocumentEditor({ templateId, initialTemplate }: { templa
     const paperElement = document.getElementById("a4-print-area");
     if (!paperElement) return;
 
-    // 1. 메모리 상에 클론 생성 및 전처리 진행 (워드프로세서 호환성용)
+    // 1. 메모리 상에 클론 생성 및 UI 전용 요소(.no-print, 파일 input) 제거
     const clone = paperElement.cloneNode(true) as HTMLElement;
+    clone.querySelectorAll('.no-print, input[type="file"]').forEach((el) => el.remove());
 
-    // 2. 줄바꿈(\n)을 명시적인 <br /> 태그로 변환 (white-space가 pre-wrap인 셀 대응)
-    const textContainers = clone.querySelectorAll('td, div, p');
-    textContainers.forEach((el) => {
-      const element = el as HTMLElement;
-      if (element.style.whiteSpace === "pre-wrap" || element.innerText?.includes("\n")) {
-        if (element.children.length === 0 || (element.children.length > 0 && element.innerHTML.indexOf("<table") === -1)) {
-          const text = element.innerText;
-          if (text && text.includes("\n")) {
-            const escapedHtml = text
-              .replace(/&/g, "&amp;")
-              .replace(/</g, "&lt;")
-              .replace(/>/g, "&gt;")
-              .replace(/"/g, "&quot;")
-              .replace(/'/g, "&#039;")
-              .replace(/\n/g, "<br />");
-            element.innerHTML = escapedHtml;
-          }
+    // 2. 텍스트 노드(Node.TEXT_NODE) 내부의 줄바꿈(\n)만 안전하게 <br />로 변환 (로고·직인 <img> 및 자식 태그 보존)
+    const textNodesToSplit: Text[] = [];
+    const walker = document.createTreeWalker(clone, NodeFilter.SHOW_TEXT);
+    let currentNode = walker.nextNode();
+    while (currentNode) {
+      if (currentNode.nodeValue && currentNode.nodeValue.includes("\n")) {
+        const parentTag = currentNode.parentElement?.tagName;
+        if (parentTag !== "STYLE" && parentTag !== "SCRIPT") {
+          textNodesToSplit.push(currentNode as Text);
         }
       }
+      currentNode = walker.nextNode();
+    }
+    textNodesToSplit.forEach((textNode) => {
+      const parts = (textNode.nodeValue || "").split("\n");
+      if (parts.length <= 1 || !textNode.parentNode) return;
+      const frag = document.createDocumentFragment();
+      parts.forEach((part, idx) => {
+        if (part) frag.appendChild(document.createTextNode(part));
+        if (idx < parts.length - 1) {
+          frag.appendChild(document.createElement("br"));
+        }
+      });
+      textNode.parentNode.replaceChild(frag, textNode);
     });
 
-    // 3. flex space-between을 워드 프로세서 친화적인 공백(&nbsp;) 레이아웃으로 보정
-    const flexBetweenElements = clone.querySelectorAll('div[style*="justifyContent: space-between"], div[style*="justifycontent: space-between"]');
+    // 3. flex space-between을 워드 프로세서 친화적인 공백(&nbsp;) 레이아웃으로 보정 (자식 DOM 및 직인 <img> 보존)
+    const flexBetweenElements = clone.querySelectorAll(
+      'div[style*="justify-content: space-between"], div[style*="justifyContent: space-between"], div[style*="justifycontent: space-between"]'
+    );
     flexBetweenElements.forEach((el) => {
       const element = el as HTMLElement;
+      if (element.classList.contains("common-brand-header")) return;
       const children = Array.from(element.children);
-      // 신청인/작성인 서명 라인 1줄짜리 정렬 보정
       if (children.length === 2 && children[0].tagName === "SPAN" && children[1].tagName === "SPAN") {
-        const leftText = (children[0] as HTMLElement).innerText || "";
-        const rightText = (children[1] as HTMLElement).innerText || "";
-        // 공백 문자를 충분히 주입하여 나란히 벌림 효과 생성
-        element.innerHTML = `<span style="font-size: 10pt;">${leftText}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;${rightText}</span>`;
+        const spacer = document.createElement("span");
+        spacer.innerHTML = "&nbsp;".repeat(36);
+        element.insertBefore(spacer, children[1]);
         element.style.display = "block";
         element.style.textAlign = "center";
         element.style.width = "100%";
@@ -970,8 +1305,8 @@ export default function DocumentEditor({ templateId, initialTemplate }: { templa
       }
     });
 
-    // 5. 제목 및 수신관청(h1, h2, h3) 강제 가운데 정렬 주입
-    const headers = clone.querySelectorAll('h1, h2, h3');
+    // 5. 문서 대제목(h1) 및 수신관청(h2)만 가운데 정렬 주입 (조항 제목 h3 좌측 정렬 보존)
+    const headers = clone.querySelectorAll("h1, .generic-footer-block h2");
     headers.forEach((el) => {
       const element = el as HTMLElement;
       element.style.textAlign = "center";
@@ -980,8 +1315,8 @@ export default function DocumentEditor({ templateId, initialTemplate }: { templa
       element.style.margin = "10px auto";
     });
 
-    // 6. 하단 날짜 및 정렬 블록 강제 가운데 정렬 주입
-    const footerBlocks = clone.querySelectorAll('.generic-footer-block, .generic-footer-block div, .contract-footer-block, .contract-footer-block div');
+    // 6. 범용 서식 하단 블록 가운데 정렬 (계약서 2단 서명 블록 width:48% 훼손 방지)
+    const footerBlocks = clone.querySelectorAll(".generic-footer-block");
     footerBlocks.forEach((el) => {
       const element = el as HTMLElement;
       element.style.textAlign = "center";
@@ -1081,7 +1416,13 @@ export default function DocumentEditor({ templateId, initialTemplate }: { templa
         <div style={{ position: "relative", display: "inline-block", cursor: "pointer" }}>
           {logoImage ? (
             <div style={{ position: "relative", display: "inline-block" }}>
-              <img src={logoImage} alt="Logo" style={{ maxHeight: "30px", maxWidth: "120px", objectFit: "contain", verticalAlign: "middle" }} onClick={triggerLogoUpload} />
+              <img
+                src={logoImage}
+                alt="Logo"
+                height={30}
+                style={{ maxHeight: "30px", maxWidth: "120px", height: "30px", width: "auto", objectFit: "contain", verticalAlign: "middle" }}
+                onClick={triggerLogoUpload}
+              />
               <button 
                 onClick={(e) => { e.stopPropagation(); setLogoImage(null); }} 
                 className="no-print" 
@@ -1204,13 +1545,40 @@ export default function DocumentEditor({ templateId, initialTemplate }: { templa
             >
               {data.date}
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", width: "100%", maxWidth: "320px", fontSize: "11pt" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", maxWidth: "320px", fontSize: "11pt" }}>
               <span>작 성 인 :</span>
-              <span 
-                onInput={(e) => handleFieldInputDirect("name", e.currentTarget.innerText)} onBlur={(e) => handleFieldChange("name", e.currentTarget.innerText)}
-                style={{ fontWeight: "bold", outline: "none" }}
-              >
-                {data.name} (서명 / 인)
+              <span style={{ position: "relative", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                <span
+                  onInput={(e) => handleFieldInputDirect("name", e.currentTarget.innerText)}
+                  onBlur={(e) => handleFieldChange("name", e.currentTarget.innerText)}
+                  style={{ fontWeight: "bold", outline: "none" }}
+                >
+                  {data.name}
+                </span>
+                <span style={{ position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", fontWeight: "bold" }}>
+                  <span>(서명 / 인)</span>
+                  {(data.signatureImage || data.stampImage) && (
+                    <img
+                      src={data.signatureImage || data.stampImage}
+                      alt="전자서명/인감"
+                      width={56}
+                      height={56}
+                      style={{
+                        position: "absolute",
+                        top: "50%",
+                        left: "50%",
+                        transform: "translate(-50%, -50%)",
+                        width: "56px",
+                        height: "56px",
+                        objectFit: "contain",
+                        pointerEvents: "none",
+                        opacity: 0.92,
+                        mixBlendMode: "multiply",
+                        zIndex: 2,
+                      }}
+                    />
+                  )}
+                </span>
               </span>
             </div>
             {data.company && (
@@ -1241,7 +1609,19 @@ export default function DocumentEditor({ templateId, initialTemplate }: { templa
 
   return (
     <div className="container" style={{ padding: "32px 24px", maxWidth: "1400px" }}>
-      <Link href="/form" prefetch={false} className="back-link">
+      <Link
+        href="/form"
+        prefetch={false}
+        className="back-link"
+        onClick={(e) => {
+          if (
+            hasUnsavedEdits() &&
+            !window.confirm("작성 중인 문서 내용이 저장되지 않았습니다. 목록으로 이동하시겠습니까?")
+          ) {
+            e.preventDefault();
+          }
+        }}
+      >
         ← 무료 서식 센터 홈으로
       </Link>
 
@@ -1814,6 +2194,29 @@ export default function DocumentEditor({ templateId, initialTemplate }: { templa
 
                 if (hasPageBreak && template.layout) {
                   const pages = splitLayoutIntoPages(template.layout);
+                  const bindPageText = (txt?: string) =>
+                    txt ? txt.replace(/\{(\w+)\}/g, (_m, k) => (data?.[k] !== undefined ? String(data[k]) : "")) : "";
+                  const pageHasSealSlot = (pageElements: any[]) =>
+                    pageElements.some((el: any) => {
+                      if (el.type === "sign-block") return true;
+                      if (el.type === "paragraph" && SEAL_REGEX.test(bindPageText(el.value))) return true;
+                      if (el.type === "table" && Array.isArray(el.rows)) {
+                        return el.rows.some(
+                          (r: any) =>
+                            !r.repeatKey &&
+                            Array.isArray(r.cells) &&
+                            r.cells.some((c: any) => !c.key && SEAL_REGEX.test(bindPageText(c.label)))
+                        );
+                      }
+                      return false;
+                    });
+                  let targetSealPageIdx = pages.length - 1;
+                  for (let i = pages.length - 1; i >= 0; i--) {
+                    if (pageHasSealSlot(pages[i])) {
+                      targetSealPageIdx = i;
+                      break;
+                    }
+                  }
                   return pages.map((pageLayout, pageIdx) => (
                     <div 
                       className="a4-paper multipage-page" 
@@ -1834,6 +2237,8 @@ export default function DocumentEditor({ templateId, initialTemplate }: { templa
                         handleArrayFieldChange={handleArrayFieldChange}
                         theme={theme}
                         spacing={currentSpacing}
+                        allowSealStamp={pageIdx === targetSealPageIdx}
+                        allowFallbackSeal={pageIdx === pages.length - 1}
                       />
                       
                       <div className="common-page-footer" style={{ position: "absolute", bottom: "8px", left: "0", right: "0", textAlign: "center", fontSize: "7.5pt", color: "#8b95a1", fontFamily: "sans-serif", letterSpacing: "0.5px", pointerEvents: "none" }}>
@@ -1871,7 +2276,16 @@ export default function DocumentEditor({ templateId, initialTemplate }: { templa
           isOpen={isSignatureModalOpen}
           onClose={() => setIsSignatureModalOpen(false)}
           onApplySignature={handleApplySignature}
-          defaultSignerName={data?.name || data?.partyA_owner || data?.owner || "대표자"}
+          defaultSignerName={
+            data?.name ||
+            data?.ceoName ||
+            data?.employerRep ||
+            data?.partyAName ||
+            data?.partyA_owner ||
+            data?.supplierCeo ||
+            data?.owner ||
+            "대표자"
+          }
         />
       )}
 

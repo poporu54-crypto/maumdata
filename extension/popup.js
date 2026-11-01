@@ -1,7 +1,15 @@
 const API_PRIMARY = "https://www.maumdata.com";
-const API_FALLBACK = "http://localhost:3000";
 
 let currentBizData = null;
+
+function escapeHtml(str) {
+  return String(str ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
 
 // 토스트 표시 헬퍼
 function showToast(msg) {
@@ -59,21 +67,12 @@ function formatBrn(raw10) {
   return `${clean.slice(0, 3)}-${clean.slice(3, 5)}-${clean.slice(5)}`;
 }
 
-// 실서버 우선 API 호출
+// 실서버 API 호출
 async function fetchApiJson(path) {
-  try {
-    const res = await fetch(`${API_PRIMARY}${path}`);
-    if (res.ok) return await res.json();
-    if (res.status === 404) return { __notFound: true };
-    throw new Error(`HTTP ${res.status}`);
-  } catch (primaryErr) {
-    try {
-      const resLocal = await fetch(`${API_FALLBACK}${path}`);
-      if (resLocal.ok) return await resLocal.json();
-      if (resLocal.status === 404) return { __notFound: true };
-    } catch (_) {}
-    throw primaryErr;
-  }
+  const res = await fetch(`${API_PRIMARY}${path}`);
+  if (res.ok) return await res.json();
+  if (res.status === 404) return { __notFound: true };
+  throw new Error(`HTTP ${res.status}`);
 }
 
 // 스테이지 뷰 전환
@@ -167,8 +166,8 @@ function renderListMessage(title, sub) {
   container.innerHTML = `
     <div style="text-align:center; padding: 22px 10px; color: #94a3b8;">
       <div style="font-size: 24px; margin-bottom: 6px;">🔍</div>
-      <div style="font-size: 12px; font-weight: 700; color: #f8fafc; margin-bottom: 4px;">${title}</div>
-      <div style="font-size: 10.5px; color: #64748b;">${sub}</div>
+      <div style="font-size: 12px; font-weight: 700; color: #f8fafc; margin-bottom: 4px;">${escapeHtml(title)}</div>
+      <div style="font-size: 10.5px; color: #64748b;">${escapeHtml(sub)}</div>
     </div>
   `;
 }
@@ -183,10 +182,10 @@ function renderSearchList(list) {
     div.className = "biz-list-item";
     div.innerHTML = `
       <div class="biz-list-top">
-        <strong>${item.b_nm}</strong>
-        <span class="source-pill">${formatBrn(item.b_no)}</span>
+        <strong>${escapeHtml(item.b_nm)}</strong>
+        <span class="source-pill">${escapeHtml(formatBrn(item.b_no))}</span>
       </div>
-      <div class="biz-list-sub">대표: ${item.p_nm || "-"} · ${item.b_sector || "업종 정보"}</div>
+      <div class="biz-list-sub">대표: ${escapeHtml(item.p_nm || "-")} · ${escapeHtml(item.b_sector || "업종 정보")}</div>
     `;
     div.addEventListener("click", () => loadBusinessDetail(item.b_no));
     container.appendChild(div);
@@ -279,9 +278,9 @@ function renderBusinessDetail(data) {
           const pct = Math.max(12, Math.min(100, Math.round(((Number(h.revenue) || 0) / maxRev) * 100)));
           return `
             <div class="fin-mini-row">
-              <span class="fin-mini-yr">${String(h.year).slice(-2)}년</span>
+              <span class="fin-mini-yr">${escapeHtml(String(h.year).slice(-2))}년</span>
               <div class="fin-mini-track"><div class="fin-mini-fill" data-pct="${pct}"></div></div>
-              <span class="fin-mini-val">${h.revenue ? h.revenue + "억" : "-"}</span>
+              <span class="fin-mini-val">${escapeHtml(h.revenue ? h.revenue + "억" : "-")}</span>
             </div>
           `;
         })
@@ -529,7 +528,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const btnDtFull = document.getElementById("btn-dt-full");
   if (btnDtFull) {
     btnDtFull.addEventListener("click", () => {
-      const bNo = currentBizData?.b_no || "1378651839";
+      const bNo = String(currentBizData?.b_no || "1378651839").replace(/[^0-9]/g, "");
       chrome.tabs.create({ url: `${API_PRIMARY}/biz/${bNo}` });
     });
   }

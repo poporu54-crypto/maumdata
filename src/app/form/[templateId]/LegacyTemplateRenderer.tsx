@@ -5,23 +5,63 @@ import React from "react";
 export interface LegacyTemplateRendererProps {
   templateId: string;
   data: any;
-  handleFieldInputDirect: (key: string, value: string) => void;
-  handleFieldChange: (key: string, value: any) => void;
-  handleArrayFieldChange: (arrayKey: string, index: number, field: string, value: string) => void;
+  handleFieldInputDirect?: (key: string, value: string) => void;
+  handleFieldChange?: (key: string, value: any) => void;
+  handleArrayFieldChange?: (arrayKey: string, index: number, field: string, value: string) => void;
+  readOnly?: boolean;
 }
 
 export default function LegacyTemplateRenderer({
   templateId,
   data,
-  handleFieldInputDirect,
-  handleFieldChange,
-  handleArrayFieldChange,
+  handleFieldInputDirect = () => {},
+  handleFieldChange = () => {},
+  handleArrayFieldChange = () => {},
+  readOnly = false,
 }: LegacyTemplateRendererProps) {
+    const sigSrc: string | null = data?.signatureImage || data?.stampImage || null;
+    const partyBSigSrc: string | null = data?.partyBSignatureImage || null;
+
+    const renderSeal = (label: string = "(인)", customSrc: string | null = sigSrc) => (
+      <span
+        style={{
+          position: "relative",
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          verticalAlign: "middle",
+        }}
+      >
+        <span>{label}</span>
+        {customSrc && (
+          <img
+            src={customSrc}
+            alt="전자서명/인감"
+            width={56}
+            height={56}
+            style={{
+              position: "absolute",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              width: "56px",
+              height: "56px",
+              objectFit: "contain",
+              opacity: 0.9,
+              mixBlendMode: "multiply",
+              pointerEvents: "none",
+              zIndex: 2,
+            }}
+          />
+        )}
+      </span>
+    );
+
     switch (templateId) {
       // 1. 사직서
       case "resignation":
         return (
-          <div contentEditable={true} suppressContentEditableWarning={true} style={{ display: "flex", flexDirection: "column", justifyContent: "flex-start", flexGrow: 1, fontSize: "11pt", outline: "none" }}>
+          <div contentEditable={!readOnly} suppressContentEditableWarning={true} style={{ display: "flex", flexDirection: "column", justifyContent: "flex-start", flexGrow: 1, fontSize: "11pt", outline: "none" }}>
             <div>
               <h1 style={{ textAlign: "center", fontSize: "26pt", fontWeight: 800, margin: "10px 0 25px 0", letterSpacing: "15px" }}>사직서</h1>
               <table style={{ width: "100%", borderCollapse: "collapse", border: "2px solid #000000", fontSize: "10.5pt" }}>
@@ -111,11 +151,15 @@ export default function LegacyTemplateRenderer({
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", width: "100%", maxWidth: "350px", fontSize: "11pt" }}>
                 <span>신 청 인 :</span>
-                <span 
-                  onInput={(e) => handleFieldInputDirect("name", e.currentTarget.innerText)} onBlur={(e) => handleFieldChange("name", e.currentTarget.innerText)}
-                  style={{ fontWeight: "bold", outline: "none" }}
-                >
-                  {data.name} (서명 / 인)
+                <span style={{ fontWeight: "bold" }}>
+                  <span
+                    onInput={(e) => handleFieldInputDirect("name", e.currentTarget.innerText)}
+                    onBlur={(e) => handleFieldChange("name", e.currentTarget.innerText)}
+                    style={{ outline: "none" }}
+                  >
+                    {data.name}
+                  </span>{" "}
+                  {renderSeal("(서명 / 인)")}
                 </span>
               </div>
               {data.company && (
@@ -131,10 +175,9 @@ export default function LegacyTemplateRenderer({
         );
 
       // 2. 표준 이력서
-      // 2. 표준 이력서
       case "resume":
         return (
-          <div contentEditable={true} suppressContentEditableWarning={true} style={{ display: "flex", flexDirection: "column", flexGrow: 1, fontSize: "9.5pt", outline: "none" }}>
+          <div contentEditable={!readOnly} suppressContentEditableWarning={true} style={{ display: "flex", flexDirection: "column", flexGrow: 1, fontSize: "9.5pt", outline: "none" }}>
             <h1 style={{ textAlign: "center", fontSize: "26pt", fontWeight: 800, margin: "10px 0 20px 0", letterSpacing: "12px" }}>이 력 서</h1>
             
             <h3 style={{ borderLeft: "4px solid #000", paddingLeft: "8px", fontWeight: "bold", fontSize: "11.5pt", margin: "15px 0 8px 0" }}>1. 인적 사항</h3>
@@ -328,6 +371,12 @@ export default function LegacyTemplateRenderer({
             >
               {data.intro}
             </div>
+            {sigSrc && (
+              <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "8px", marginTop: "14px", fontSize: "10pt", fontWeight: "bold" }}>
+                <span>작성자 : {data.nameKo}</span>
+                {renderSeal("(서명 / 인)")}
+              </div>
+            )}
           </div>
         );
 
@@ -355,10 +404,10 @@ export default function LegacyTemplateRenderer({
         // 공용 밑줄 공란 렌더러 헬퍼 (HWP 인라인 언더라인 완벽 재현 & 양방향 편집 연동)
         const renderUnderline = (val: string, minWidth = "100px", fieldKey?: string, padding = "0 8px") => (
           <span 
-            contentEditable={true}
+            contentEditable={!readOnly}
             suppressContentEditableWarning={true}
-            onInput={fieldKey ? (e) => handleFieldInputDirect(fieldKey, e.currentTarget.innerText) : undefined}
-            onBlur={fieldKey ? (e) => handleFieldChange(fieldKey, e.currentTarget.innerText) : undefined}
+            onInput={fieldKey && !readOnly ? (e) => handleFieldInputDirect(fieldKey, e.currentTarget.innerText) : undefined}
+            onBlur={fieldKey && !readOnly ? (e) => handleFieldChange(fieldKey, e.currentTarget.innerText) : undefined}
             style={{
               borderBottom: "1.2px solid #000000",
               display: "inline-block",
@@ -369,7 +418,7 @@ export default function LegacyTemplateRenderer({
               color: val ? "#000000" : "transparent",
               whiteSpace: "nowrap",
               outline: "none",
-              cursor: "text"
+              cursor: readOnly ? "default" : "text"
             }}
             className={fieldKey ? "editable-value-field" : ""}
             data-field-key={fieldKey}
@@ -403,7 +452,7 @@ export default function LegacyTemplateRenderer({
           const isBank = data.payMethod?.includes("계좌") || data.payMethod?.includes("통장") || data.payMethod?.includes("입금");
 
           return (
-            <div className="contract-compact hwp-document" contentEditable={true} suppressContentEditableWarning={true} style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flexGrow: 1, minHeight: "920px", fontSize: "9.5pt", fontFamily: "'Batang', '바탕', 'Times New Roman', serif", lineHeight: 1.6, color: "#000000", padding: "30px 35px", boxSizing: "border-box", outline: "none" }}>
+            <div className="contract-compact hwp-document" contentEditable={!readOnly} suppressContentEditableWarning={true} style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flexGrow: 1, minHeight: "920px", fontSize: "9.5pt", fontFamily: "'Batang', '바탕', 'Times New Roman', serif", lineHeight: 1.6, color: "#000000", padding: "30px 35px", boxSizing: "border-box", outline: "none" }}>
               <div>
                 <div style={{ display: "flex", justifyContent: "center", marginBottom: "20px" }}>
                   <div style={{ border: "2px solid #000000", padding: "6px 40px", fontSize: "16pt", fontWeight: "bold", textAlign: "center", letterSpacing: "6px", backgroundColor: "#ffffff" }}>
@@ -549,12 +598,12 @@ export default function LegacyTemplateRenderer({
                   <div style={{ width: "48%", lineHeight: 1.7 }}>
                     <strong>(사업주)</strong> 사업체명: {data.employerName}<br />
                     주소: {data.employerAddr}<br />
-                    대표자: {renderUnderline(data.employerCEO, "90px", "employerCEO")} (서명 또는 인)
+                    대표자: {renderUnderline(data.employerCEO, "90px", "employerCEO")} {renderSeal("(서명 또는 인)")}
                   </div>
                   <div style={{ width: "48%", lineHeight: 1.7 }}>
                     <strong>(근로자)</strong> 주소: {data.employeeAddr}<br />
                     연락처: {data.employeePhone}<br />
-                    성명: {renderUnderline(data.employeeName, "90px", "employeeName")} (서명 또는 인)
+                    성명: {renderUnderline(data.employeeName, "90px", "employeeName")} {renderSeal("(서명 또는 인)", partyBSigSrc)}
                   </div>
                 </div>
               </div>
@@ -570,7 +619,7 @@ export default function LegacyTemplateRenderer({
           const isBank = data.payMethod?.includes("계좌") || data.payMethod?.includes("통장") || data.payMethod?.includes("입금");
 
           return (
-            <div className="contract-compact hwp-document" contentEditable={true} suppressContentEditableWarning={true} style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flexGrow: 1, minHeight: "920px", fontSize: "9.2pt", fontFamily: "'Batang', '바탕', 'Times New Roman', serif", lineHeight: 1.5, color: "#000000", padding: "25px 30px", boxSizing: "border-box", outline: "none" }}>
+            <div className="contract-compact hwp-document" contentEditable={!readOnly} suppressContentEditableWarning={true} style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flexGrow: 1, minHeight: "920px", fontSize: "9.2pt", fontFamily: "'Batang', '바탕', 'Times New Roman', serif", lineHeight: 1.5, color: "#000000", padding: "25px 30px", boxSizing: "border-box", outline: "none" }}>
               <div>
                 <div style={{ display: "flex", justifyContent: "center", marginBottom: "15px" }}>
                   <div style={{ border: "2px solid #000000", padding: "5px 30px", fontSize: "14pt", fontWeight: "bold", textAlign: "center", backgroundColor: "#ffffff" }}>
@@ -664,7 +713,7 @@ export default function LegacyTemplateRenderer({
                       <div style={{ paddingLeft: "15px", marginTop: "3px", display: "flex", flexDirection: "column", gap: "4px" }}>
                         <div>- {data.salaryType || "시"}급 : {renderUnderline(data.salaryAmt, "120px", "salaryAmt")}원</div>
                         <div>- 상여금 : 있음 {renderCheck(hasBonus)} {renderUnderline(hasBonus ? data.bonusAmt : "", "90px", "bonusAmt")}원, 없음 {renderCheck(!hasBonus)}</div>
-                        <div>- 기타급여 : 있음 {renderCheck(hasOtherPay)} {hasOtherPay ? `(${renderUnderline(data.otherPayAmt, "90px", "otherPayAmt")}원)` : ""}, 없음 {renderCheck(!hasOtherPay)}</div>
+                        <div>- 기타급여 : 있음 {renderCheck(hasOtherPay)} {hasOtherPay ? <>({renderUnderline(data.otherPayAmt, "90px", "otherPayAmt")}원)</> : ""}, 없음 {renderCheck(!hasOtherPay)}</div>
                         <div>- 임금지급일 : 매월 {renderUnderline(data.payDay, "60px", "payDay")}일 / 지급방법 : 직접지급 {renderCheck(isDirect)}, 계좌입금 {renderCheck(isBank)}</div>
                       </div>
                     </div>
@@ -712,12 +761,12 @@ export default function LegacyTemplateRenderer({
                   <div style={{ width: "48%", lineHeight: 1.5 }}>
                     <strong>(사업주)</strong> 상호: {data.employerName}<br />
                     주소: {data.employerAddr}<br />
-                    대표자: {renderUnderline(data.employerCEO, "80px", "employerCEO")} (인)
+                    대표자: {renderUnderline(data.employerCEO, "80px", "employerCEO")} {renderSeal("(인)")}
                   </div>
                   <div style={{ width: "48%", lineHeight: 1.5 }}>
                     <strong>(근로자)</strong> 주소: {data.employeeAddr}<br />
                     연락처: {data.employeePhone}<br />
-                    성명: {renderUnderline(data.employeeName, "80px", "employeeName")} (인)
+                    성명: {renderUnderline(data.employeeName, "80px", "employeeName")} {renderSeal("(인)", partyBSigSrc)}
                   </div>
                 </div>
               </div>
@@ -730,7 +779,7 @@ export default function LegacyTemplateRenderer({
           const isBank = data.payMethod?.includes("계좌") || data.payMethod?.includes("통장") || data.payMethod?.includes("입금");
 
           return (
-            <div className="contract-compact hwp-document" contentEditable={true} suppressContentEditableWarning={true} style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flexGrow: 1, minHeight: "920px", fontSize: "9.2pt", fontFamily: "'Batang', '바탕', 'Times New Roman', serif", lineHeight: 1.5, color: "#000000", padding: "25px 30px", boxSizing: "border-box", outline: "none" }}>
+            <div className="contract-compact hwp-document" contentEditable={!readOnly} suppressContentEditableWarning={true} style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flexGrow: 1, minHeight: "920px", fontSize: "9.2pt", fontFamily: "'Batang', '바탕', 'Times New Roman', serif", lineHeight: 1.5, color: "#000000", padding: "25px 30px", boxSizing: "border-box", outline: "none" }}>
               <div>
                 <div style={{ display: "flex", justifyContent: "center", marginBottom: "15px" }}>
                   <div style={{ border: "2px solid #000000", padding: "5px 30px", fontSize: "14pt", fontWeight: "bold", textAlign: "center", backgroundColor: "#ffffff" }}>
@@ -853,12 +902,12 @@ export default function LegacyTemplateRenderer({
                   <div style={{ width: "48%", lineHeight: 1.5 }}>
                     <strong>(사업주)</strong> 상호: {data.employerName}<br />
                     주소: {data.employerAddr}<br />
-                    대표자: {renderUnderline(data.employerCEO, "80px", "employerCEO")} (인)
+                    대표자: {renderUnderline(data.employerCEO, "80px", "employerCEO")} {renderSeal("(인)")}
                   </div>
                   <div style={{ width: "48%", lineHeight: 1.5 }}>
                     <strong>(근로자)</strong> 주소: {data.employeeAddr}<br />
                     연락처: {data.employeePhone}<br />
-                    성명: {renderUnderline(data.employeeName, "80px", "employeeName")} (인)
+                    성명: {renderUnderline(data.employeeName, "80px", "employeeName")} {renderSeal("(인)", partyBSigSrc)}
                   </div>
                 </div>
               </div>
@@ -875,7 +924,7 @@ export default function LegacyTemplateRenderer({
           const isBank = data.payMethod?.includes("계좌") || data.payMethod?.includes("통장") || data.payMethod?.includes("입금");
 
           return (
-            <div className="contract-compact hwp-document" contentEditable={true} suppressContentEditableWarning={true} style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flexGrow: 1, minHeight: "920px", fontSize: "9.0pt", fontFamily: "'Batang', '바탕', 'Times New Roman', serif", lineHeight: 1.5, color: "#000000", padding: "20px 25px", boxSizing: "border-box", outline: "none" }}>
+            <div className="contract-compact hwp-document" contentEditable={!readOnly} suppressContentEditableWarning={true} style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flexGrow: 1, minHeight: "920px", fontSize: "9.0pt", fontFamily: "'Batang', '바탕', 'Times New Roman', serif", lineHeight: 1.5, color: "#000000", padding: "20px 25px", boxSizing: "border-box", outline: "none" }}>
               <div>
                 <div style={{ display: "flex", justifyContent: "center", marginBottom: "12px" }}>
                   <div style={{ border: "2px solid #000000", padding: "5px 30px", fontSize: "14pt", fontWeight: "bold", textAlign: "center", backgroundColor: "#ffffff" }}>
@@ -995,7 +1044,7 @@ export default function LegacyTemplateRenderer({
                       <div style={{ paddingLeft: "15px", marginTop: "3px", display: "flex", flexDirection: "column", gap: "3px" }}>
                         <div>- {data.salaryType || "시"}급 : {renderUnderline(data.salaryAmt, "120px", "salaryAmt")}원</div>
                         <div>- 상여금 : 있음 {renderCheck(hasBonus)} {renderUnderline(hasBonus ? data.bonusAmt : "", "90px", "bonusAmt")}원, 없음 {renderCheck(!hasBonus)}</div>
-                        <div>- 기타급여 : 있음 {renderCheck(hasOtherPay)} {hasOtherPay ? `(${renderUnderline(data.otherPayAmt, "90px", "otherPayAmt")}원)` : ""}, 없음 {renderCheck(!hasOtherPay)}</div>
+                        <div>- 기타급여 : 있음 {renderCheck(hasOtherPay)} {hasOtherPay ? <>({renderUnderline(data.otherPayAmt, "90px", "otherPayAmt")}원)</> : ""}, 없음 {renderCheck(!hasOtherPay)}</div>
                         <div>- 임금지급일 : 매월 {renderUnderline(data.payDay, "60px", "payDay")}일 / 지급방법 : 직접지급 {renderCheck(isDirect)}, 계좌입금 {renderCheck(isBank)}</div>
                       </div>
                     </div>
@@ -1024,12 +1073,12 @@ export default function LegacyTemplateRenderer({
                   <div style={{ width: "48%", lineHeight: 1.5 }}>
                     <strong>(사업주)</strong> 상호: {data.employerName}<br />
                     주소: {data.employerAddr}<br />
-                    대표자: {renderUnderline(data.employerCEO, "80px", "employerCEO")} (인)
+                    대표자: {renderUnderline(data.employerCEO, "80px", "employerCEO")} {renderSeal("(인)")}
                   </div>
                   <div style={{ width: "48%", lineHeight: 1.5 }}>
                     <strong>(근로자)</strong> 주소: {data.employeeAddr}<br />
                     연락처: {data.employeePhone}<br />
-                    성명: {renderUnderline(data.employeeName, "80px", "employeeName")} (인)
+                    성명: {renderUnderline(data.employeeName, "80px", "employeeName")} {renderSeal("(인)", partyBSigSrc)}
                   </div>
                 </div>
               </div>
@@ -1040,7 +1089,7 @@ export default function LegacyTemplateRenderer({
           const dStart = parseDateOrEmpty(data.contractStart);
           const dEnd = parseDateOrEmpty(data.contractEnd);
           return (
-            <div className="contract-foreigner hwp-document" contentEditable={true} suppressContentEditableWarning={true} style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flexGrow: 1, minHeight: "920px", fontSize: "8.2pt", fontFamily: "'Batang', '바탕', 'Times New Roman', serif", lineHeight: 1.5, color: "#000000", padding: "20px 25px", boxSizing: "border-box", outline: "none" }}>
+            <div className="contract-foreigner hwp-document" contentEditable={!readOnly} suppressContentEditableWarning={true} style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flexGrow: 1, minHeight: "920px", fontSize: "8.2pt", fontFamily: "'Batang', '바탕', 'Times New Roman', serif", lineHeight: 1.5, color: "#000000", padding: "20px 25px", boxSizing: "border-box", outline: "none" }}>
               <div>
                 <div style={{ display: "flex", justifyContent: "center", marginBottom: "15px" }}>
                   <div style={{ border: "2px solid #000000", padding: "5px 30px", fontSize: "13pt", fontWeight: "bold", textAlign: "center", letterSpacing: "2px", backgroundColor: "#ffffff" }}>
@@ -1155,13 +1204,13 @@ export default function LegacyTemplateRenderer({
                   <div style={{ width: "48%" }}>
                     <strong>[사업주 (Employer)]</strong><br />
                     Company: {data.employerName}<br />
-                    CEO: {renderUnderline(data.employerCEO, "80px", "employerCEO")} (Signature)
+                    CEO: {renderUnderline(data.employerCEO, "80px", "employerCEO")} {renderSeal("(Signature)")}
                   </div>
                   <div style={{ width: "48%" }}>
                     <strong>[근로자 (Employee)]</strong><br />
                     Passport No: {data.employeePassport}<br />
                     Name: {data.employeeName}<br />
-                    Signature: {renderUnderline(data.employeeName, "80px", "employeeName")} (Signature)
+                    Signature: {renderUnderline(data.employeeName, "80px", "employeeName")} {renderSeal("(Signature)", partyBSigSrc)}
                   </div>
                 </div>
               </div>
@@ -1171,7 +1220,7 @@ export default function LegacyTemplateRenderer({
       }      // 4. 연차 휴가 신청서
       case "leave":
         return (
-          <div contentEditable={true} suppressContentEditableWarning={true} style={{ display: "flex", flexDirection: "column", justifyContent: "flex-start", flexGrow: 1, fontSize: "10.5pt", outline: "none" }}>
+          <div contentEditable={!readOnly} suppressContentEditableWarning={true} style={{ display: "flex", flexDirection: "column", justifyContent: "flex-start", flexGrow: 1, fontSize: "10.5pt", outline: "none" }}>
             <div>
               <h1 style={{ textAlign: "center", fontSize: "24pt", fontWeight: 800, margin: "20px 0 35px 0", letterSpacing: "8px" }}>연차 휴가 신청서</h1>
               <table style={{ width: "100%", borderCollapse: "collapse", border: "2px solid #000000", fontSize: "10.5pt" }}>
@@ -1253,11 +1302,15 @@ export default function LegacyTemplateRenderer({
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", width: "100%", maxWidth: "320px", fontSize: "11pt" }}>
                 <span>신 청 자 :</span>
-                <span 
-                  onInput={(e) => handleFieldInputDirect("name", e.currentTarget.innerText)} onBlur={(e) => handleFieldChange("name", e.currentTarget.innerText)}
-                  style={{ fontWeight: "bold", outline: "none" }}
-                >
-                  {data.name} (서명 / 인)
+                <span style={{ fontWeight: "bold" }}>
+                  <span
+                    onInput={(e) => handleFieldInputDirect("name", e.currentTarget.innerText)}
+                    onBlur={(e) => handleFieldChange("name", e.currentTarget.innerText)}
+                    style={{ outline: "none" }}
+                  >
+                    {data.name}
+                  </span>{" "}
+                  {renderSeal("(서명 / 인)")}
                 </span>
               </div>
               {data.company && (
@@ -1275,7 +1328,7 @@ export default function LegacyTemplateRenderer({
       // 5. 업무 경위서
       case "report":
         return (
-          <div contentEditable={true} suppressContentEditableWarning={true} style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flexGrow: 1, fontSize: "10.5pt", outline: "none" }}>
+          <div contentEditable={!readOnly} suppressContentEditableWarning={true} style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flexGrow: 1, fontSize: "10.5pt", outline: "none" }}>
             <div>
               <h1 style={{ textAlign: "center", fontSize: "24pt", fontWeight: 800, margin: "15px 0 25px 0", letterSpacing: "8px" }}>시말서 / 업무 경위서</h1>
               <table style={{ width: "100%", borderCollapse: "collapse", border: "2px solid #000000", fontSize: "10.5pt", marginBottom: "15px" }}>
@@ -1375,11 +1428,15 @@ export default function LegacyTemplateRenderer({
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", width: "100%", maxWidth: "320px", fontSize: "11pt" }}>
                 <span>보 고 자 :</span>
-                <span 
-                  onInput={(e) => handleFieldInputDirect("name", e.currentTarget.innerText)} onBlur={(e) => handleFieldChange("name", e.currentTarget.innerText)}
-                  style={{ fontWeight: "bold", outline: "none" }}
-                >
-                  {data.name} (서명 / 인)
+                <span style={{ fontWeight: "bold" }}>
+                  <span
+                    onInput={(e) => handleFieldInputDirect("name", e.currentTarget.innerText)}
+                    onBlur={(e) => handleFieldChange("name", e.currentTarget.innerText)}
+                    style={{ outline: "none" }}
+                  >
+                    {data.name}
+                  </span>{" "}
+                  {renderSeal("(서명 / 인)")}
                 </span>
               </div>
             </div>
@@ -1389,7 +1446,7 @@ export default function LegacyTemplateRenderer({
       // 6. 기안서
       case "proposal":
         return (
-          <div contentEditable={true} suppressContentEditableWarning={true} style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flexGrow: 1, fontSize: "10.5pt", outline: "none" }}>
+          <div contentEditable={!readOnly} suppressContentEditableWarning={true} style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flexGrow: 1, fontSize: "10.5pt", outline: "none" }}>
             <div>
               <h1 style={{ textAlign: "center", fontSize: "24pt", fontWeight: 800, margin: "15px 0 25px 0", letterSpacing: "15px" }}>기 안 서</h1>
               <table style={{ width: "100%", borderCollapse: "collapse", border: "2px solid #000000", marginBottom: "15px" }}>
@@ -1469,7 +1526,8 @@ export default function LegacyTemplateRenderer({
                   style={{ outline: "none", marginLeft: "4px" }}
                 >
                   {data.drafter}
-                </span> (서명 / 인)
+                </span>{" "}
+                {renderSeal("(서명 / 인)")}
               </div>
             </div>
           </div>
@@ -1478,7 +1536,7 @@ export default function LegacyTemplateRenderer({
       // 7. 품의서
       case "approval":
         return (
-          <div contentEditable={true} suppressContentEditableWarning={true} style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flexGrow: 1, fontSize: "10.5pt", outline: "none" }}>
+          <div contentEditable={!readOnly} suppressContentEditableWarning={true} style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flexGrow: 1, fontSize: "10.5pt", outline: "none" }}>
             <div>
               <h1 style={{ textAlign: "center", fontSize: "24pt", fontWeight: 800, margin: "15px 0 25px 0", letterSpacing: "15px" }}>품 의 서</h1>
               <table style={{ width: "100%", borderCollapse: "collapse", border: "2px solid #000000", marginBottom: "15px" }}>
@@ -1563,7 +1621,8 @@ export default function LegacyTemplateRenderer({
                   style={{ outline: "none", marginLeft: "4px" }}
                 >
                   {data.name}
-                </span> (서명 / 인)
+                </span>{" "}
+                {renderSeal("(서명 / 인)")}
               </div>
             </div>
           </div>
@@ -1572,7 +1631,7 @@ export default function LegacyTemplateRenderer({
       // 8. 회의록
       case "meeting":
         return (
-          <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flexGrow: 1, fontSize: "10pt" }}>
+          <div contentEditable={!readOnly} suppressContentEditableWarning={true} style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flexGrow: 1, fontSize: "10pt", outline: "none" }}>
             <div>
               <h1 style={{ textAlign: "center", fontSize: "22pt", fontWeight: 800, margin: "10px 0 20px 0", letterSpacing: "10px" }}>회의록</h1>
               <table style={{ width: "100%", borderCollapse: "collapse", border: "2px solid #000000", marginBottom: "15px" }}>
@@ -1592,7 +1651,7 @@ export default function LegacyTemplateRenderer({
                     <td colSpan={3} style={{ border: "1px solid #000000", padding: "8px 10px" }}>{data.attendees}</td>
                   </tr>
                   <tr>
-                    <td style={{ border: "1px solid #000000", padding: "8px 10px", textAlign: "center", backgroundColor: "#f9fafb", fontWeight: "bold", whiteSpace: "nowrap" }}>회의 안건</td>
+                    <td style={{ border: "1px solid #000000", width: "20%", padding: "8px 10px", textAlign: "center", backgroundColor: "#f9fafb", fontWeight: "bold", whiteSpace: "nowrap" }}>회의 안건</td>
                     <td colSpan={3} style={{ border: "1px solid #000000", padding: "8px 10px", wordBreak: "keep-all" }}>{data.agenda}</td>
                   </tr>
                   <tr>
@@ -1610,8 +1669,9 @@ export default function LegacyTemplateRenderer({
                 </tbody>
               </table>
             </div>
-            <div className="generic-footer-block" style={{ display: "flex", justifyContent: "flex-end", width: "100%", fontSize: "10pt" }}>
+            <div className="generic-footer-block" style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: "12px", width: "100%", fontSize: "10pt" }}>
               <span>작성 및 기록일자: <strong>{data.date}</strong></span>
+              {sigSrc && <span>기록자 {renderSeal("(인)")}</span>}
             </div>
           </div>
         );
@@ -1619,7 +1679,7 @@ export default function LegacyTemplateRenderer({
       // 9. 지출결의서
       case "payment":
         return (
-          <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flexGrow: 1, fontSize: "10.5pt" }}>
+          <div contentEditable={!readOnly} suppressContentEditableWarning={true} style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flexGrow: 1, fontSize: "10.5pt", outline: "none" }}>
             <div>
               <h1 style={{ textAlign: "center", fontSize: "24pt", fontWeight: 800, margin: "15px 0 25px 0", letterSpacing: "15px" }}>지출결의서</h1>
               <table style={{ width: "100%", borderCollapse: "collapse", border: "2px solid #000000", marginBottom: "15px" }}>
@@ -1652,7 +1712,7 @@ export default function LegacyTemplateRenderer({
             </div>
             <div className="generic-footer-block" style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "100%", gap: "5px", marginTop: "20px" }}>
               <div style={{ fontSize: "12pt", fontWeight: "bold" }}>{data.date}</div>
-              <div style={{ fontSize: "11pt", fontWeight: "bold", marginTop: "5px" }}>영수인(결의자): {data.resolver} (서명 / 인)</div>
+              <div style={{ fontSize: "11pt", fontWeight: "bold", marginTop: "5px" }}>영수인(결의자): {data.resolver} {renderSeal("(서명 / 인)")}</div>
             </div>
           </div>
         );
@@ -1660,7 +1720,7 @@ export default function LegacyTemplateRenderer({
       // 10. 견적서
       case "estimate":
         return (
-          <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flexGrow: 1, fontSize: "10pt" }}>
+          <div contentEditable={!readOnly} suppressContentEditableWarning={true} style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flexGrow: 1, fontSize: "10pt", outline: "none" }}>
             <div>
               <h1 style={{ textAlign: "center", fontSize: "24pt", fontWeight: 800, margin: "10px 0 20px 0", letterSpacing: "15px" }}>견 적 서</h1>
               
@@ -1674,9 +1734,26 @@ export default function LegacyTemplateRenderer({
                   </p>
                   <p style={{ fontSize: "10.5pt", marginTop: "8px" }}>견적일자: <strong>{data.estDate}</strong></p>
                 </div>
-                <div style={{ width: "50%", border: "1.5px solid #000000", padding: "12px", whiteSpace: "pre-line", fontSize: "9.5pt", lineHeight: 1.6 }}>
+                <div style={{ width: "50%", border: "1.5px solid #000000", padding: "12px", whiteSpace: "pre-line", fontSize: "9.5pt", lineHeight: 1.6, position: "relative" }}>
                   <div style={{ fontWeight: "bold", borderBottom: "1px solid #000", paddingBottom: "4px", marginBottom: "6px", fontSize: "10pt", textAlign: "center" }}>공 급 자</div>
-                  {data.provider}
+                  {typeof data.provider === "string" && /(\(인\)|\(서명\)|\(직인\))/.test(data.provider) ? (
+                    (() => {
+                      const m = data.provider.match(/(\(인\)|\(서명\)|\(직인\))/);
+                      if (!m || m.index === undefined) return data.provider;
+                      return (
+                        <>
+                          {data.provider.slice(0, m.index)}
+                          {renderSeal(m[0])}
+                          {data.provider.slice(m.index + m[0].length)}
+                        </>
+                      );
+                    })()
+                  ) : (
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: "8px" }}>
+                      <div style={{ flex: 1 }}>{data.provider}</div>
+                      <div style={{ flexShrink: 0 }}>{renderSeal("(인)")}</div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1708,7 +1785,7 @@ export default function LegacyTemplateRenderer({
       // 11. 발주서
       case "order":
         return (
-          <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flexGrow: 1, fontSize: "10pt" }}>
+          <div contentEditable={!readOnly} suppressContentEditableWarning={true} style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flexGrow: 1, fontSize: "10pt", outline: "none" }}>
             <div>
               <h1 style={{ textAlign: "center", fontSize: "24pt", fontWeight: 800, margin: "10px 0 20px 0", letterSpacing: "15px" }}>발 주 서</h1>
               
@@ -1745,7 +1822,7 @@ export default function LegacyTemplateRenderer({
             </div>
             
             <div className="generic-footer-block" style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "100%", gap: "5px", marginTop: "20px" }}>
-              <div style={{ fontSize: "11.5pt", fontWeight: "bold" }}>발주자 (구매처): ________________ (인/서명)</div>
+              <div style={{ fontSize: "11.5pt", fontWeight: "bold" }}>발주자 (구매처): ________________ {renderSeal("(인/서명)")}</div>
             </div>
           </div>
         );
@@ -1753,7 +1830,7 @@ export default function LegacyTemplateRenderer({
       // 12. 차용증
       case "iou":
         return (
-          <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flexGrow: 1, fontSize: "9.5pt", letterSpacing: "-0.5px" }}>
+          <div contentEditable={!readOnly} suppressContentEditableWarning={true} style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", flexGrow: 1, fontSize: "9.5pt", letterSpacing: "-0.5px", outline: "none" }}>
             <div>
               <h1 style={{ textAlign: "center", fontSize: "22pt", fontWeight: 800, margin: "10px 0 15px 0", letterSpacing: "10px" }}>금전차용증서</h1>
               <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "15px", wordBreak: "keep-all" }}>
@@ -1801,11 +1878,11 @@ export default function LegacyTemplateRenderer({
               <div style={{ display: "flex", justifyContent: "space-between", width: "100%", fontSize: "10pt", marginTop: "8px" }}>
                 <div style={{ width: "48%" }}>
                   <strong>채권자 (갑)</strong><br />
-                  성명: {data.creditorName} (인/서명)
+                  성명: {data.creditorName} {renderSeal("(인/서명)")}
                 </div>
                 <div style={{ width: "48%" }}>
                   <strong>채무자 (을)</strong><br />
-                  성명: {data.debtorName} (인/서명)
+                  성명: {data.debtorName} {renderSeal("(인/서명)", partyBSigSrc)}
                 </div>
               </div>
             </div>

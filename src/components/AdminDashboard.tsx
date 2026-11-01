@@ -1,15 +1,16 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
-interface TimelineEvent {
+export interface TimelineEvent {
   date: string;
   title: string;
   desc: string;
 }
 
-interface EditRequest {
+export interface EditRequest {
   id: number;
   b_no: string;
   b_nm: string;
@@ -27,14 +28,14 @@ interface EditRequest {
   proposedBusinessName?: string;
 }
 
-interface AdminStats {
+export interface AdminStats {
   totalBusinesses: number;
   noNameBusinesses: number;
   pendingRequests: number;
   totalViews: number;
 }
 
-interface NoNameBusiness {
+export interface NoNameBusiness {
   b_no: string;
   b_nm: string;
   p_nm: string;
@@ -47,15 +48,33 @@ interface AdminDashboardProps {
   initialRequests: EditRequest[];
   stats: AdminStats;
   noNameBusinesses: NoNameBusiness[];
+  embedded?: boolean;
 }
 
-export default function AdminDashboard({ initialRequests, stats, noNameBusinesses }: AdminDashboardProps) {
+export default function AdminDashboard({
+  initialRequests,
+  stats,
+  noNameBusinesses,
+  embedded = false,
+}: AdminDashboardProps) {
   const router = useRouter();
   
   // 클라이언트 측 동적 동기화를 위한 State 격상
   const [requests, setRequests] = useState<EditRequest[]>(initialRequests);
   const [statsState, setStatsState] = useState<AdminStats>(stats);
   const [noNameState, setNoNameState] = useState<NoNameBusiness[]>(noNameBusinesses);
+
+  useEffect(() => {
+    setRequests(initialRequests);
+  }, [initialRequests]);
+
+  useEffect(() => {
+    setStatsState(stats);
+  }, [stats]);
+
+  useEffect(() => {
+    setNoNameState(noNameBusinesses);
+  }, [noNameBusinesses]);
 
   const [processingId, setProcessingId] = useState<number | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -94,7 +113,11 @@ export default function AdminDashboard({ initialRequests, stats, noNameBusinesse
         
         // 통계 및 수치도 즉시 실시간 갱신 (승인 시 등록 수 및 대기 건수 변경 반영)
         // 화면 리프레시 유도 및 데이터 다시 불러오기를 위해 백엔드 API를 찔러 최신 통계를 가져올 수도 있습니다.
-        const statsRes = await fetch("/api/admin/bulk-sync", { method: "POST", body: JSON.stringify({ onlyStats: true }) }).catch(() => null);
+        const statsRes = await fetch("/api/admin/bulk-sync", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ onlyStats: true }),
+        }).catch(() => null);
         if (statsRes && statsRes.ok) {
           const statsData = await statsRes.json();
           if (statsData.stats) setStatsState(statsData.stats);
@@ -179,13 +202,15 @@ export default function AdminDashboard({ initialRequests, stats, noNameBusinesse
 
   return (
     <div style={{
-      padding: "40px 24px 80px 24px",
+      padding: embedded ? "24px" : "40px 24px 80px 24px",
       fontFamily: "var(--font-family-sans)",
-      color: "var(--color-text-main)",
+      color: "#f9fafb",
       maxWidth: "1240px",
       margin: "0 auto",
       backgroundColor: "#080b11",
-      minHeight: "100vh"
+      borderRadius: embedded ? "20px" : "0",
+      border: embedded ? "1px solid rgba(255, 255, 255, 0.08)" : "none",
+      minHeight: embedded ? "auto" : "100vh"
     }}>
       {/* 로딩 스피너 및 키프레임 애니메이션 삽입 */}
       <style dangerouslySetInnerHTML={{__html: `
@@ -198,100 +223,85 @@ export default function AdminDashboard({ initialRequests, stats, noNameBusinesse
         }
       `}} />
 
-      {/* 어드민 네비게이션 헤더 */}
-      <div style={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        paddingBottom: "24px",
-        borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
-        marginBottom: "40px",
-        gap: "16px",
-        flexWrap: "wrap"
-      }}>
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <span style={{
-              background: "linear-gradient(135deg, #3b82f6, #8b5cf6)",
-              padding: "6px 12px",
-              borderRadius: "8px",
-              fontSize: "0.75rem",
-              fontWeight: 800,
-              color: "#ffffff",
-              textTransform: "uppercase",
-              letterSpacing: "0.05em"
+      {/* 어드민 네비게이션 헤더 (단독 페이지 모드에서만 표시) */}
+      {!embedded && (
+        <div style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          paddingBottom: "24px",
+          borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
+          marginBottom: "40px",
+          gap: "16px",
+          flexWrap: "wrap"
+        }}>
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <span style={{
+                background: "linear-gradient(135deg, #3b82f6, #8b5cf6)",
+                padding: "6px 12px",
+                borderRadius: "8px",
+                fontSize: "0.75rem",
+                fontWeight: 800,
+                color: "#ffffff",
+                textTransform: "uppercase",
+                letterSpacing: "0.05em"
+              }}>
+                System Admin
+              </span>
+            </div>
+            <h1 style={{
+              fontSize: "2.2rem",
+              fontWeight: 900,
+              background: "linear-gradient(135deg, #ffffff 40%, #a5b4fc 100%)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              margin: "8px 0 0 0",
+              letterSpacing: "-0.02em"
             }}>
-              System Admin
-            </span>
+              🛡️ 어드민 컨트롤 타워
+            </h1>
+            <p style={{ color: "rgba(156, 163, 175, 0.7)", fontSize: "0.95rem", margin: "6px 0 0 0" }}>
+              마음데이타 실시간 통계 관제 및 유저 정보 제안 심사 시스템
+            </p>
           </div>
-          <h1 style={{
-            fontSize: "2.2rem",
-            fontWeight: 900,
-            background: "linear-gradient(135deg, #ffffff 40%, #a5b4fc 100%)",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-            margin: "8px 0 0 0",
-            letterSpacing: "-0.02em"
-          }}>
-            🛡️ 어드민 컨트롤 타워
-          </h1>
-          <p style={{ color: "rgba(156, 163, 175, 0.7)", fontSize: "0.95rem", margin: "6px 0 0 0" }}>
-            마음데이타 실시간 통계 관제 및 유저 정보 제안 심사 시스템
-          </p>
+          <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+            <Link
+              href="/"
+              prefetch={false}
+              style={{
+                padding: "11px 20px",
+                borderRadius: "12px",
+                border: "1px solid rgba(255, 255, 255, 0.08)",
+                backgroundColor: "rgba(255, 255, 255, 0.02)",
+                fontSize: "0.88rem",
+                fontWeight: 600,
+                color: "rgba(255, 255, 255, 0.8)",
+                textDecoration: "none",
+                transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)"
+              }}
+            >
+              홈페이지 바로가기
+            </Link>
+            <button
+              onClick={handleLogout}
+              style={{
+                padding: "11px 20px",
+                borderRadius: "12px",
+                border: "none",
+                backgroundColor: "rgba(248, 113, 113, 0.12)",
+                color: "#fca5a5",
+                fontSize: "0.88rem",
+                fontWeight: 700,
+                cursor: "pointer",
+                transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)"
+              }}
+            >
+              로그아웃
+            </button>
+          </div>
         </div>
-        <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-          <a
-            href="/"
-            style={{
-              padding: "11px 20px",
-              borderRadius: "12px",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
-              backgroundColor: "rgba(255, 255, 255, 0.02)",
-              fontSize: "0.88rem",
-              fontWeight: 600,
-              color: "rgba(255, 255, 255, 0.8)",
-              textDecoration: "none",
-              transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)"
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.3)";
-              e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.08)";
-              e.currentTarget.style.color = "#ffffff";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.08)";
-              e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.02)";
-              e.currentTarget.style.color = "rgba(255, 255, 255, 0.8)";
-            }}
-          >
-            홈페이지 바로가기
-          </a>
-          <button
-            onClick={handleLogout}
-            style={{
-              padding: "11px 20px",
-              borderRadius: "12px",
-              border: "none",
-              backgroundColor: "rgba(248, 113, 113, 0.12)",
-              color: "#fca5a5",
-              fontSize: "0.88rem",
-              fontWeight: 700,
-              cursor: "pointer",
-              transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)"
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = "rgba(248, 113, 113, 0.25)";
-              e.currentTarget.style.color = "#ffffff";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = "rgba(248, 113, 113, 0.12)";
-              e.currentTarget.style.color = "#fca5a5";
-            }}
-          >
-            로그아웃
-          </button>
-        </div>
-      </div>
+      )}
 
       {/* KPI 통계 카드 대시보드 */}
       <div style={{
@@ -1151,8 +1161,9 @@ export default function AdminDashboard({ initialRequests, stats, noNameBusinesse
                           borderTopRightRadius: "10px",
                           borderBottomRightRadius: "10px"
                         }}>
-                          <a
+                          <Link
                             href={`/biz/${biz.b_no}`}
+                            prefetch={false}
                             target="_blank"
                             rel="noopener noreferrer"
                             style={{
@@ -1166,17 +1177,9 @@ export default function AdminDashboard({ initialRequests, stats, noNameBusinesse
                               textDecoration: "none",
                               transition: "all 0.2s"
                             }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.backgroundColor = "#3b82f6";
-                              e.currentTarget.style.color = "#ffffff";
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.backgroundColor = "rgba(59, 130, 246, 0.15)";
-                              e.currentTarget.style.color = "#60a5fa";
-                            }}
                           >
                             상세 정보 등록하러 가기 ↗
-                          </a>
+                          </Link>
                         </td>
                       </tr>
                     );

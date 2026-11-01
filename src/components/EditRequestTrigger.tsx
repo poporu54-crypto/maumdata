@@ -28,6 +28,7 @@ export default function EditRequestTrigger({
     <>
       <div style={{ marginTop: "16px", display: "flex", justifyContent: "flex-start" }}>
         <button
+          type="button"
           onClick={() => setIsOpen(true)}
           style={{
             display: "inline-flex",
@@ -35,27 +36,24 @@ export default function EditRequestTrigger({
             gap: "8px",
             padding: "8px 16px",
             borderRadius: "30px",
-            border: "1px solid rgba(255, 255, 255, 0.15)",
-            backgroundColor: "rgba(255, 255, 255, 0.05)",
-            color: "var(--color-text-sub)",
+            border: "1px solid rgba(49, 130, 246, 0.3)",
+            backgroundColor: "var(--color-primary-light)",
+            color: "var(--color-primary)",
             fontSize: "0.88rem",
-            fontWeight: 600,
+            fontWeight: 700,
             cursor: "pointer",
-            backdropFilter: "blur(4px)",
             transition: "all 0.2s ease-in-out",
             outline: "none",
-            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)"
+            boxShadow: "var(--shadow-sm)"
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = "rgba(49, 130, 246, 0.15)";
+            e.currentTarget.style.backgroundColor = "rgba(49, 130, 246, 0.16)";
             e.currentTarget.style.borderColor = "var(--color-primary)";
-            e.currentTarget.style.color = "var(--color-primary)";
             e.currentTarget.style.transform = "translateY(-1px)";
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.05)";
-            e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.15)";
-            e.currentTarget.style.color = "var(--color-text-sub)";
+            e.currentTarget.style.backgroundColor = "var(--color-primary-light)";
+            e.currentTarget.style.borderColor = "rgba(49, 130, 246, 0.3)";
             e.currentTarget.style.transform = "translateY(0)";
           }}
         >

@@ -48,25 +48,31 @@ export default async function MarketAreaPage({ params }: PageProps) {
     address: store.rdnmAdr,
   }));
 
-  // 3. 업종 대분류별 비중 집계
+  // 3. 업종 대분류별 비중 집계 (소진공 SDSC2 실제 대분류명 기준 매핑)
   const counts: Record<string, { count: number; name: string; color: string }> = {};
   
-  const colorMapping: Record<string, string> = {
+  const CATEGORY_COLORS: Record<string, string> = {
     "음식": "var(--color-primary)",
     "소매": "#a855f7",
+    "과학·기술": "#06b6d4",
+    "부동산": "#f59e0b",
+    "보건의료": "#ef4444",
     "교육": "#10b981",
-    "생활서비스": "#fbbf24",
+    "수리·개인": "#fbbf24",
+    "시설관리·임대": "#6366f1",
+    "예술·스포츠": "#f97316",
     "숙박": "#ec4899",
     "기타": "#94a3b8"
   };
 
   storeList.forEach((store) => {
-    const lNm = store.indsLclsNm || "기타";
+    const rawNm = (store.indsLclsNm || "기타").replace(/ㆍ/g, "·").trim();
+    const lNm = rawNm || "기타";
     if (!counts[lNm]) {
       counts[lNm] = {
         count: 0,
         name: lNm,
-        color: colorMapping[lNm] || colorMapping["기타"],
+        color: CATEGORY_COLORS[lNm] || CATEGORY_COLORS["기타"],
       };
     }
     counts[lNm].count++;
@@ -184,10 +190,10 @@ export default async function MarketAreaPage({ params }: PageProps) {
           marginBottom: "32px"
         }}>
           <h3 style={{ fontSize: "1.1rem", fontWeight: 800, color: "var(--color-text-main)", marginBottom: "8px" }}>
-            📊 업종별 점유 구성비
+            📊 업종별 점유 구성비 (표본 비율)
           </h3>
           <p style={{ fontSize: "0.85rem", color: "var(--color-text-desc)", marginBottom: "24px" }}>
-            상권 내 가장 지배적인 영향력을 가진 주요 산업군별 분포 비율입니다.
+            전체 상업시설 {totalCount.toLocaleString()}개소 중 수집된 표본({sampleCount.toLocaleString()}개 점포) 기준 주요 산업군별 분포 비율입니다.
           </p>
 
           <div style={{
@@ -231,21 +237,24 @@ export default async function MarketAreaPage({ params }: PageProps) {
               </div>
             </div>
 
-            {/* 범례 */}
+            {/* 범례 (표본 비율 명시) */}
             <div style={{
               display: "grid",
               gridTemplateColumns: "1fr",
               gap: "12px",
-              minWidth: "200px"
+              minWidth: "220px"
             }}>
+              <div style={{ fontSize: "0.76rem", fontWeight: 700, color: "var(--color-text-desc)", borderBottom: "1px solid var(--color-border)", paddingBottom: "6px" }}>
+                표본 비율 (수집 표본 {sampleCount.toLocaleString()}개 기준)
+              </div>
               {chartData.map((item, idx) => (
-                <div key={idx} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: "0.9rem" }}>
+                <div key={idx} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", fontSize: "0.9rem" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px", fontWeight: 600 }}>
                     <div style={{ width: "12px", height: "12px", borderRadius: "3px", backgroundColor: item.color }}></div>
                     <span style={{ color: "var(--color-text-sub)" }}>{item.name}</span>
                   </div>
                   <span style={{ color: "var(--color-text-main)", fontWeight: 700 }}>
-                    {item.count}개 ({item.pct}%)
+                    {item.pct}% <span style={{ fontSize: "0.78rem", color: "var(--color-text-desc)", fontWeight: 500 }}>(표본 {item.count}개)</span>
                   </span>
                 </div>
               ))}
@@ -268,14 +277,14 @@ export default async function MarketAreaPage({ params }: PageProps) {
           </p>
 
           <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            {topStores.map((store, idx) => (
+            {topStores.map((store) => (
               <div 
                 key={store.bizesId} 
                 style={{
                   padding: "16px 20px",
                   border: "1px solid var(--color-border)",
                   borderRadius: "12px",
-                  backgroundColor: "rgba(255, 255, 255, 0.005)",
+                  backgroundColor: "var(--bg-color-main)",
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "center",
@@ -287,7 +296,8 @@ export default async function MarketAreaPage({ params }: PageProps) {
                   <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
                     <strong style={{ color: "var(--color-text-main)", fontSize: "0.98rem" }}>{store.bizesNm}</strong>
                     <span style={{
-                      backgroundColor: "rgba(255, 255, 255, 0.04)",
+                      backgroundColor: "var(--bg-color-card)",
+                      border: "1px solid var(--color-border)",
                       color: "var(--color-text-desc)",
                       fontSize: "0.75rem",
                       padding: "2px 6px",

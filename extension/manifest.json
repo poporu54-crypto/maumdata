@@ -10,8 +10,7 @@
   ],
   "host_permissions": [
     "https://www.maumdata.com/*",
-    "https://maumdata.com/*",
-    "http://localhost:3000/*"
+    "https://maumdata.com/*"
   ],
   "action": {
     "default_popup": "popup.html",

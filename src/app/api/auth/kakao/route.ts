@@ -1,27 +1,31 @@
 import { NextResponse, NextRequest } from "next/server";
+import {
+  createSignedOAuthState,
+  getSafeBaseOrigin,
+  sanitizeReturnToPath,
+} from "@/lib/sessionAuth";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const source = searchParams.get("source") || "";
+  const returnTo = sanitizeReturnToPath(searchParams.get("returnTo"));
+  const baseOrigin = getSafeBaseOrigin(request);
 
-  const clientId = process.env.KAKAO_CLIENT_ID || "83c099e699aebea20f572b85a32bfab5";
-  const host = request.headers.get("host") || "www.maumdata.com";
-  const protocol = request.headers.get("x-forwarded-proto") || "https";
-  const redirectUri = `${protocol}://${host}/api/auth/kakao/callback`;
+  const clientId = (process.env.KAKAO_CLIENT_ID || "").trim();
+  const redirectUri = `${baseOrigin}/api/auth/kakao/callback`;
 
   if (!clientId) {
-    return NextResponse.redirect(`${protocol}://${host}/contracts?auth_notice=kakao_not_configured`);
+    return NextResponse.redirect(`${baseOrigin}/contracts?auth_error=kakao_not_configured`);
   }
 
-  const stateParam =
-    source === "app" || source === "ios"
-      ? `&state=${encodeURIComponent(source)}`
-      : "";
+  const signedState = createSignedOAuthState({ source, returnTo });
   const kakaoAuthUrl = `https://kauth.kakao.com/oauth/authorize?client_id=${encodeURIComponent(
     clientId
-  )}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code${stateParam}`;
+  )}&redirect_uri=${encodeURIComponent(
+    redirectUri
+  )}&response_type=code&state=${encodeURIComponent(signedState)}`;
 
   return NextResponse.redirect(kakaoAuthUrl);
 }

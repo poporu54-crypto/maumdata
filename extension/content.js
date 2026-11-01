@@ -50,6 +50,15 @@ function closeInPageLayerModal() {
   }
 }
 
+function escapeHtml(str) {
+  return String(str ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function formatBrn(raw10) {
   const clean = String(raw10 || "").replace(/[^0-9]/g, "");
   if (clean.length !== 10) return raw10;
@@ -109,36 +118,37 @@ function fetchBizForLayer(bNo) {
     const taxType = (d.tax_status && d.tax_status.tax_type) || "일반과세자";
     const revStr = d.latest_revenue ? `${d.latest_revenue}억 원` : "비공개";
     const empStr = d.latest_employees ? `${d.latest_employees}명` : "집계중";
+    const safeBNo = String(d.b_no || bNo || "").replace(/[^0-9]/g, "");
 
     body.style.textAlign = "left";
     body.style.padding = "0";
     body.innerHTML = `
-      <div class="md-modal-title">${d.b_nm}</div>
-      <div class="md-modal-brn">사업자등록번호: ${d.b_no_formatted || formatBrn(d.b_no)} · ${d.is_sme || "기업"}</div>
+      <div class="md-modal-title">${escapeHtml(d.b_nm)}</div>
+      <div class="md-modal-brn">사업자등록번호: ${escapeHtml(d.b_no_formatted || formatBrn(d.b_no))} · ${escapeHtml(d.is_sme || "기업")}</div>
       <div class="md-modal-status">
-        <span>● ${stt} (${taxType})</span>
+        <span>● ${escapeHtml(stt)} (${escapeHtml(taxType)})</span>
       </div>
       <div class="md-modal-grid">
         <div class="md-modal-cell">
           <span class="md-modal-k">대표자</span>
-          <span class="md-modal-v">${d.p_nm || "-"}</span>
+          <span class="md-modal-v">${escapeHtml(d.p_nm || "-")}</span>
         </div>
         <div class="md-modal-cell">
           <span class="md-modal-k">최근 매출 / 인원</span>
-          <span class="md-modal-v">${revStr} / ${empStr}</span>
+          <span class="md-modal-v">${escapeHtml(revStr)} / ${escapeHtml(empStr)}</span>
         </div>
         <div class="md-modal-cell full">
           <span class="md-modal-k">주요 업종</span>
-          <span class="md-modal-v">${d.b_sector || "-"}</span>
+          <span class="md-modal-v">${escapeHtml(d.b_sector || "-")}</span>
         </div>
         <div class="md-modal-cell full">
           <span class="md-modal-k">소재지</span>
-          <span class="md-modal-v">${d.b_adr || "-"}</span>
+          <span class="md-modal-v">${escapeHtml(d.b_adr || "-")}</span>
         </div>
       </div>
       <div class="md-modal-actions">
-        <a href="https://www.maumdata.com/contracts" target="_blank" class="md-btn-sub">✍️ 전자계약 작성</a>
-        <a href="https://www.maumdata.com/biz/${d.b_no}" target="_blank" class="md-btn-main">📊 상세 리포트 ↗</a>
+        <a href="https://www.maumdata.com/contracts" target="_blank" rel="noopener noreferrer" class="md-btn-sub">✍️ 전자계약 작성</a>
+        <a href="https://www.maumdata.com/biz/${escapeHtml(safeBNo)}" target="_blank" rel="noopener noreferrer" class="md-btn-main">📊 상세 리포트 ↗</a>
       </div>
     `;
   });
@@ -149,9 +159,9 @@ function renderLayerNotFound(query) {
   if (!body) return;
   body.innerHTML = `
     <div style="padding: 12px 4px; text-align:center;">
-      <div style="font-size:13px; font-weight:800; color:#f8fafc; margin-bottom:6px;">'${query}' 조회 결과 안내</div>
+      <div style="font-size:13px; font-weight:800; color:#f8fafc; margin-bottom:6px;">'${escapeHtml(query)}' 조회 결과 안내</div>
       <div style="font-size:11px; color:#94a3b8; margin-bottom:12px;">마음데이타 포털에서 실시간 국세청 상태 및 상세 검색을 진행해보세요.</div>
-      <a href="https://www.maumdata.com/search?q=${encodeURIComponent(query)}" target="_blank" class="md-btn-main">마음데이타에서 검색하기 ↗</a>
+      <a href="https://www.maumdata.com/search?q=${escapeHtml(encodeURIComponent(query))}" target="_blank" rel="noopener noreferrer" class="md-btn-main">마음데이타에서 검색하기 ↗</a>
     </div>
   `;
 }

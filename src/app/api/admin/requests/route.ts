@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { getPendingEditRequests } from "@/lib/db";
+import { isAdminRequest } from "@/lib/sessionAuth";
+
+export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   try {
-    const cookieStore = await cookies();
-    const session = cookieStore.get("admin_session");
-
-    if (!session || session.value !== "authenticated") {
+    if (!isAdminRequest(req)) {
       return NextResponse.json(
         { error: "권한이 없습니다. 먼저 로그인해 주세요." },
         { status: 401 }

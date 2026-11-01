@@ -1,9 +1,26 @@
 import React from "react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { getAllTemplateSummariesServer, TemplateSummary } from "@/lib/formSummaries";
 import FormCatalogClient from "./FormCatalogClient";
 
 export const revalidate = 3600;
+
+export const metadata: Metadata = {
+  title: "스마트 무료 서식 센터 (즉시 작성·A4 PDF 인쇄)",
+  description:
+    "근로계약서, 사직서, 견적서, 차용증, 지출결의서 등 300여 종의 실무 비즈니스·법률·행정 무료 서식을 회원가입 없이 웹에서 작성하고 A4 PDF·한글·워드로 즉시 저장하세요.",
+  alternates: {
+    canonical: "/form",
+  },
+  openGraph: {
+    title: "스마트 무료 서식 센터 | 마음데이타 FORM",
+    description:
+      "회원가입 없이 웹에서 바로 입력하고 A4 PDF·인쇄·비대면 전자서명까지 지원하는 무료 문서 서식 센터",
+    url: "https://www.maumdata.com/form",
+    type: "website",
+  },
+};
 
 const DIRECTORY_GROUPS: { key: string; label: string }[] = [
   { key: "노무", label: "📋 인사 · 노무 표준 서식" },
