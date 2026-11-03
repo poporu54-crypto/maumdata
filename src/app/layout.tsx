@@ -63,6 +63,19 @@ export default function RootLayout({
     <html lang="ko">
       <body>
         <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-4ZZ8NXRY9B"
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+
+            gtag('config', 'G-4ZZ8NXRY9B');
+          `}
+        </Script>
+        <Script
           async
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3713361723411048"
           crossOrigin="anonymous"
