@@ -8,6 +8,8 @@ import { getPopularQuickLinks } from "@/lib/db";
 import DragScrollContainer from "@/components/DragScrollContainer";
 import AdBanner from "@/components/AdBanner";
 import InteractiveDemoShowcase from "@/components/InteractiveDemoShowcase";
+import JsonLd from "@/components/JsonLd";
+import { buildHomePageJsonLd } from "@/lib/structuredData";
 
 export const revalidate = 300;
 
@@ -24,8 +26,15 @@ export default async function MainPage() {
     getPopularQuickLinks(6),
   ]);
 
+  const homeJsonLd = buildHomePageJsonLd({
+    quickLinks,
+    activeBizCount: stats.summary.activeBizCount,
+    totalTrackedEmployees: stats.summary.totalTrackedEmployees,
+  });
+
   return (
     <div className="animate-fade-in" style={{ padding: "24px 0 80px 0" }}>
+      <JsonLd data={homeJsonLd} />
       <div className="container" style={{ maxWidth: "720px" }}>
         
         {/* 히어로 타이틀 */}

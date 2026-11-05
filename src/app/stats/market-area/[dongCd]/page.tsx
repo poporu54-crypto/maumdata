@@ -3,6 +3,8 @@ import { Metadata } from "next";
 import Link from "next/link";
 import { getStoreDataInDong, getDongName } from "@/lib/marketApi";
 import ClientMapWrapper from "@/components/ClientMapWrapper";
+import JsonLd from "@/components/JsonLd";
+import { buildStatsDatasetJsonLd } from "@/lib/structuredData";
 
 export const revalidate = 86400;
 
@@ -91,8 +93,39 @@ export default async function MarketAreaPage({ params }: PageProps) {
   // 상위 대표 점포 리스트 (최대 10개)
   const topStores = storeList.slice(0, 10);
 
+  const dongDatasetJsonLd = buildStatsDatasetJsonLd({
+    path: `/stats/market-area/${dongCd}`,
+    name: `${dongInfo.fullName} 업종별 상가 점포 분포 및 상권 분석 데이터셋`,
+    description: `${dongInfo.fullName}(행정동 코드 ${dongCd}) 지역의 상업시설 총계(${totalCount.toLocaleString("ko-KR")}개소), 대분류 업종별 점포 비중 및 주요 영업 점포 분포를 분석한 상권 빅데이터 리포트입니다.`,
+    keywords: [
+      `${dongInfo.fullName} 상권분석`,
+      `${dongInfo.dong} 점포수`,
+      `${dongInfo.dong} 업종 분포`,
+      "소상공인 상권정보",
+      "마음데이타 상권 리포트",
+    ],
+    spatialName: `대한민국 ${dongInfo.fullName}`,
+    basedOnSources: [
+      { name: "소상공인시장진흥공단 상가(상권)정보 공공데이터", url: "https://www.data.go.kr" },
+    ],
+    variables: [
+      { name: "행정동 전체 상업시설 수", value: totalCount, unitText: "개소" },
+      ...chartData.slice(0, 3).map((c) => ({
+        name: `${c.name} 업종 표본 점유율`,
+        value: c.pct,
+        unitText: "%",
+      })),
+    ],
+    breadcrumbs: [
+      { name: "홈", path: "/" },
+      { name: "전국 상권 분석 허브", path: "/stats/market-area" },
+      { name: `${dongInfo.fullName} 상권 리포트`, path: `/stats/market-area/${dongCd}` },
+    ],
+  });
+
   return (
     <div className="animate-fade-in" style={{ padding: "24px 0 80px 0" }}>
+      <JsonLd data={dongDatasetJsonLd} />
       <div className="container" style={{ maxWidth: "720px" }}>
 
         {/* 타이틀 헤더 */}

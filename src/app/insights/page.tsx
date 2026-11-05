@@ -4,6 +4,8 @@ import AdBanner from "@/components/AdBanner";
 import StatsRelatedNav from "@/components/StatsRelatedNav";
 import InsightsTabsClient from "@/components/InsightsTabsClient";
 import { getRealPortalStats } from "@/lib/statApi";
+import JsonLd from "@/components/JsonLd";
+import { buildStatsDatasetJsonLd } from "@/lib/structuredData";
 
 export const revalidate = 600;
 
@@ -27,8 +29,33 @@ export default async function InsightsPage() {
   const stats = await getRealPortalStats();
   const { summary } = stats;
 
+  const datasetJsonLd = buildStatsDatasetJsonLd({
+    path: "/insights",
+    name: "대한민국 기업 실데이터 종합 인사이트 (납세상태 · 국민연금 고용 · DART 공시)",
+    description:
+      "마음데이타 DB에 실제 동기화된 국세청 계속사업자 납세상태, 국민연금 가입 임직원 및 월별 채용 추이, 금융감독원 DART 결산 재무·전자공시 실데이터를 집계한 기업 빅데이터 리포트입니다.",
+    keywords: ["기업 통계", "계속사업자 현황", "국민연금 임직원 통계", "DART 재무 랭킹", "마음데이타 인사이트"],
+    dateModified: summary.latestSyncDate,
+    basedOnSources: [
+      { name: "국세청 사업자등록 상태조회 공공데이터", url: "https://www.data.go.kr" },
+      { name: "국민연금공단 가입 사업장 내역 공공데이터", url: "https://www.data.go.kr" },
+      { name: "금융감독원 전자공시시스템 (DART)", url: "https://dart.fss.or.kr" },
+    ],
+    variables: [
+      { name: "검증 계속사업자 수", value: summary.activeBizCount, unitText: "개사" },
+      { name: "국민연금 추적 가입 임직원 수", value: summary.totalTrackedEmployees, unitText: "명" },
+      { name: "수집 DART 전자공시 건수", value: summary.totalDisclosuresCount, unitText: "건" },
+      { name: "결산 재무 검증 기업 수", value: summary.financialCompanyCount, unitText: "개사" },
+    ],
+    breadcrumbs: [
+      { name: "홈", path: "/" },
+      { name: "데이터 인사이트", path: "/insights" },
+    ],
+  });
+
   return (
     <div className="animate-fade-in" style={{ padding: "40px 0 80px 0" }}>
+      <JsonLd data={datasetJsonLd} />
       <div className="container" style={{ maxWidth: "880px" }}>
         {/* 타이틀 및 헤더 */}
         <div style={{ marginBottom: "28px" }}>

@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getAllTemplateSummariesServer, TemplateSummary } from "@/lib/formSummaries";
 import FormCatalogClient from "./FormCatalogClient";
+import JsonLd from "@/components/JsonLd";
+import { buildFormCatalogJsonLd } from "@/lib/structuredData";
 
 export const revalidate = 3600;
 
@@ -43,8 +45,11 @@ export default async function DocsPage() {
     bucket.push(item);
   }
 
+  const catalogJsonLd = buildFormCatalogJsonLd(summaries);
+
   return (
     <>
+      <JsonLd data={catalogJsonLd} />
       <FormCatalogClient initialSummaries={summaries} />
 
       {/* 검색엔진 크롤러 및 사용자를 위한 전체 무료 서식 표준 <a href> 디렉토리 */}

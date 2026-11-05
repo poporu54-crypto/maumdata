@@ -1,0 +1,58 @@
+# 마음데이타 (MaumData)
+
+> 마음데이타(MaumData, https://www.maumdata.com)는 대한민국 사업자등록번호 실시간 납세상태 검증, 법인 결산 재무제표 및 국민연금 임직원·채용 추이 분석, DART 전자공시·나라장터 입찰·특허 통합 조회, 국가 사업체·행정동 상권 통계, 그리고 300여 종 무료 표준 계약서·비즈니스 서식 웹 작성 및 비대면 전자서명을 무료로 제공하는 민간 기업 데이터 포털입니다.
+
+## 핵심 제공 서비스 및 데이터 출처 (Core Capabilities & Official Data Sources)
+
+- **실시간 사업자·법인 통합 검증**: 국세청 사업자등록 상태(계속사업자·휴업자·폐업자 및 과세유형), 금융위원회 기업기본정보·재무정보, 공정거래위원회 통신판매업 신고 정보 통합 제공.
+- **고용·재무·공시 입체 분석**: 국민연금공단 가입 사업장 기준 임직원 수·월별 신규 입사(취득)·퇴사(상실)·추정 평균 연봉, 금융감독원 DART 전자공시 및 최근 3개년 재무제표(매출액·영업이익·당기순이익·자본잠식·부채비율), 조달청 나라장터 입찰 내역, 특허청(KIPRIS) 산업재산권 정보 통합 제공.
+- **실데이터 기업·상권 통계**: 통계청(KOSIS) 전국사업체조사 19대 산업 대분류 공식 통계, 소상공인시장진흥공단 행정동별 상가 업종 분포, 자체 검증 기업 DB 실집계 인사이트 제공.
+- **무료 표준 서식 센터 & 비대면 전자계약**: 회원가입이나 프로그램 설치 없이 웹 브라우저에서 300여 종 실무 서식을 즉시 작성하고 A4 PDF 인쇄, 한글(HWP)·워드(DOC) 다운로드, 자필 서명·직인 날인, 보안 PIN 기반 비대면 전자계약 체결 지원.
+
+## AI 에이전트 · 검색엔진 직결 URL 규칙 (Deterministic Deep-Link Patterns)
+
+- **사업자등록번호 10자리 직접 조회**: `https://www.maumdata.com/biz/{하이픈제거10자리숫자}`
+  - 예시 (삼성전자 124-81-00998): https://www.maumdata.com/biz/1248100998
+  - 예시 (네이버 220-81-62517): https://www.maumdata.com/biz/2208162517
+  - 예시 (카카오 120-81-47521): https://www.maumdata.com/biz/1208147521
+- **기업명 · 대표자명 · 13자리 법인등록번호 통합 검색**: `https://www.maumdata.com/search?q={검색어}`
+- **무료 서식 에디터 직접 연결**: `https://www.maumdata.com/form/{templateId}`
+- **키워드별 무료 서식 모음**: `https://www.maumdata.com/form/tag/{키워드}`
+- **행정동 상권 분석 리포트**: `https://www.maumdata.com/stats/market-area/{행정동코드10자리}`
+
+## 주요 통계 및 데이터 인사이트 페이지 (Statistics & Insights)
+
+- [메인 포털 홈](https://www.maumdata.com/): 실시간 사업자번호 조회, 인기 검증 기업 및 핵심 통계 대시보드
+- [대한민국 기업 실데이터 인사이트](https://www.maumdata.com/insights): 검증 계속사업자·국민연금 고용·DART 공시 실시간 SQL 종합 집계 및 매출·채용 상위 기업 리더보드
+- [계속사업자 검증 현황 & 고용 안정성 분석](https://www.maumdata.com/stats/active-rate): 국세청 납세상태·과세유형 분포 및 국민연금 월별 고용 유지율 시계열 리포트
+- [산업군별 기업 분포 & 통계청 공식 업종 통계](https://www.maumdata.com/stats/distribution): 업종별 검증 법인 비중 및 통계청 전국사업체조사 19대 산업 확정 통계
+- [신규 채용 & 신설 법인 실데이터 동향](https://www.maumdata.com/stats/new-biz): 국민연금 월별 신규 취득 인원 추이, 채용 상위 기업, 전국 17개 시·도별 고용 분포
+- [전국 상권 분석 메인 허브](https://www.maumdata.com/stats/market-area): 서울 강남(역삼1동 `1168064000`), 종로(`1111061500`), 판교 삼평동(`4113565500`), 부산 우동 센텀(`2635052000`) 등 주요 상권 업종 구성 및 점포 분포 리포트
+
+## 대표 무료 서식 바로가기 (Popular Free Web Forms — No Signup Required)
+
+- [무료 서식 센터 전체 목록 (300+종)](https://www.maumdata.com/form): 노무·행정·재무·계약·법률·정부 민원 표준 양식 전체 디렉토리
+- [표준 근로계약서](https://www.maumdata.com/form/contract): 고용노동부 표준 양식 기반 정규·계약직 근로계약서 웹 작성 및 전자서명
+- [단시간근로자(알바) 표준근로계약서](https://www.maumdata.com/form/contract_short_time): 파트타임·아르바이트 근무일별 근로시간 및 시급 명시 계약서
+- [연소근로자 표준근로계약서](https://www.maumdata.com/form/contract_minor): 만 18세 미만 연소근로자 근로계약서 및 친권자 동의서 포함 양식
+- [건설일용근로자 표준근로계약서](https://www.maumdata.com/form/contract_construction): 일당·제수당 산정 내역 포함 건설 현장 일용직 표준계약서
+- [외국인근로자 표준근로계약서](https://www.maumdata.com/form/contract_foreigner): 한·영 병기 외국인근로자 표준근로계약서
+- [외주 용역 표준계약서](https://www.maumdata.com/form/generic_partnership): 프리랜서·기업 간 외주 개발·디자인·용역 대금 및 검수 표준 계약서
+- [비밀유지계약서 (NDA)](https://www.maumdata.com/form/generic_nda): 기업 간 기술·영업비밀 보호를 위한 기밀유지 협약서
+- [사직서](https://www.maumdata.com/form/resignation): 결재란 설정 및 인수인계·기밀유지 서약이 포함된 표준 사직서
+- [재직증명서](https://www.maumdata.com/form/employment_certificate): 금융기관·관공서 제출용 표준 재직증명서 (직인 날인 지원)
+- [경력증명서](https://www.maumdata.com/form/generic_career_cert): 재직 기간 및 담당 직무 확인용 표준 경력증명서
+- [표준 이력서](https://www.maumdata.com/form/resume): 학력·경력·자격사항 한눈에 정리하는 A4 표준 이력서
+- [표준 견적서](https://www.maumdata.com/form/estimate): 품목별 수량·단가·공급가액·부가세 자동 표 구성 및 기업 DB 자동입력 견적서
+- [발주서](https://www.maumdata.com/form/order): 거래처 납품 요청용 품목·납기·결제조건 표준 발주서
+- [지출결의서](https://www.maumdata.com/form/payment): 법인·부서 경비 집행 품의 및 회계 증빙용 지출결의서
+- [차용증](https://www.maumdata.com/form/iou): 원금·이자율·변제기일·기한의 이익 상실 조항이 포함된 금전소비대차 차용증
+- [위임장](https://www.maumdata.com/form/power_of_attorney): 대리인 권한 위임용 표준 위임장
+- [합의서](https://www.maumdata.com/form/settlement_agreement): 민·형사 분쟁 원만 해결 및 부제소 특약 표준 합의서
+
+## 크롤링 · 색인 참고 (Indexing & Feeds)
+
+- [사이트맵 인덱스](https://www.maumdata.com/sitemap.xml)
+- [RSS 피드](https://www.maumdata.com/rss.xml)
+- [이용약관](https://www.maumdata.com/terms) · [개인정보처리방침](https://www.maumdata.com/privacy)
+- 운영사: 지윤 주식회사 (사업자등록번호 137-86-51839)

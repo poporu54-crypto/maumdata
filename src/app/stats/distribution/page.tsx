@@ -3,6 +3,8 @@ import { Metadata } from "next";
 import Link from "next/link";
 import StatsRelatedNav from "@/components/StatsRelatedNav";
 import { getRealPortalStats, getOfficialKosisSurvey } from "@/lib/statApi";
+import JsonLd from "@/components/JsonLd";
+import { buildStatsDatasetJsonLd } from "@/lib/structuredData";
 
 export const revalidate = 1800;
 
@@ -42,8 +44,44 @@ export default async function DistributionStatsPage() {
   const seg3Offset = (seg2Offset - constructionRealEstate + 100) % 100;
   const seg4Offset = (seg3Offset - manufacturing + 100) % 100;
 
+  const datasetJsonLd = buildStatsDatasetJsonLd({
+    path: "/stats/distribution",
+    name: "대한민국 산업군별 검증 기업 분포 및 통계청 전국사업체조사 19대 산업 공식 통계",
+    description:
+      "마음데이타 DB에 등록된 계속사업자의 실제 업종별 분포와 국가데이터처(통계청) 전국사업체조사 19대 산업 대분류별 사업체 수·종사자 수 확정 통계를 함께 제공하는 데이터셋입니다.",
+    keywords: ["산업군별 기업 분포", "전국사업체조사", "통계청 업종별 사업체 수", "KOSIS 산업 통계", "업종 점유율"],
+    dateModified: summary.latestSyncDate,
+    basedOnSources: [
+      { name: "국가데이터처(통계청) KOSIS 전국사업체조사 공식 통계", url: "https://kosis.kr" },
+      { name: "국세청 · 금융위원회 기업 기본정보 공공데이터", url: "https://www.data.go.kr" },
+    ],
+    variables: [
+      { name: "업종 분류 검증 계속사업자 수", value: classifiedTotal, unitText: "개사" },
+      ...(kosisSurvey && kosisSurvey.totalBusinesses > 0
+        ? [
+            {
+              name: `통계청 전국사업체조사 총 사업체 수 (${kosisSurvey.referenceDateLabel})`,
+              value: kosisSurvey.totalBusinesses,
+              unitText: "개",
+            },
+            {
+              name: `통계청 전국사업체조사 총 종사자 수 (${kosisSurvey.referenceDateLabel})`,
+              value: kosisSurvey.totalEmployees,
+              unitText: "명",
+            },
+          ]
+        : []),
+    ],
+    breadcrumbs: [
+      { name: "홈", path: "/" },
+      { name: "데이터 인사이트", path: "/insights" },
+      { name: "산업군별 기업 분포 통계", path: "/stats/distribution" },
+    ],
+  });
+
   return (
     <div className="animate-fade-in" style={{ padding: "24px 0 80px 0" }}>
+      <JsonLd data={datasetJsonLd} />
       <div className="container" style={{ maxWidth: "820px" }}>
         {/* 타이틀 헤더 */}
         <div style={{ marginBottom: "28px" }}>

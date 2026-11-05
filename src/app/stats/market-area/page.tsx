@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import AdBanner from "@/components/AdBanner";
+import JsonLd from "@/components/JsonLd";
+import { buildMarketAreaHubJsonLd } from "@/lib/structuredData";
 
 // Leaflet 지도는 클라이언트 사이드에서만 안전하게 렌더링되도록 dynamic import(ssr: false) 처리합니다.
 const InteractiveMap = dynamic(() => import("@/components/InteractiveMap"), {
@@ -203,9 +205,13 @@ export default function MarketAreaHub() {
     }
   };
 
+  const marketHubJsonLd = buildMarketAreaHubJsonLd(
+    REGIONS.flatMap((r) => r.dongs.map((d) => ({ cd: d.cd, name: d.name, gu: d.gu })))
+  );
+
   return (
     <div className="animate-fade-in" style={{ padding: "40px 0 80px 0" }}>
-      <link rel="canonical" href="https://www.maumdata.com/stats/market-area" />
+      <JsonLd data={marketHubJsonLd} />
       <div className="container" style={{ maxWidth: "1000px" }}>
         
         {/* 타이틀 및 소개글 */}

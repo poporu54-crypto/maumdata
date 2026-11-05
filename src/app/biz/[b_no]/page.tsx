@@ -45,6 +45,8 @@ import SyncTrigger from "./components/SyncTrigger";
 import EmploymentHealthSection from "./components/EmploymentHealthSection";
 import BizStickyNav from "./components/BizStickyNav";
 import QuickContractModal from "./components/QuickContractModal";
+import JsonLd from "@/components/JsonLd";
+import { buildBusinessDetailJsonLd } from "@/lib/structuredData";
 
 export const dynamic = "force-dynamic";
 
@@ -158,35 +160,20 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
       ? cleanFoundingDt.replace(/(\d{4})(\d{2})(\d{2})/, "$1-$2-$3")
       : undefined;
 
-  const jsonLd = business ? {
-    "@context": "https://schema.org",
-    "@type": "LocalBusiness",
-    "name": business.b_nm,
-    "image": "https://www.maumdata.com/og-image.png",
-    "@id": `https://www.maumdata.com/biz/${cleanBNo}`,
-    "url": `https://www.maumdata.com/biz/${cleanBNo}`,
-    ...(business.b_adr
-      ? {
-          "address": {
-            "@type": "PostalAddress",
-            "streetAddress": business.b_adr,
-            "addressLocality": business.b_adr.split(" ")[0],
-            "addressCountry": "KR"
-          }
-        }
-      : {}),
-    "taxID": formattedBNo,
-    ...(formattedFoundingDt ? { "foundingDate": formattedFoundingDt } : {})
-  } : null;
+  const jsonLd = buildBusinessDetailJsonLd({
+    cleanBNo,
+    formattedBNo,
+    business,
+    apiStatus,
+    isInvalid,
+    latestEmployees,
+    formattedFoundingDt,
+    dartCode: dartCodeToUse,
+  });
 
   return (
     <div className="animate-fade-in" style={{ padding: "24px 0 80px 0" }}>
-      {jsonLd && (
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
-        />
-      )}
+      <JsonLd data={jsonLd} />
 
       <div className="container" style={{ maxWidth: "800px" }}>
         {/* 비동기 동기화 트리거 컴포넌트 장착 */}

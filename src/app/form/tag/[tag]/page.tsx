@@ -3,6 +3,8 @@ import Link from "next/link";
 import { Metadata } from "next";
 import { getTagTemplateSummariesServer } from "@/lib/formSummaries";
 import AdSpace from "@/components/AdSpace";
+import JsonLd from "@/components/JsonLd";
+import { buildFormTagJsonLd } from "@/lib/structuredData";
 
 export const revalidate = 3600;
 
@@ -56,9 +58,11 @@ export default async function TagPage(props: TagPageProps) {
   const { tag } = await props.params;
   const decodedTag = safeDecodeTag(tag);
   const matchedTemplates = await loadTagSummariesCached(decodedTag);
+  const tagJsonLd = buildFormTagJsonLd(decodedTag, matchedTemplates);
 
   return (
     <div className="container animate-fade-in" style={{ padding: "40px 24px" }}>
+      <JsonLd data={tagJsonLd} />
       <AdSpace format="horizontal" style={{ width: "100%", margin: "0 auto 32px auto" }} />
 
       <div style={{ marginBottom: "40px", textAlign: "center" }}>

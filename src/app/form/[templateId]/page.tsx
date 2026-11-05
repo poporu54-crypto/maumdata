@@ -6,6 +6,8 @@ import { getTemplateByIdFromDB } from "@/lib/db";
 import { getRelatedTemplateSummariesServer } from "@/lib/formSummaries";
 import { getTemplateById } from "../templatesData";
 import DocumentEditor from "./DocumentEditor";
+import JsonLd from "@/components/JsonLd";
+import { buildFormDetailJsonLd } from "@/lib/structuredData";
 
 export const revalidate = 3600;
 
@@ -77,29 +79,17 @@ export default async function Page(props: PageProps) {
   const relatedForms = await getRelatedTemplateSummariesServer(category, templateId, 8);
   const categoryTags = CATEGORY_QUICK_TAGS[category] || CATEGORY_QUICK_TAGS["행정"];
 
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "DigitalDocument",
-    name: `${tpl.title} 표준 양식`,
-    description:
-      tpl.desc || `${tpl.title} 서식을 웹에서 작성하고 A4 PDF·한글·워드로 저장할 수 있는 무료 비즈니스 양식입니다.`,
-    url: `https://www.maumdata.com/form/${templateId}`,
-    inLanguage: "ko-KR",
-    isAccessibleForFree: true,
-    genre: category,
-    publisher: {
-      "@type": "Organization",
-      name: "마음데이타",
-      url: "https://www.maumdata.com",
-    },
-  };
+  const jsonLd = buildFormDetailJsonLd({
+    templateId,
+    title: tpl.title,
+    desc: tpl.desc,
+    category,
+    tags: tpl.tags,
+  });
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
-      />
+      <JsonLd data={jsonLd} />
       <DocumentEditor templateId={templateId} initialTemplate={tpl} />
 
       {/* A4 인쇄 시 제외(.no-print)되는 검색엔진·사용자용 연관 서식 표준 <a href> 내부 링크 섹션 */}

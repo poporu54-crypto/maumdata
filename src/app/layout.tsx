@@ -10,6 +10,8 @@ import MobileBottomNav from "@/components/MobileBottomNav";
 import AppInstallBanner from "@/components/AppInstallBanner";
 import MaumDataLogo from "@/components/MaumDataLogo";
 import NavigationProgressBar from "@/components/NavigationProgressBar";
+import JsonLd from "@/components/JsonLd";
+import { buildSiteGraphJsonLd } from "@/lib/structuredData";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.maumdata.com"),
@@ -62,6 +64,7 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <body>
+        <JsonLd data={buildSiteGraphJsonLd()} />
         <Script
           src="https://www.googletagmanager.com/gtag/js?id=G-4ZZ8NXRY9B"
           strategy="afterInteractive"

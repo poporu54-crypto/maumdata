@@ -3,6 +3,8 @@ import { Metadata } from "next";
 import Link from "next/link";
 import StatsRelatedNav from "@/components/StatsRelatedNav";
 import { getRealPortalStats, formatBizNo } from "@/lib/statApi";
+import JsonLd from "@/components/JsonLd";
+import { buildStatsDatasetJsonLd } from "@/lib/structuredData";
 
 export const revalidate = 600;
 
@@ -63,8 +65,33 @@ export default async function ActiveRateStatsPage() {
 
   const linePoints = points.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
 
+  const datasetJsonLd = buildStatsDatasetJsonLd({
+    path: "/stats/active-rate",
+    name: "국세청 계속사업자 검증 현황 및 국민연금 월별 고용 안정성 실데이터 통계",
+    description:
+      "국세청 사업자등록 상태 실조회 기반 계속사업자·과세유형 분포와 국민연금 가입 사업장의 월별 고용 유지율, 순고용 증가 기업 지표를 집계한 데이터셋입니다.",
+    keywords: ["계속사업자 비율", "휴폐업 통계", "과세유형 분포", "국민연금 고용 유지율", "고용 안정성"],
+    dateModified: summary.latestSyncDate,
+    basedOnSources: [
+      { name: "국세청 사업자등록정보 상태조회 공공데이터", url: "https://www.data.go.kr" },
+      { name: "국민연금공단 가입 사업장 내역 공공데이터", url: "https://www.data.go.kr" },
+    ],
+    variables: [
+      { name: "검증 대상 총 사업자 수", value: summary.verifiedTotalCount, unitText: "개사" },
+      { name: "계속사업자 수", value: summary.activeBizCount, unitText: "개사" },
+      { name: "계속사업자 비율", value: activePct, unitText: "%" },
+      { name: "일반과세자 수", value: summary.generalTaxCount, unitText: "개사" },
+    ],
+    breadcrumbs: [
+      { name: "홈", path: "/" },
+      { name: "데이터 인사이트", path: "/insights" },
+      { name: "계속사업자 & 고용 안정성 분석", path: "/stats/active-rate" },
+    ],
+  });
+
   return (
     <div className="animate-fade-in" style={{ padding: "24px 0 80px 0" }}>
+      <JsonLd data={datasetJsonLd} />
       <div className="container" style={{ maxWidth: "820px" }}>
         {/* 헤더 */}
         <div style={{ marginBottom: "28px" }}>

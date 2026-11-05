@@ -3,6 +3,8 @@ import { Metadata } from "next";
 import Link from "next/link";
 import StatsRelatedNav from "@/components/StatsRelatedNav";
 import { getRealPortalStats, formatBizNo } from "@/lib/statApi";
+import JsonLd from "@/components/JsonLd";
+import { buildStatsDatasetJsonLd } from "@/lib/structuredData";
 
 export const revalidate = 600;
 
@@ -72,8 +74,32 @@ export default async function NewBizStatsPage() {
 
   const chart = generateMonthlyChart();
 
+  const datasetJsonLd = buildStatsDatasetJsonLd({
+    path: "/stats/new-biz",
+    name: "국민연금 신규 채용 추이 · 신설 검증 법인 및 17개 시도별 고용 분포 통계",
+    description:
+      "국민연금 가입 사업장의 월별 실제 신규 입사(취득) 인원 시계열 추이, 채용 상위 기업, 연도별 신설 검증 법인 및 전국 17개 시·도별 고용 분포를 집계한 실데이터 리포트입니다.",
+    keywords: ["국민연금 신규 입사", "기업 채용 통계", "신설 법인 현황", "시도별 고용 분포", "채용 상위 기업"],
+    dateModified: summary.latestSyncDate,
+    basedOnSources: [
+      { name: "국민연금공단 가입 사업장 내역 공공데이터", url: "https://www.data.go.kr" },
+      { name: "금융위원회 기업기본정보 · 국세청 사업자 상태조회 공공데이터", url: "https://www.data.go.kr" },
+    ],
+    variables: [
+      { name: "국민연금 연동 사업장 수", value: summary.npsCompanyCount, unitText: "개사" },
+      { name: "최근 월 신규 취득(입사) 인원", value: summary.monthlyNewHires, unitText: "명" },
+      { name: "총 추적 국민연금 가입 임직원 수", value: summary.totalTrackedEmployees, unitText: "명" },
+    ],
+    breadcrumbs: [
+      { name: "홈", path: "/" },
+      { name: "데이터 인사이트", path: "/insights" },
+      { name: "신규 채용 & 신설 법인 동향", path: "/stats/new-biz" },
+    ],
+  });
+
   return (
     <div className="animate-fade-in" style={{ padding: "24px 0 80px 0" }}>
+      <JsonLd data={datasetJsonLd} />
       <div className="container" style={{ maxWidth: "820px" }}>
         {/* 타이틀 헤더 */}
         <div style={{ marginBottom: "28px" }}>
