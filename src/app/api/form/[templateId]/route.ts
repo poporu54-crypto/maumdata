@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getTemplateByIdFromDB } from "@/lib/db";
 import { getTemplateById } from "../../../form/templatesData";
+import { guardApiRequest } from "@/lib/apiBotGuard";
 
 const CACHE_HEADERS = {
   "Cache-Control": "public, s-maxage=600, stale-while-revalidate=3600",
@@ -11,6 +12,14 @@ export async function GET(
   request: NextRequest,
   props: { params: Promise<{ templateId: string }> }
 ) {
+  const blocked = guardApiRequest(request, {
+    bucket: "form_detail",
+    maxRequests: 60,
+    windowMs: 60_000,
+    mode: "public-read",
+  });
+  if (blocked) return blocked;
+
   try {
     const { templateId } = await props.params;
 

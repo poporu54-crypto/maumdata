@@ -3,11 +3,11 @@ import { createContract } from "@/lib/db";
 import { uploadContractSnapshotToR2 } from "@/lib/r2";
 import crypto from "crypto";
 import {
-  checkRateLimit,
   getAuthenticatedContractUser,
   getClientIp,
   getSafeBaseOrigin,
 } from "@/lib/sessionAuth";
+import { guardApiRequest } from "@/lib/apiBotGuard";
 
 export const dynamic = "force-dynamic";
 
@@ -20,14 +20,16 @@ function isValidDataImageUrl(val: unknown): boolean {
 
 export async function POST(request: NextRequest) {
   try {
+    const blocked = guardApiRequest(request, {
+      bucket: "contract_create",
+      maxRequests: 20,
+      windowMs: 60_000,
+      mode: "same-origin",
+      rateLimitMessage: "계약 생성 요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.",
+    });
+    if (blocked) return blocked;
+
     const ip = getClientIp(request);
-    const rate = checkRateLimit(`contract_create:${ip}`, 20, 60_000);
-    if (!rate.allowed) {
-      return NextResponse.json(
-        { error: `계약 생성 요청이 너무 많습니다. ${rate.retryAfterSec}초 후 다시 시도해 주세요.` },
-        { status: 429 }
-      );
-    }
 
     const body = await request.json();
     const {

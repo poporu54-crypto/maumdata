@@ -12,10 +12,19 @@ import {
   verifySignedUserSessionToken,
   verifyUserPassword,
 } from "@/lib/sessionAuth";
+import { guardApiRequest } from "@/lib/apiBotGuard";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
+  const blocked = guardApiRequest(request, {
+    bucket: "auth_session_get",
+    maxRequests: 60,
+    windowMs: 60_000,
+    mode: "public-read",
+  });
+  if (blocked) return blocked;
+
   const user = getAuthenticatedContractUser(request);
   if (!user) {
     return NextResponse.json({ authenticated: false, user: null });
@@ -29,6 +38,13 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const blocked = guardApiRequest(request, {
+      bucket: "auth_session_post",
+      maxRequests: 25,
+      windowMs: 60_000,
+      mode: "same-origin",
+    });
+    if (blocked) return blocked;
     const body = await request.json().catch(() => ({}));
     const { action } = body || {};
 
@@ -191,6 +207,14 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  const blocked = guardApiRequest(request, {
+    bucket: "auth_session_del",
+    maxRequests: 5,
+    windowMs: 60_000,
+    mode: "same-origin",
+  });
+  if (blocked) return blocked;
+
   try {
     const authUser = getAuthenticatedContractUser(request);
     if (!authUser) {

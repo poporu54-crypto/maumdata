@@ -1,27 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createFeedback, getAllFeedbacks } from "@/lib/db";
 import {
-  checkRateLimit,
-  getClientIp,
   isAdminRequest,
   sanitizeHttpUrl,
 } from "@/lib/sessionAuth";
+import { guardApiRequest } from "@/lib/apiBotGuard";
 
 const ALLOWED_CATEGORIES = new Set(["suggestion", "bug", "data_error", "inquiry"]);
 
 // 1. 피드백 제출 (사용자)
 export async function POST(req: NextRequest) {
   try {
-    const ip = getClientIp(req);
-    const rate = checkRateLimit(`feedback_submit:${ip}`, 10, 5 * 60 * 1000);
-    if (!rate.allowed) {
-      return NextResponse.json(
-        {
-          error: `피드백 접수가 너무 빈번합니다. ${rate.retryAfterSec}초 후 다시 시도해 주세요.`,
-        },
-        { status: 429 }
-      );
-    }
+    const blocked = guardApiRequest(req, {
+      bucket: "feedback_submit",
+      maxRequests: 10,
+      windowMs: 5 * 60 * 1000,
+      mode: "same-origin",
+      rateLimitMessage: "피드백 접수가 너무 빈번합니다. 잠시 후 다시 시도해 주세요.",
+    });
+    if (blocked) return blocked;
 
     const body = await req.json().catch(() => ({}));
     const { message, url, userAgent, userId, category } = body;

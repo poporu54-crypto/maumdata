@@ -1,31 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { addEditRequest } from "@/lib/db";
 import { validateBizrNo } from "@/lib/bizValidation";
-import { checkRateLimit, getClientIp, sanitizeHttpUrl } from "@/lib/sessionAuth";
-
-function isRateLimitAllowed(result: unknown): boolean {
-  if (typeof result === "boolean") return result;
-  if (typeof result === "object" && result !== null) {
-    if ("allowed" in result) return Boolean((result as { allowed?: boolean }).allowed);
-    if ("ok" in result) return Boolean((result as { ok?: boolean }).ok);
-  }
-  return true;
-}
+import { sanitizeHttpUrl } from "@/lib/sessionAuth";
+import { guardApiRequest } from "@/lib/apiBotGuard";
 
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ b_no: string }> }
 ) {
   try {
-    const ip = getClientIp(req);
-    const rateResult: unknown = checkRateLimit(`editreq:${ip}`, 10, 300_000);
-    if (rateResult instanceof Response) return rateResult;
-    if (!isRateLimitAllowed(rateResult)) {
-      return NextResponse.json(
-        { error: "요청 횟수가 너무 많습니다. 잠시 후 다시 시도해 주세요." },
-        { status: 429 }
-      );
-    }
+    const blocked = guardApiRequest(req, {
+      bucket: "editreq",
+      maxRequests: 10,
+      windowMs: 300_000,
+      mode: "same-origin",
+      rateLimitMessage: "요청 횟수가 너무 많습니다. 잠시 후 다시 시도해 주세요.",
+    });
+    if (blocked) return blocked;
 
     const resolvedParams = await params;
     const bNo = resolvedParams?.b_no || "";

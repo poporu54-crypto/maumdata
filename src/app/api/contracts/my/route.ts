@@ -1,6 +1,7 @@
 import { NextResponse, NextRequest } from "next/server";
 import { getContractsByUserId, getContractsByIds, deleteContractForUser } from "@/lib/db";
 import { getAuthenticatedContractUser, SessionUserPayload } from "@/lib/sessionAuth";
+import { guardApiRequest } from "@/lib/apiBotGuard";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +34,14 @@ function mapContractRow(c: any, authUser: SessionUserPayload | null) {
 }
 
 export async function GET(request: NextRequest) {
+  const blocked = guardApiRequest(request, {
+    bucket: "contract_my_get",
+    maxRequests: 40,
+    windowMs: 60_000,
+    mode: "same-origin",
+  });
+  if (blocked) return blocked;
+
   try {
     const authUser = getAuthenticatedContractUser(request);
     if (!authUser) {
@@ -57,6 +66,14 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const blocked = guardApiRequest(request, {
+    bucket: "contract_my_post",
+    maxRequests: 40,
+    windowMs: 60_000,
+    mode: "same-origin",
+  });
+  if (blocked) return blocked;
+
   try {
     const body = await request.json().catch(() => ({}));
     const { action, contractId, contractIds } = body || {};

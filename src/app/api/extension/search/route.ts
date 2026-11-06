@@ -1,36 +1,19 @@
 import { NextResponse, NextRequest } from "next/server";
 import { searchCorpOutline } from "@/lib/corpApi";
 import { searchBusinesses } from "@/lib/db";
-import { checkRateLimit, getClientIp } from "@/lib/sessionAuth";
-
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
-};
-
-function isRateLimitAllowed(result: unknown): boolean {
-  if (typeof result === "boolean") return result;
-  if (typeof result === "object" && result !== null) {
-    if ("allowed" in result) return Boolean((result as { allowed?: boolean }).allowed);
-    if ("ok" in result) return Boolean((result as { ok?: boolean }).ok);
-  }
-  return true;
-}
+import { buildExtensionCorsHeaders, guardApiRequest } from "@/lib/apiBotGuard";
 
 export async function GET(request: NextRequest) {
-  const ip = getClientIp(request);
-  const rateResult: unknown = checkRateLimit(`extsearch:${ip}`, 60, 60_000);
-  if (rateResult instanceof Response) return rateResult;
-  if (!isRateLimitAllowed(rateResult)) {
-    return NextResponse.json(
-      { error: "검색 요청 한도를 초과했습니다. 잠시 후 다시 시도해 주세요." },
-      {
-        status: 429,
-        headers: CORS_HEADERS,
-      }
-    );
-  }
+  const corsHeaders = buildExtensionCorsHeaders(request);
+  const blocked = guardApiRequest(request, {
+    bucket: "ext_biz_search",
+    maxRequests: 45,
+    windowMs: 60_000,
+    mode: "extension",
+    corsHeaders,
+    rateLimitMessage: "검색 요청 한도를 초과했습니다. 잠시 후 다시 시도해 주세요.",
+  });
+  if (blocked) return blocked;
 
   const { searchParams } = new URL(request.url);
   const searchQuery = searchParams.get("query") || searchParams.get("q") || "";
@@ -40,7 +23,7 @@ export async function GET(request: NextRequest) {
       { error: "검색어는 2글자 이상 입력해 주세요." },
       {
         status: 400,
-        headers: CORS_HEADERS,
+        headers: corsHeaders,
       }
     );
   }
@@ -102,7 +85,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(results, {
       headers: {
-        ...CORS_HEADERS,
+        ...corsHeaders,
         "Cache-Control": "public, s-maxage=120, stale-while-revalidate=600",
       }
     });
@@ -112,16 +95,16 @@ export async function GET(request: NextRequest) {
       { error: "검색 중 오류가 발생했습니다." },
       {
         status: 500,
-        headers: CORS_HEADERS,
+        headers: corsHeaders,
       }
     );
   }
 }
 
 // OPTIONS 요청 핸들링 (Preflight 대응)
-export async function OPTIONS() {
+export async function OPTIONS(request: NextRequest) {
   return new NextResponse(null, {
     status: 200,
-    headers: CORS_HEADERS,
+    headers: buildExtensionCorsHeaders(request),
   });
 }

@@ -14,6 +14,7 @@ import {
   safeStringEqual,
   SessionUserPayload,
 } from "@/lib/sessionAuth";
+import { guardApiRequest } from "@/lib/apiBotGuard";
 
 export const dynamic = "force-dynamic";
 
@@ -54,6 +55,14 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ token: string }> }
 ) {
+  const blocked = guardApiRequest(request, {
+    bucket: "contract_token_get",
+    maxRequests: 40,
+    windowMs: 60_000,
+    mode: "public-read",
+  });
+  if (blocked) return blocked;
+
   try {
     const resolvedParams = await params;
     const token = resolvedParams.token;
@@ -187,6 +196,14 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ token: string }> }
 ) {
+  const blocked = guardApiRequest(request, {
+    bucket: "contract_token_post",
+    maxRequests: 15,
+    windowMs: 60_000,
+    mode: "same-origin",
+  });
+  if (blocked) return blocked;
+
   try {
     const resolvedParams = await params;
     const token = resolvedParams.token;

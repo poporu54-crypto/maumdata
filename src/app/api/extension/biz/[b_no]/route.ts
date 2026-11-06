@@ -1,17 +1,23 @@
 import { NextResponse, NextRequest } from "next/server";
 import { getUnifiedBusinessData } from "@/app/biz/[b_no]/utils/dataLoader";
 import { validateBizrNo } from "@/lib/bizValidation";
-
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
-};
+import { buildExtensionCorsHeaders, guardApiRequest } from "@/lib/apiBotGuard";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ b_no: string }> }
 ) {
+  const corsHeaders = buildExtensionCorsHeaders(request);
+  const blocked = guardApiRequest(request, {
+    bucket: "ext_biz_detail",
+    maxRequests: 30,
+    windowMs: 60_000,
+    mode: "extension",
+    corsHeaders,
+    rateLimitMessage: "기업 상세 조회 요청 한도를 초과했습니다. 잠시 후 다시 시도해 주세요.",
+  });
+  if (blocked) return blocked;
+
   const resolvedParams = await params;
   const bNo = (resolvedParams?.b_no || "").replace(/[^0-9]/g, "");
 
@@ -20,7 +26,7 @@ export async function GET(
       { error: "올바른 10자리 사업자등록번호가 아닙니다." },
       {
         status: 400,
-        headers: CORS_HEADERS,
+        headers: corsHeaders,
       }
     );
   }
@@ -33,7 +39,7 @@ export async function GET(
         { error: "조회되지 않는 사업자번호입니다." },
         {
           status: 404,
-          headers: CORS_HEADERS,
+          headers: corsHeaders,
         }
       );
     }
@@ -93,7 +99,7 @@ export async function GET(
 
     return NextResponse.json(summaryData, {
       headers: {
-        ...CORS_HEADERS,
+        ...corsHeaders,
         "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
       }
     });
@@ -103,16 +109,16 @@ export async function GET(
       { error: "기업 상세 조회 중 내부 오류가 발생했습니다." },
       {
         status: 500,
-        headers: CORS_HEADERS,
+        headers: corsHeaders,
       }
     );
   }
 }
 
 // OPTIONS 요청 핸들링 (Preflight 대응)
-export async function OPTIONS() {
+export async function OPTIONS(request: NextRequest) {
   return new NextResponse(null, {
     status: 200,
-    headers: CORS_HEADERS,
+    headers: buildExtensionCorsHeaders(request),
   });
 }

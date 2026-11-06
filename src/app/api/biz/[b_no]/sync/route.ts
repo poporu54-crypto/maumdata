@@ -1,20 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getLocalBusiness, syncAndCacheBusinessData } from "@/app/biz/[b_no]/utils/dataLoader";
 import { validateBizrNo } from "@/lib/bizValidation";
-import { checkRateLimit, getClientIp } from "@/lib/sessionAuth";
+import { guardApiRequest } from "@/lib/apiBotGuard";
 
 export const dynamic = "force-dynamic";
 
 const SYNC_COOLDOWN_MS = 10 * 60 * 1000; // 10분
-
-function isRateLimitAllowed(result: unknown): boolean {
-  if (typeof result === "boolean") return result;
-  if (typeof result === "object" && result !== null) {
-    if ("allowed" in result) return Boolean((result as { allowed?: boolean }).allowed);
-    if ("ok" in result) return Boolean((result as { ok?: boolean }).ok);
-  }
-  return true;
-}
 
 export async function POST(
   request: NextRequest,
@@ -22,15 +13,14 @@ export async function POST(
 ) {
   let cleanBNo = "";
   try {
-    const ip = getClientIp(request);
-    const rateResult: unknown = checkRateLimit(`sync:${ip}`, 10, 60_000);
-    if (rateResult instanceof Response) return rateResult;
-    if (!isRateLimitAllowed(rateResult)) {
-      return NextResponse.json(
-        { error: "동기화 요청 한도를 초과했습니다. 잠시 후 다시 시도해 주세요." },
-        { status: 429 }
-      );
-    }
+    const blocked = guardApiRequest(request, {
+      bucket: "biz_sync",
+      maxRequests: 10,
+      windowMs: 60_000,
+      mode: "same-origin",
+      rateLimitMessage: "동기화 요청 한도를 초과했습니다. 잠시 후 다시 시도해 주세요.",
+    });
+    if (blocked) return blocked;
 
     const resolvedParams = await params;
     const bNo = resolvedParams?.b_no || "";

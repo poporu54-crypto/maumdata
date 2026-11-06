@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { searchTemplatesFromDB } from "@/lib/db";
+import { guardApiRequest } from "@/lib/apiBotGuard";
 
 const CACHE_HEADERS = {
   "Cache-Control": "public, s-maxage=600, stale-while-revalidate=3600",
@@ -7,6 +8,14 @@ const CACHE_HEADERS = {
 
 // DB 서식 대량 검색 API
 export async function GET(request: NextRequest) {
+  const blocked = guardApiRequest(request, {
+    bucket: "form_search",
+    maxRequests: 60,
+    windowMs: 60_000,
+    mode: "public-read",
+  });
+  if (blocked) return blocked;
+
   try {
     const { searchParams } = new URL(request.url);
     const q = searchParams.get("q") || "";
