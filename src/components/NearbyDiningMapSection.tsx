@@ -30,6 +30,8 @@ export default async function NearbyDiningMapSection({
       title: `🏢 ${anchorTitle}`,
       category: variant === "company" ? "기준 사업장 소재지" : "기준 상권 중심",
       address: bundle.normalizedAddress,
+      badge: "기준",
+      pinColor: "#2563eb",
     },
     ...bundle.places.map((p, idx) => ({
       lat: p.lat,
@@ -38,6 +40,9 @@ export default async function NearbyDiningMapSection({
       category: `${p.spotType === "cafe" ? "☕" : "🍽️"} ${p.categoryLabel} (도보 약 ${p.walkMinutes}분 · ${p.distanceMeters}m)`,
       address: p.address,
       link: p.kakaoMapUrl,
+      linkLabel: "카카오맵 상세 보기 ↗",
+      badge: String(idx + 1),
+      pinColor: p.spotType === "cafe" ? "#0d9488" : "#ea580c",
     })),
   ];
 

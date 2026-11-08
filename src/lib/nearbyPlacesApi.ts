@@ -92,6 +92,30 @@ export function resolveStayChartSynergyLink(address: string): StayChartSynergyLi
       label: "제주 출장·워크샵 숙소 90일 최저가 차트 비교 (StayChart)",
     };
   }
+  if (address.includes("강릉")) {
+    return {
+      url: "https://www.staychart.com/ko/destinations/gangneung",
+      label: "강릉 출장·동해안 숙소 90일 최저가 차트 비교 (StayChart)",
+    };
+  }
+  if (address.includes("경주")) {
+    return {
+      url: "https://www.staychart.com/ko/destinations/gyeongju",
+      label: "경주 출장·보문단지 숙소 90일 최저가 차트 비교 (StayChart)",
+    };
+  }
+  if (address.includes("여수")) {
+    return {
+      url: "https://www.staychart.com/ko/destinations/yeosu",
+      label: "여수 출장·산단 인근 숙소 90일 최저가 차트 비교 (StayChart)",
+    };
+  }
+  if (address.includes("전주")) {
+    return {
+      url: "https://www.staychart.com/ko/destinations/jeonju",
+      label: "전주 출장·비즈니스 숙소 90일 최저가 차트 비교 (StayChart)",
+    };
+  }
   return {
     url: "https://www.staychart.com/ko/deals/korea-picks",
     label: "국내 주요 출장지 호텔·숙소 90일 가격 변동 확인 (StayChart)",

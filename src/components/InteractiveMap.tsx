@@ -10,6 +10,9 @@ export interface MapMarker {
   category: string;
   address: string;
   link?: string;
+  linkLabel?: string;
+  badge?: string;
+  pinColor?: string;
 }
 
 interface InteractiveMapProps {
@@ -168,24 +171,50 @@ export default function InteractiveMap({
 
     if (markers.length === 0) return;
 
-    // Custom CSS-based divIcon for premium Toss Neon style
+    // Custom CSS-based divIcon for premium Toss Neon style & numbered local pins
     markers.forEach((m) => {
+      const safeBadge = m.badge ? escapeHtml(m.badge) : "";
+      const safePinColor =
+        m.pinColor && /^(?:#[0-9a-fA-F]{3,8}|var\(--[a-zA-Z0-9-]+\))$/.test(m.pinColor)
+          ? m.pinColor
+          : "var(--color-primary)";
+
       const customIcon = L.divIcon({
         className: "custom-map-marker",
-        html: `
+        html: safeBadge
+          ? `
+          <div style="
+            min-width: 24px;
+            height: 24px;
+            padding: 0 6px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background-color: ${safePinColor};
+            color: #ffffff;
+            font-size: 11px;
+            font-weight: 800;
+            border: 2.5px solid #ffffff;
+            border-radius: 999px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+            transform: translate(-50%, -50%);
+            white-space: nowrap;
+          ">${safeBadge}</div>
+        `
+          : `
           <div style="
             width: 14px; 
             height: 14px; 
-            background-color: var(--color-primary); 
+            background-color: ${safePinColor}; 
             border: 3px solid #ffffff; 
             border-radius: 50%; 
-            box-shadow: 0 0 10px var(--color-primary), 0 0 4px rgba(0,0,0,0.5);
+            box-shadow: 0 0 10px ${safePinColor}, 0 0 4px rgba(0,0,0,0.5);
             transform: translate(-50%, -50%);
             transition: all 0.2s ease;
           "></div>
         `,
-        iconSize: [14, 14],
-        iconAnchor: [7, 7]
+        iconSize: safeBadge ? [24, 24] : [14, 14],
+        iconAnchor: safeBadge ? [12, 12] : [7, 7]
       });
 
       const marker = L.marker([m.lat, m.lng], { icon: customIcon }).addTo(markersGroup);
@@ -194,6 +223,11 @@ export default function InteractiveMap({
       const safeCategory = escapeHtml(m.category);
       const safeAddress = escapeHtml(m.address);
       const safeLink = sanitizeMapLink(m.link);
+      const isExternalLink = /^https?:\/\//i.test(safeLink);
+      const safeLinkLabel = escapeHtml(
+        m.linkLabel || (isExternalLink ? "상세 지도 보기 ↗" : "상권 리포트 보기")
+      );
+      const targetAttr = isExternalLink ? ' target="_blank" rel="noopener noreferrer"' : "";
 
       const popupContent = `
         <div style="
@@ -209,7 +243,7 @@ export default function InteractiveMap({
           </div>
           <div style="
             display: inline-block;
-            background-color: var(--color-primary);
+            background-color: ${safePinColor};
             color: #ffffff;
             font-size: 10px;
             font-weight: 700;
@@ -224,7 +258,7 @@ export default function InteractiveMap({
           </div>
           ${
             safeLink
-              ? `<a href="${escapeHtml(safeLink)}" style="
+              ? `<a href="${escapeHtml(safeLink)}"${targetAttr} style="
                   display: block;
                   text-align: center;
                   background-color: var(--color-primary-light);
@@ -236,7 +270,7 @@ export default function InteractiveMap({
                   text-decoration: none;
                   transition: background-color 0.2s;
                 ">
-                  상권 리포트 보기
+                  ${safeLinkLabel}
                 </a>`
               : ""
           }
