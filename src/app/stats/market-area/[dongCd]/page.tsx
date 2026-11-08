@@ -3,6 +3,7 @@ import { Metadata } from "next";
 import Link from "next/link";
 import { getStoreDataInDong, getDongName } from "@/lib/marketApi";
 import ClientMapWrapper from "@/components/ClientMapWrapper";
+import NearbyDiningMapSection from "@/components/NearbyDiningMapSection";
 import JsonLd from "@/components/JsonLd";
 import { buildStatsDatasetJsonLd } from "@/lib/structuredData";
 
@@ -359,6 +360,14 @@ export default async function MarketAreaPage({ params }: PageProps) {
             ))}
           </div>
         </div>
+
+        {/* 카카오 로컬 실측 식음료(F&B) 맛집·카페 지도 & StayChart 출장 숙소 시너지 */}
+        <NearbyDiningMapSection
+          targetAddress={dongInfo.fullName}
+          anchorTitle={dongInfo.fullName}
+          radiusMeters={850}
+          variant="district"
+        />
 
         {/* 전국 주요 핵심 상권 비교 내부 <a href> 연결망 */}
         <section

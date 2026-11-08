@@ -45,6 +45,7 @@ import SyncTrigger from "./components/SyncTrigger";
 import EmploymentHealthSection from "./components/EmploymentHealthSection";
 import BizStickyNav from "./components/BizStickyNav";
 import QuickContractModal from "./components/QuickContractModal";
+import NearbyDiningMapSection from "@/components/NearbyDiningMapSection";
 import JsonLd from "@/components/JsonLd";
 import { buildBusinessDetailJsonLd } from "@/lib/structuredData";
 
@@ -113,7 +114,8 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
   }
 
   const { apiStatus, business, isInvalid, isNew, relatedBusinesses = [] } = await getUnifiedBusinessData(cleanBNo);
-  if (!isInvalid && business && !isNew && !(await isPrefetchRequest())) {
+  const isPrefetch = await isPrefetchRequest();
+  if (!isInvalid && business && !isNew && !isPrefetch) {
     recordBusinessView(cleanBNo);
   }
   const formattedBNo = cleanBNo.replace(/(\d{3})(\d{2})(\d{5})/, "$1-$2-$3");
@@ -824,6 +826,21 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                     />
                   );
                 })()}
+
+                {/* 기업 주변 도보권 점심 맛집 · 비즈니스 미팅 카페 지도 (프리패치 시 미호출) */}
+                {!isPrefetch &&
+                  business?.b_adr &&
+                  business.b_adr !== "-" &&
+                  business.b_adr !== "소재지 정보 없음" && (
+                    <Suspense fallback={<SectionSkeleton />}>
+                      <NearbyDiningMapSection
+                        targetAddress={business.b_adr}
+                        anchorTitle={business.b_nm || "사업장"}
+                        radiusMeters={550}
+                        variant="company"
+                      />
+                    </Suspense>
+                  )}
 
                 {/* 동일 대표자 관련 사업자 */}
                 {relatedBusinesses && relatedBusinesses.length > 0 && (
