@@ -8,6 +8,10 @@ import { buildFormTagJsonLd } from "@/lib/structuredData";
 
 export const revalidate = 3600;
 
+export async function generateStaticParams() {
+  return [];
+}
+
 function safeDecodeTag(rawTag: string): string {
   try {
     return decodeURIComponent(rawTag);

@@ -206,6 +206,16 @@ export function guardApiRequest(
     );
   }
 
+  // 1-1. 브라우저 주소창 직접 입력 및 크롤러 문서 탐색(Sec-Fetch-Dest: document)을 통한 JSON 덤프 수집 차단
+  const secFetchDest = (req.headers.get("sec-fetch-dest") || "").trim().toLowerCase();
+  const secFetchMode = (req.headers.get("sec-fetch-mode") || "").trim().toLowerCase();
+  if (secFetchDest === "document" || secFetchMode === "navigate") {
+    return NextResponse.json(
+      { error: "브라우저 주소창 또는 문서 탐색 방식의 직접 API 호출은 허용되지 않습니다." },
+      { status: 403, headers: { ...baseErrorHeaders, "X-Robots-Tag": "noindex, nofollow, noarchive" } }
+    );
+  }
+
   // 2. 엔드포인트 모드별 출처(Origin / Referer / Sec-Fetch-Site) 무결성 검증
   const method = req.method.toUpperCase();
   const isStateChanging =

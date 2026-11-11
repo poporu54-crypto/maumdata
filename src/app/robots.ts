@@ -1,6 +1,13 @@
 import type { MetadataRoute } from "next";
 
-const DISALLOWED_PATHS = ["/api/", "/admin/", "/sign/", "/search"];
+const DISALLOWED_PATHS = [
+  "/api/",
+  "/admin/",
+  "/sign/",
+  "/search",
+  "/_next/data/",
+  "/*?_rsc=*",
+];
 
 const AI_SEARCH_BOTS = [
   "OAI-SearchBot",

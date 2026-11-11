@@ -9,6 +9,10 @@ import { buildStatsDatasetJsonLd } from "@/lib/structuredData";
 
 export const revalidate = 86400;
 
+export async function generateStaticParams() {
+  return [];
+}
+
 interface PageProps {
   params: Promise<{ dongCd: string }>;
 }

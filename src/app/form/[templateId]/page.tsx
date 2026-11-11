@@ -11,6 +11,10 @@ import { buildFormDetailJsonLd } from "@/lib/structuredData";
 
 export const revalidate = 3600;
 
+export async function generateStaticParams() {
+  return [];
+}
+
 const loadTemplateCached = cache(async (templateId: string) => {
   return getTemplateById(templateId) || (await getTemplateByIdFromDB(templateId));
 });

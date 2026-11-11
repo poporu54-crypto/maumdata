@@ -62,13 +62,41 @@ export async function getAllTemplateSummariesServer(): Promise<TemplateSummary[]
 
     try {
       const res = await query(
-        `SELECT id, title, category, description AS desc, popular, tags, fields
+        `SELECT
+           id,
+           title,
+           category,
+           description AS desc,
+           popular,
+           tags,
+           CASE
+             WHEN jsonb_typeof(fields) = 'array' THEN jsonb_array_length(fields)
+             ELSE 0
+           END AS total_fields,
+           COALESCE(
+             (
+               SELECT jsonb_agg(lbl)
+               FROM (
+                 SELECT elem->>'label' AS lbl
+                 FROM jsonb_array_elements(
+                   CASE WHEN jsonb_typeof(fields) = 'array' THEN fields ELSE '[]'::jsonb END
+                 ) AS elem
+                 WHERE COALESCE(elem->>'type', '') <> 'list'
+                   AND elem->>'label' IS NOT NULL
+                 LIMIT 4
+               ) sub
+             ),
+             '[]'::jsonb
+           ) AS field_labels
          FROM document_templates
          ORDER BY popular DESC, title ASC`
       );
       for (const row of res.rows) {
         if (!merged.has(row.id)) {
-          const { fieldLabels, totalFields } = summarizeFields(row.fields);
+          const fieldLabels = Array.isArray(row.field_labels)
+            ? row.field_labels.filter((l: unknown): l is string => typeof l === "string").slice(0, 4)
+            : [];
+          const totalFields = Number(row.total_fields) || 0;
           merged.set(row.id, {
             id: row.id,
             title: row.title || "",

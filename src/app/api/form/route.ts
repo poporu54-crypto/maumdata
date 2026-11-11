@@ -18,9 +18,20 @@ export async function GET(request: NextRequest) {
 
   try {
     const { searchParams } = new URL(request.url);
-    const q = searchParams.get("q") || "";
-    const tag = searchParams.get("tag") || null;
-    const category = searchParams.get("category") || null;
+    const q = (searchParams.get("q") || "").trim();
+    const tag = searchParams.get("tag")?.trim() || null;
+    const category = searchParams.get("category")?.trim() || null;
+
+    // 파라미터 미지정 시 전체 테이블 JSON 풀덤프 원천 차단
+    if (!q && !tag && !category) {
+      return NextResponse.json(
+        {
+          success: true,
+          data: [],
+        },
+        { headers: CACHE_HEADERS }
+      );
+    }
 
     // DB에서 검색 수행
     const dbResults = await searchTemplatesFromDB(q, tag, category);
