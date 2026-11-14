@@ -1,6 +1,8 @@
 import React from "react";
 import { Metadata } from "next";
 
+export const revalidate = 86400;
+
 export const metadata: Metadata = {
   title: "이용약관 | 마음데이타",
   description: "지윤 주식회사가 제공하는 마음데이타(MaumData) 서비스 이용약관입니다.",
@@ -127,7 +129,12 @@ export default function TermsPage() {
             <div>• 상호명: 지윤 주식회사</div>
             <div>• 대표자: 박상욱</div>
             <div>• 사업자등록번호: 137-86-51839</div>
-            <div>• 이메일 문의: poporu54@gmail.com</div>
+            <div>
+              • 이메일 문의:{" "}
+              <a href="mailto:contact@maumdata.com" style={{ color: "var(--color-primary)", textDecoration: "none" }}>
+                contact@maumdata.com
+              </a>
+            </div>
             <div>• 웹사이트: https://www.maumdata.com</div>
           </div>
 

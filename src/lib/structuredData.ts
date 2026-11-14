@@ -79,7 +79,21 @@ export function buildSiteGraphJsonLd() {
           height: 630,
         },
         taxID: "137-86-51839",
-        email: "poporu54@gmail.com",
+        email: "contact@maumdata.com",
+        contactPoint: [
+          {
+            "@type": "ContactPoint",
+            contactType: "customer service",
+            email: "contact@maumdata.com",
+            availableLanguage: ["ko"],
+          },
+          {
+            "@type": "ContactPoint",
+            contactType: "privacy support",
+            email: "support@maumdata.com",
+            availableLanguage: ["ko"],
+          },
+        ],
         founder: {
           "@type": "Person",
           name: "박상욱",

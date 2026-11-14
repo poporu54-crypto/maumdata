@@ -55,4 +55,4 @@
 - [사이트맵 인덱스](https://www.maumdata.com/sitemap.xml)
 - [RSS 피드](https://www.maumdata.com/rss.xml)
 - [이용약관](https://www.maumdata.com/terms) · [개인정보처리방침](https://www.maumdata.com/privacy)
-- 운영사: 지윤 주식회사 (사업자등록번호 137-86-51839)
+- 운영사: 지윤 주식회사 (사업자등록번호 137-86-51839 · 문의: contact@maumdata.com)

@@ -167,7 +167,11 @@ export default function PrivacyPage() {
               <p>
                 이용자는 언제든지 자신의 개인정보에 대해 열람·정정·삭제·처리정지를 요구할 수 있습니다. 전자계약 보관함
                 회원은 로그인 후 보관함 화면의 <code>[계정 탈퇴]</code> 버튼을 클릭하여 계정 정보를 즉시 삭제할 수 있으며,
-                추가적인 권리 행사는 개인정보 보호책임자 이메일(poporu54@gmail.com)로 요청하시면 지체 없이 조치합니다.
+                추가적인 권리 행사는 개인정보 보호책임자 이메일(
+                <a href="mailto:support@maumdata.com" style={{ color: "var(--color-primary)", textDecoration: "none" }}>
+                  support@maumdata.com
+                </a>
+                )로 요청하시면 지체 없이 조치합니다.
               </p>
             </section>
 
@@ -216,7 +220,10 @@ export default function PrivacyPage() {
                   <strong>개인정보 보호책임자:</strong> 박상욱
                 </div>
                 <div>
-                  <strong>문의 이메일:</strong> poporu54@gmail.com
+                  <strong>문의 이메일:</strong>{" "}
+                  <a href="mailto:support@maumdata.com" style={{ color: "var(--color-primary)", textDecoration: "none" }}>
+                    support@maumdata.com
+                  </a>
                 </div>
                 <div style={{ fontSize: "0.85rem", color: "var(--color-text-desc)", marginTop: "4px" }}>
                   * 마음데이타 서비스와 관련된 개인정보보호 문의 및 불만을 신속하게 처리해 드립니다.
@@ -245,7 +252,12 @@ export default function PrivacyPage() {
             <div>• 상호명: 지윤 주식회사</div>
             <div>• 대표자: 박상욱</div>
             <div>• 사업자등록번호: 137-86-51839</div>
-            <div>• 이메일 문의: poporu54@gmail.com</div>
+            <div>
+              • 이메일 문의:{" "}
+              <a href="mailto:support@maumdata.com" style={{ color: "var(--color-primary)", textDecoration: "none" }}>
+                support@maumdata.com
+              </a>
+            </div>
             <div>• 웹사이트: https://www.maumdata.com</div>
           </div>
         </div>

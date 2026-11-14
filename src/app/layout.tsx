@@ -140,6 +140,11 @@ export default function RootLayout({
                     <div style={{ fontWeight: 600, color: "var(--color-text-sub)", marginBottom: "8px" }}>고객 지원</div>
                     <ul style={{ listStyle: "none", display: "flex", flexDirection: "column", gap: "6px" }}>
                       <li><FooterFeedbackButton /></li>
+                      <li>
+                        <a href="mailto:contact@maumdata.com" className="footer-link">
+                          ✉️ contact@maumdata.com
+                        </a>
+                      </li>
                     </ul>
                   </div>
                 </div>
