@@ -112,6 +112,7 @@ input, button, select {
   -webkit-backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--color-border);
   transition: var(--transition-smooth);
+  overflow-x: clip;
 }
 
 .header-inner {
@@ -119,11 +120,15 @@ input, button, select {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 14px;
+  flex-wrap: nowrap;
 }
 
 .header-logo-link {
   display: inline-flex;
   align-items: center;
+  flex-shrink: 0;
+  white-space: nowrap;
   text-decoration: none;
   transition: transform 0.2s ease;
 }
@@ -132,24 +137,84 @@ input, button, select {
   transform: scale(1.05) rotate(-2deg);
 }
 
-.desktop-nav-links {
+/* 가로 드래그 · 손가락 스와이프 지원 네비게이션 레일 */
+.header-nav-rail {
+  flex: 1 1 auto;
+  min-width: 0;
+  position: relative;
   display: flex;
-  gap: 20px;
   align-items: center;
+  overflow: hidden;
+}
+
+.header-nav-scroll {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
+  overscroll-behavior-x: contain;
+  padding: 4px 2px;
+}
+
+.header-nav-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.header-nav-scroll.is-scrollable {
+  cursor: grab;
+}
+
+.header-nav-scroll.is-dragging {
+  cursor: grabbing;
+  user-select: none;
+}
+
+/* 스크롤 가능 방향 시각 힌트 (유리 헤더 투과 마스크 — 라이트/다크 자동 대응) */
+.header-nav-rail.fade-right .header-nav-scroll {
+  -webkit-mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 28px), transparent 100%);
+  mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 28px), transparent 100%);
+}
+
+.header-nav-rail.fade-left .header-nav-scroll {
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 28px, #000 100%);
+  mask-image: linear-gradient(to right, transparent 0, #000 28px, #000 100%);
+}
+
+.header-nav-rail.fade-left.fade-right .header-nav-scroll {
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 28px, #000 calc(100% - 28px), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, #000 28px, #000 calc(100% - 28px), transparent 100%);
 }
 
 .nav-link {
-  font-size: 0.95rem;
-  font-weight: 500;
+  font-size: 0.9rem;
+  font-weight: 600;
   color: var(--color-text-sub);
-  transition: var(--transition-smooth);
-  padding: 6px 10px;
-  border-radius: 8px;
+  transition: color 0.18s ease, background-color 0.18s ease, border-color 0.18s ease;
+  padding: 7px 11px;
+  border-radius: 9px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  line-height: 1.25;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .nav-link:hover, .nav-link.active {
   color: var(--color-primary);
   background-color: var(--color-primary-light);
+}
+
+.nav-link.active {
+  font-weight: 700;
 }
 
 .nav-link-highlight {
@@ -160,10 +225,9 @@ input, button, select {
 
 .btn-portal-switch {
   color: var(--color-text-desc);
-  font-size: 0.85rem;
-  margin-left: 8px;
-  padding: 5px 10px;
-  border-radius: 8px;
+  font-size: 0.84rem;
+  padding: 6px 11px;
+  border-radius: 9px;
   border: 1px solid var(--color-border);
 }
 
@@ -172,13 +236,20 @@ input, button, select {
   color: var(--color-primary);
 }
 
+.header-right-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
 .theme-toggle-wrapper {
   display: flex;
   align-items: center;
-  margin-left: 6px;
+  flex-shrink: 0;
 }
 
-.mobile-header-actions {
+.mobile-menu-trigger-btn {
   display: none;
 }
 
@@ -323,7 +394,7 @@ input, button, select {
 
 @media (max-width: 768px) {
   .biz-sticky-nav {
-    top: 56px; /* 모바일 헤더 높이에 맞춤 */
+    top: 95px; /* 모바일 2단(로고바 + 가로 스와이프 탭바) 헤더 높이에 맞춤 */
     margin: -16px -16px 20px -16px;
     padding: 6px 12px;
   }
@@ -337,39 +408,47 @@ input, button, select {
 }
 
 @media (max-width: 768px) {
-  /* 모바일 헤더: 데스크톱 내비게이션 숨기고 모바일 우측 빠른 액션(인사이트 + 다크모드 + 전체메뉴) 표시 */
-  .desktop-nav-links {
-    display: none !important;
+  /* 모바일 헤더: 1행(로고 + 테마/전체메뉴) + 2행(손가락 가로 스와이프 메뉴 바) */
+  .header-inner {
+    height: auto !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 0 !important;
+    padding-top: 6px !important;
+    padding-bottom: 0 !important;
   }
 
-  .mobile-header-actions {
-    display: flex !important;
-    align-items: center;
+  .header-logo-link {
+    order: 1;
+    height: 44px;
+  }
+
+  .header-right-actions {
+    order: 2;
+    margin-left: auto;
+    height: 44px;
     gap: 6px;
-    flex-shrink: 0;
   }
 
-  .mobile-insights-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 5px 10px;
+  .header-nav-rail {
+    order: 3;
+    flex: 0 0 calc(100% + 32px);
+    width: calc(100% + 32px);
+    margin: 4px -16px 0 -16px;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .header-nav-scroll {
+    padding: 7px 14px;
+    gap: 6px;
+  }
+
+  .nav-link {
+    font-size: 0.83rem;
+    padding: 6px 11px;
     border-radius: 999px;
-    font-size: 0.76rem;
-    font-weight: 800;
-    color: var(--color-text-sub);
-    background-color: var(--bg-color-main);
-    border: 1px solid var(--color-border);
-    white-space: nowrap;
-    text-decoration: none;
-    transition: all 0.2s ease;
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  .mobile-insights-chip.active {
-    color: var(--color-primary);
-    background-color: var(--color-primary-light);
-    border-color: rgba(49, 130, 246, 0.35);
   }
 
   .mobile-menu-trigger-btn {
@@ -385,13 +464,6 @@ input, button, select {
     cursor: pointer;
     flex-shrink: 0;
     -webkit-tap-highlight-color: transparent;
-  }
-
-  .header-inner {
-    height: 56px !important;
-    flex-direction: row !important;
-    align-items: center !important;
-    justify-content: space-between !important;
   }
 
   .theme-toggle-btn {
@@ -525,15 +597,17 @@ input, button, select {
 .theme-toggle-btn {
   background: none;
   border: 1px solid var(--color-border);
-  padding: 8px 12px;
+  padding: 7px 12px;
   border-radius: 20px;
-  font-size: 0.85rem;
-  font-weight: 500;
+  font-size: 0.84rem;
+  font-weight: 600;
   color: var(--color-text-sub);
   cursor: pointer;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
+  white-space: nowrap;
+  flex-shrink: 0;
   transition: var(--transition-smooth);
 }
 

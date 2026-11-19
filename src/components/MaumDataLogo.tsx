@@ -43,6 +43,8 @@ export default function MaumDataLogo({
         userSelect: "none",
         cursor: "pointer",
         textDecoration: "none",
+        whiteSpace: "nowrap",
+        flexShrink: 0,
       }}
     >
       {/* 모던 벡터 SVG 심볼 마크 (M + 하트 + 우상향 데이터 차트 융합) */}
@@ -119,15 +121,17 @@ export default function MaumDataLogo({
 
       {/* 텍스트 로고 및 서비스 배지 */}
       {showText && (
-        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+        <div style={{ display: "inline-flex", alignItems: "center", gap: "6px", whiteSpace: "nowrap", flexShrink: 0 }}>
           <span
             style={{
               fontSize: dimensions.fontSize,
               fontWeight: 850,
               letterSpacing: "-0.04em",
               color: "var(--color-text-main)",
-              display: "flex",
+              display: "inline-flex",
               alignItems: "center",
+              whiteSpace: "nowrap",
+              flexShrink: 0,
             }}
           >
             마음데이타
@@ -147,6 +151,8 @@ export default function MaumDataLogo({
                 display: "inline-block",
                 lineHeight: 1.2,
                 transform: "translateY(-1px)",
+                whiteSpace: "nowrap",
+                flexShrink: 0,
               }}
             >
               {badgeConfig.text}
