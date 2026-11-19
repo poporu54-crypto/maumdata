@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import {
   vibrateDevice,
@@ -89,7 +90,23 @@ export default function BusinessCardScannerModal({
   // 안드로이드 물리 뒤로가기 연동 및 당겨서 새로고침 잠금
   useAppModalBack(isOpen, onClose);
 
-  if (!isOpen) return null;
+  // ESC 키로 닫기 및 모달 열림 중 배경 스크롤 잠금
+  useEffect(() => {
+    if (!isOpen) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen, onClose]);
+
+  if (!isOpen || typeof document === "undefined") return null;
 
   const isNativeScannerReady = hasNativeOcrScanner();
 
@@ -229,24 +246,30 @@ export default function BusinessCardScannerModal({
     onClose();
   };
 
-  return (
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
-      onClick={onClose}
+      aria-label="명함 및 사업자등록증 OCR 스캔"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
       style={{
         position: "fixed",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: "rgba(15, 23, 42, 0.75)",
+        inset: 0,
+        width: "100%",
+        height: "100dvh",
+        backgroundColor: "rgba(15, 23, 42, 0.72)",
         backdropFilter: "blur(8px)",
-        zIndex: 10000,
+        WebkitBackdropFilter: "blur(8px)",
+        zIndex: 20000,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
         padding: "16px",
+        cursor: "pointer",
       }}
     >
       <div
@@ -262,8 +285,9 @@ export default function BusinessCardScannerModal({
           display: "flex",
           flexDirection: "column",
           gap: "14px",
-          maxHeight: "90vh",
+          maxHeight: "calc(100dvh - 32px)",
           overflowY: "auto",
+          cursor: "default",
         }}
       >
         {/* 헤더 */}
@@ -534,6 +558,7 @@ export default function BusinessCardScannerModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
