@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import {
   buildUrlsetXml,
   getCoreSitemapEntries,
+  getDirectorySitemapEntries,
   getFormsSitemapEntries,
   getTier1CompanySitemapEntries,
 } from "@/lib/seoFeeds";
@@ -17,6 +18,8 @@ export async function GET(
   let entries;
   if (section === "core.xml") {
     entries = await getCoreSitemapEntries();
+  } else if (section === "directory.xml") {
+    entries = await getDirectorySitemapEntries();
   } else if (section === "forms.xml") {
     entries = await getFormsSitemapEntries();
   } else if (section === "companies.xml") {

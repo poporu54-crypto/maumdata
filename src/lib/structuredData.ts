@@ -519,8 +519,9 @@ export function buildFormDetailJsonLd(params: {
   desc?: string;
   category: string;
   tags?: string[];
+  faqs?: Array<{ q: string; a: string }>;
 }) {
-  const { templateId, title, desc, category, tags = [] } = params;
+  const { templateId, title, desc, category, tags = [], faqs = [] } = params;
   const pagePath = `/form/${templateId}`;
   const pageUrl = `${SITE_URL}${pagePath}`;
   const description =
@@ -571,6 +572,22 @@ export function buildFormDetailJsonLd(params: {
         ],
         publisher: { "@id": ORG_ID },
       },
+      ...(faqs.length > 0
+        ? [
+            {
+              "@type": "FAQPage",
+              "@id": `${pageUrl}#faq`,
+              mainEntity: faqs.map((item) => ({
+                "@type": "Question",
+                name: item.q,
+                acceptedAnswer: {
+                  "@type": "Answer",
+                  text: item.a,
+                },
+              })),
+            },
+          ]
+        : []),
       buildBreadcrumbNode(
         [
           { name: "홈", path: "/" },
@@ -687,6 +704,115 @@ export function buildMarketAreaHubJsonLd(
           { name: "전국 상권 분석 허브", path: "/stats/market-area" },
         ],
         "/stats/market-area"
+      ),
+    ],
+  };
+}
+
+/**
+ * 10. 기업 랭킹 · 권역 · 업종 통합 디렉토리 메인 허브 (`/directory`)
+ */
+export function buildDirectoryOverviewJsonLd(params: {
+  hubLinks: Array<{ title: string; path: string }>;
+  dateModified?: string | null;
+}) {
+  const { hubLinks, dateModified } = params;
+  const isoDate = dateModified ? dateModified.slice(0, 10) : undefined;
+
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "CollectionPage",
+        "@id": `${SITE_URL}/directory#collection`,
+        url: `${SITE_URL}/directory`,
+        name: "대한민국 알짜 기업 랭킹 · 지역 · 업종 디렉토리 | 마음데이타",
+        description:
+          "국세청 계속사업자 검증, 국민연금 상시 임직원·추정 평균연봉, DART 결산 매출·영업이익 실데이터를 기반으로 집계한 지역·업종·테마별 기업 리더보드 허브입니다.",
+        isPartOf: { "@id": WEBSITE_ID },
+        publisher: { "@id": ORG_ID },
+        inLanguage: "ko-KR",
+        isAccessibleForFree: true,
+        ...(isValidIsoDate(isoDate) ? { dateModified: isoDate } : {}),
+        mainEntity: {
+          "@type": "ItemList",
+          name: "마음데이타 실데이터 기업 랭킹 및 권역·산업 디렉토리 목록",
+          numberOfItems: hubLinks.length,
+          itemListElement: hubLinks.map((hub, idx) => ({
+            "@type": "ListItem",
+            position: idx + 1,
+            name: hub.title,
+            url: toAbsoluteUrl(hub.path),
+          })),
+        },
+      },
+      buildBreadcrumbNode(
+        [
+          { name: "홈", path: "/" },
+          { name: "기업 랭킹 · 디렉토리", path: "/directory" },
+        ],
+        "/directory"
+      ),
+    ],
+  };
+}
+
+/**
+ * 11. 개별 랭킹 · 업무지구 · 산업군 기업 허브 상세 (`/directory/[kind]/[slug]`)
+ */
+export function buildDirectoryHubJsonLd(params: {
+  path: string;
+  kindLabel: string;
+  title: string;
+  description: string;
+  dateModified?: string | null;
+  companies: Array<{
+    bNo: string;
+    name: string;
+    sector?: string;
+    shortRegion?: string;
+  }>;
+}) {
+  const { path, kindLabel, title, description, dateModified, companies } = params;
+  const pageUrl = toAbsoluteUrl(path);
+  const isoDate = dateModified ? dateModified.slice(0, 10) : undefined;
+  const topItems = companies.slice(0, 50);
+
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "CollectionPage",
+        "@id": `${pageUrl}#collection`,
+        url: pageUrl,
+        name: title,
+        description,
+        isPartOf: { "@id": WEBSITE_ID },
+        publisher: { "@id": ORG_ID },
+        inLanguage: "ko-KR",
+        isAccessibleForFree: true,
+        ...(isValidIsoDate(isoDate) ? { dateModified: isoDate } : {}),
+        mainEntity: {
+          "@type": "ItemList",
+          name: title,
+          itemListOrder: "https://schema.org/ItemListOrderDescending",
+          numberOfItems: topItems.length,
+          itemListElement: topItems.map((c, idx) => ({
+            "@type": "ListItem",
+            position: idx + 1,
+            url: `${SITE_URL}/biz/${c.bNo}`,
+            name: c.name,
+          })),
+        },
+      },
+      buildBreadcrumbNode(
+        [
+          { name: "홈", path: "/" },
+          { name: "기업 랭킹 · 디렉토리", path: "/directory" },
+          { name: kindLabel, path: "/directory" },
+          { name: title, path },
+        ],
+        path
       ),
     ],
   };

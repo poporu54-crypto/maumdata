@@ -705,6 +705,37 @@ export default function ContractsDashboardPage() {
             })}
           </div>
         )}
+
+        <div
+          style={{
+            marginTop: "28px",
+            padding: "16px 20px",
+            borderRadius: "12px",
+            border: "1px solid var(--color-border)",
+            backgroundColor: "var(--bg-color-card)",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "12px",
+            fontSize: "0.84rem",
+          }}
+        >
+          <span style={{ color: "var(--color-text-sub)" }}>
+            팀 단위 전자계약 공동 관리 · 대량 발송 · 장기 원본 보관 기능이 필요하신가요?
+          </span>
+          <Link
+            href="/partners?type=contract_pro"
+            prefetch={false}
+            style={{
+              color: "var(--color-primary)",
+              fontWeight: 800,
+              textDecoration: "none",
+            }}
+          >
+            📁 전자계약 팀 보관함 Pro 도입 문의 ➔
+          </Link>
+        </div>
       </div>
 
       {/* 로그인 모달 */}

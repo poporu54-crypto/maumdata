@@ -1,6 +1,8 @@
 import { TEMPLATES } from "@/app/form/templatesData";
 import { query } from "@/lib/db";
 import { matchesTagRule } from "@/lib/tagRules";
+import { getDirectoryOverview } from "@/lib/directoryApi";
+import { FEATURED_RIVALRIES } from "@/lib/compareConfig";
 
 export const SITE_URL = "https://www.maumdata.com";
 
@@ -195,6 +197,7 @@ export async function getSitemapIndexEntries(): Promise<SitemapEntry[]> {
             AND b.b_nm NOT IN ('', '상호 정보 없음', '상호 미등록 사업자')
             AND (
               COALESCE(b.nps_sbscrb_nmps, 0) > 0
+              OR b.market_board IN ('KOSPI', 'KOSDAQ')
               OR b.listing_status IN ('유가', '코스닥', '코넥스', '상장')
               OR fin.b_no IS NOT NULL
               OR disc.b_no IS NOT NULL
@@ -214,9 +217,53 @@ export async function getSitemapIndexEntries(): Promise<SitemapEntry[]> {
 
   return [
     { loc: `${SITE_URL}/sitemap/core.xml`, lastmod: coreLastmod },
+    { loc: `${SITE_URL}/sitemap/directory.xml`, lastmod: companiesLastmod },
     { loc: `${SITE_URL}/sitemap/forms.xml`, lastmod: formsLastmod },
     { loc: `${SITE_URL}/sitemap/companies.xml`, lastmod: companiesLastmod },
   ];
+}
+
+/**
+ * 1-1) /sitemap/directory.xml: 실데이터 기업 랭킹 · 전국 업무지구 · 핵심 산업군 디렉토리 허브
+ */
+export async function getDirectorySitemapEntries(): Promise<SitemapEntry[]> {
+  let bizLastmod: string | undefined;
+  try {
+    const res = await query(`
+      SELECT MAX(
+        GREATEST(
+          CASE WHEN nts_last_sync_at >= '2020-01-01'::timestamptz THEN nts_last_sync_at ELSE NULL END,
+          CASE WHEN nps_last_sync_at >= '2020-01-01'::timestamptz THEN nps_last_sync_at ELSE NULL END,
+          CASE WHEN dart_last_sync_at >= '2020-01-01'::timestamptz THEN dart_last_sync_at ELSE NULL END
+        )
+      ) AS max_dt
+      FROM businesses
+      WHERE b_stt_cd = '01'
+    `);
+    bizLastmod = toW3CDate(res.rows[0]?.max_dt);
+  } catch (err) {
+    console.error("[seoFeeds] Failed to query directory sitemap timestamp:", err);
+  }
+
+  const overview = await getDirectoryOverview();
+  const entries: SitemapEntry[] = [
+    { loc: `${SITE_URL}/directory`, lastmod: bizLastmod },
+  ];
+
+  for (const h of overview.rankingHubs) {
+    entries.push({ loc: `${SITE_URL}/directory/ranking/${h.slug}`, lastmod: bizLastmod });
+  }
+  for (const h of overview.regionHubs) {
+    entries.push({ loc: `${SITE_URL}/directory/region/${h.slug}`, lastmod: bizLastmod });
+  }
+  for (const h of overview.industryHubs) {
+    entries.push({ loc: `${SITE_URL}/directory/industry/${h.slug}`, lastmod: bizLastmod });
+  }
+  for (const rv of FEATURED_RIVALRIES) {
+    entries.push({ loc: `${SITE_URL}/compare/${rv.pairSlug}`, lastmod: bizLastmod });
+  }
+
+  return entries;
 }
 
 /**
@@ -253,6 +300,8 @@ export async function getCoreSitemapEntries(): Promise<SitemapEntry[]> {
 
   const entries: SitemapEntry[] = [
     { loc: `${SITE_URL}/` },
+    { loc: `${SITE_URL}/bulk-check` },
+    { loc: `${SITE_URL}/compare`, lastmod: statsLastmod },
     { loc: `${SITE_URL}/contracts` },
     { loc: `${SITE_URL}/form`, lastmod: formsLastmod },
     { loc: `${SITE_URL}/insights`, lastmod: statsLastmod },
@@ -260,6 +309,7 @@ export async function getCoreSitemapEntries(): Promise<SitemapEntry[]> {
     { loc: `${SITE_URL}/stats/distribution`, lastmod: statsLastmod },
     { loc: `${SITE_URL}/stats/new-biz`, lastmod: statsLastmod },
     { loc: `${SITE_URL}/stats/active-rate`, lastmod: statsLastmod },
+    { loc: `${SITE_URL}/partners` },
     { loc: `${SITE_URL}/terms` },
     { loc: `${SITE_URL}/privacy` },
   ];
@@ -386,6 +436,7 @@ export async function getTier1CompanySitemapEntries(): Promise<SitemapEntry[]> {
         AND b.b_nm NOT IN ('', '상호 정보 없음', '상호 미등록 사업자')
         AND (
           COALESCE(b.nps_sbscrb_nmps, 0) > 0
+          OR b.market_board IN ('KOSPI', 'KOSDAQ')
           OR b.listing_status IN ('유가', '코스닥', '코넥스', '상장')
           OR fin.b_no IS NOT NULL
           OR disc.b_no IS NOT NULL

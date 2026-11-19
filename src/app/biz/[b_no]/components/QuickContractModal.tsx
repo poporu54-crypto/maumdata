@@ -79,6 +79,30 @@ const TEMPLATE_OPTIONS = [
     icon: "📬",
     color: "#e11d48",
   },
+  {
+    id: "contract",
+    title: "표준 근로계약서",
+    badge: "인사/노무",
+    desc: "고용노동부 표준 양식에 해당 사업장 정보(상호·주소·대표자) 자동 입력",
+    icon: "📋",
+    color: "#0284c7",
+  },
+  {
+    id: "employment_certificate",
+    title: "재직증명서",
+    badge: "인사 발급",
+    desc: "금융기관·관공서 제출용 표준 재직증명서에 회사 정보 자동 반영",
+    icon: "🪪",
+    color: "#0d9488",
+  },
+  {
+    id: "resignation",
+    title: "표준 사직서",
+    badge: "퇴직/인사",
+    desc: "결재란·인수인계 조항이 포함된 표준 사직서에 소속 회사 정보 자동 매핑",
+    icon: "📄",
+    color: "#6366f1",
+  },
 ];
 
 const INLINE_QUICK_LINKS = [
@@ -86,6 +110,7 @@ const INLINE_QUICK_LINKS = [
   { id: "estimate", label: "표준견적서" },
   { id: "order", label: "표준발주서" },
   { id: "generic_nda", label: "비밀유지계약서(NDA)" },
+  { id: "contract", label: "근로계약서" },
 ];
 
 export default function QuickContractModal({ business }: QuickContractModalProps) {

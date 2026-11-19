@@ -65,3 +65,51 @@ export async function getNtsCompanyStatus(bNo: string): Promise<NtsCompanyStatus
     return null;
   }
 }
+
+/**
+ * 최대 100개의 사업자등록번호 배열을 받아 국세청 API 단 1회 배치 호출로 실시간 납세상태·과세유형을 일괄 조회합니다.
+ */
+export async function getNtsBatchCompanyStatus(
+  rawBNos: string[]
+): Promise<NtsCompanyStatus[] | null> {
+  const uniqueClean = Array.from(
+    new Set(
+      rawBNos
+        .map((v) => String(v || "").replace(/[^0-9]/g, ""))
+        .filter((v) => v.length === 10)
+    )
+  ).slice(0, 100);
+
+  if (uniqueClean.length === 0) {
+    return [];
+  }
+
+  try {
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        b_no: uniqueClean,
+      }),
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      console.error(`NTS Batch API HTTP Error: ${response.status} ${response.statusText}`);
+      return null;
+    }
+
+    const json = (await response.json()) as NtsApiResponse;
+    if (json.status_code === "OK" && Array.isArray(json.data)) {
+      return json.data;
+    }
+
+    return null;
+  } catch (error) {
+    console.error("Failed to fetch NTS batch company status:", error);
+    return null;
+  }
+}

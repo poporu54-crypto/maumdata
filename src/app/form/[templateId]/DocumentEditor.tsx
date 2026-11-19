@@ -896,6 +896,7 @@ export default function DocumentEditor({ templateId, initialTemplate }: { templa
   const [isCompanySearchModalOpen, setIsCompanySearchModalOpen] = useState(false);
   const [isRequestSigModalOpen, setIsRequestSigModalOpen] = useState(false);
   const [signatureImage, setSignatureImage] = useState<string | null>(null);
+  const [prefilledBanner, setPrefilledBanner] = useState<{ name: string; bno: string } | null>(null);
   const initialBlankSnapshotRef = useRef<string>("");
   const initialLoadedSnapshotRef = useRef<string>("");
 
@@ -1156,6 +1157,10 @@ export default function DocumentEditor({ templateId, initialTemplate }: { templa
             bno: formattedPrefillBno || undefined,
             ceo: partyBOwner || undefined,
             address: partyBAddress || undefined,
+          });
+          setPrefilledBanner({
+            name: partyBName || "선택 기업",
+            bno: formattedPrefillBno || "",
           });
         }
       }
@@ -1640,6 +1645,46 @@ export default function DocumentEditor({ templateId, initialTemplate }: { templa
               {template.desc}
             </p>
           </div>
+
+          {prefilledBanner && (
+            <div
+              className="no-print"
+              style={{
+                padding: "12px 14px",
+                borderRadius: "12px",
+                backgroundColor: "rgba(16, 185, 129, 0.1)",
+                border: "1px solid rgba(16, 185, 129, 0.32)",
+                display: "flex",
+                alignItems: "flex-start",
+                justifyContent: "space-between",
+                gap: "10px",
+              }}
+            >
+              <div style={{ fontSize: "0.82rem", color: "#059669", lineHeight: 1.5, fontWeight: 700 }}>
+                ✅ <strong>{prefilledBanner.name}</strong>
+                {prefilledBanner.bno ? ` (${prefilledBanner.bno})` : ""} 기업 정보가 서식에 자동 기입되었습니다.
+                <div style={{ fontSize: "0.75rem", fontWeight: 500, color: "var(--color-text-sub)", marginTop: "2px" }}>
+                  세부 조건만 마저 채우고 우측 상단에서 A4 PDF 인쇄 또는 비대면 서명을 진행하세요.
+                </div>
+              </div>
+              <button
+                type="button"
+                aria-label="자동입력 안내 닫기"
+                onClick={() => setPrefilledBanner(null)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "var(--color-text-desc)",
+                  cursor: "pointer",
+                  fontSize: "0.95rem",
+                  lineHeight: 1,
+                  padding: "2px 4px",
+                }}
+              >
+                ✕
+              </button>
+            </div>
+          )}
 
           <hr style={{ border: "none", borderTop: "1px solid var(--color-border)" }} />
 

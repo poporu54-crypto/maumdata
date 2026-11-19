@@ -1,5 +1,10 @@
 import { Pool } from "pg";
 import { getKsicName, getPeerSectorGroup } from "./ksicMap";
+import {
+  resolveRegionHubSlug,
+  resolveIndustryHubSlug,
+  resolveMarketBoard,
+} from "./directoryConfig";
 
 
 declare global {
@@ -241,6 +246,29 @@ export async function upsertBusiness(biz: any) {
   
   const core = extractCoreBrand(biz.b_nm);
   const brandVal = biz.brandName || biz.brand_name || (core ? `${core}, ${biz.b_nm}` : biz.b_nm);
+  const regionHubSlug = resolveRegionHubSlug(biz.b_adr);
+  const industryHubSlug = resolveIndustryHubSlug(biz.b_sector, biz.main_biz, biz.b_nm);
+  const marketBoard = resolveMarketBoard(biz.listing_status);
+
+  let latestFinYear: number | null = null;
+  let latestRevenue: number | null = null;
+  let latestOperatingIncome: number | null = null;
+  if (Array.isArray(biz.history) && biz.history.length > 0) {
+    const sortedHist = [...biz.history]
+      .filter((h) => h && typeof h.year === "number")
+      .sort((a, b) => b.year - a.year);
+    if (sortedHist[0]) {
+      latestFinYear = sortedHist[0].year;
+      latestRevenue =
+        sortedHist[0].revenue !== undefined && sortedHist[0].revenue !== null
+          ? Number(sortedHist[0].revenue)
+          : null;
+      latestOperatingIncome =
+        sortedHist[0].operatingIncome !== undefined && sortedHist[0].operatingIncome !== null
+          ? Number(sortedHist[0].operatingIncome)
+          : null;
+    }
+  }
 
   // 1. Main Business upsert
   await query(`
@@ -253,11 +281,14 @@ export async function upsertBusiness(biz: any) {
       new_acqs_nmps, loss_sbscrb_nmps, tel_no, brand_name,
       nts_last_sync_at, nps_last_sync_at,
       tax_type, tax_type_cd,
-      b_stt, b_stt_cd, nps_chrg_amt
+      b_stt, b_stt_cd, nps_chrg_amt,
+      region_hub_slug, industry_hub_slug, market_board,
+      latest_fin_year, latest_revenue, latest_operating_income
     ) VALUES (
       $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27,
       $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, $40,
-      $41, $42, $43, $44, $45
+      $41, $42, $43, $44, $45,
+      $46, $47, $48, $49, $50, $51
     ) ON CONFLICT (b_no) DO UPDATE SET
       b_nm = EXCLUDED.b_nm,
       p_nm = EXCLUDED.p_nm,
@@ -302,7 +333,13 @@ export async function upsertBusiness(biz: any) {
       tax_type_cd = EXCLUDED.tax_type_cd,
       b_stt = EXCLUDED.b_stt,
       b_stt_cd = EXCLUDED.b_stt_cd,
-      nps_chrg_amt = EXCLUDED.nps_chrg_amt
+      nps_chrg_amt = EXCLUDED.nps_chrg_amt,
+      region_hub_slug = EXCLUDED.region_hub_slug,
+      industry_hub_slug = EXCLUDED.industry_hub_slug,
+      market_board = COALESCE(EXCLUDED.market_board, businesses.market_board),
+      latest_fin_year = COALESCE(EXCLUDED.latest_fin_year, businesses.latest_fin_year),
+      latest_revenue = COALESCE(EXCLUDED.latest_revenue, businesses.latest_revenue),
+      latest_operating_income = COALESCE(EXCLUDED.latest_operating_income, businesses.latest_operating_income)
   `, [
     clean, biz.b_nm, biz.p_nm, biz.start_dt, biz.b_adr, biz.b_sector, biz.b_type, biz.corp_no || "", biz.dart_code || "",
     biz.description || "", biz.credit_rating || "", biz.industry_rank || "", biz.is_sme || "", biz.listing_status || "",
@@ -314,7 +351,9 @@ export async function upsertBusiness(biz: any) {
     biz.ntsLastSyncAt || null, biz.npsLastSyncAt || null,
     biz.taxType || "부가가치세 일반과세자", biz.taxTypeCd || "01",
     biz.bStt || biz.b_stt || "계속사업자", biz.bSttCd || biz.b_stt_cd || "01",
-    biz.npsChrgAmt || 0
+    biz.npsChrgAmt || 0,
+    regionHubSlug, industryHubSlug, marketBoard,
+    latestFinYear, latestRevenue, latestOperatingIncome
   ]);
 
   // 1.1. 신규 설립일 타임라인 자동 갱신

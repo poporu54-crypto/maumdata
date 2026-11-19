@@ -2,6 +2,9 @@ import React from "react";
 import Link from "next/link";
 
 const STATS_LINKS = [
+  { href: "/directory", label: "🏆 지역 · 업종 · 연봉 기업 랭킹" },
+  { href: "/compare", label: "⚖️ A사 vs B사 1:1 스펙 비교기" },
+  { href: "/bulk-check", label: "⚡ 거래처 사업자번호 100건 일괄조회" },
   { href: "/stats/new-biz", label: "📈 신규 채용 · 신설 법인 동향" },
   { href: "/stats/active-rate", label: "🛡️ 국세청 계속사업자 · 고용 안정성" },
   { href: "/stats/distribution", label: "📊 업종별 기업 분포 · 통계청 공식 집계" },

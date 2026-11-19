@@ -82,6 +82,49 @@ export function SalarySection({ business }: { business: BusinessData }) {
           <span style={{ fontSize: "0.75rem", color: "var(--color-text-desc)", lineHeight: 1.4 }}>
             * 당월 국민연금 고지총액({Math.round(chrgAmt / 10000).toLocaleString()}만원)과 상시 가입자수({emps}명)의 9% 요율 역산 추정치입니다.
           </span>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "6px" }}>
+            <a
+              href="https://www.maumcalc.com/calculators/net-salary"
+              target="_blank"
+              rel="noopener"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px",
+                padding: "5px 10px",
+                borderRadius: "8px",
+                backgroundColor: "var(--color-primary-light)",
+                color: "var(--color-primary)",
+                fontSize: "0.75rem",
+                fontWeight: 800,
+                textDecoration: "none",
+              }}
+            >
+              <span>🧮 월 실수령액 계산 (마음계산기)</span>
+              <span>↗</span>
+            </a>
+            <a
+              href="https://www.maumcalc.com/calculators/severance-pay"
+              target="_blank"
+              rel="noopener"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "4px",
+                padding: "5px 10px",
+                borderRadius: "8px",
+                border: "1px solid var(--color-border)",
+                backgroundColor: "var(--bg-color-card)",
+                color: "var(--color-text-sub)",
+                fontSize: "0.75rem",
+                fontWeight: 700,
+                textDecoration: "none",
+              }}
+            >
+              <span>💰 예상 퇴직금 계산</span>
+              <span>↗</span>
+            </a>
+          </div>
         </div>
 
         <div style={{

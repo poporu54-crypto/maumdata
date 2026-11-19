@@ -11,6 +11,9 @@ const MOBILE_MENU_SECTIONS = [
     group: "기업 · 상권 · 통계 분석",
     items: [
       { href: "/", icon: "🏢", label: "기업 조회 홈", desc: "상호·대표자·사업자번호 통합 조회" },
+      { href: "/bulk-check", icon: "⚡", label: "거래처 휴·폐업 일괄조회", desc: "최대 100건 실시간 상태·엑셀 저장" },
+      { href: "/compare", icon: "⚖️", label: "기업 1:1 스펙 비교", desc: "두 회사 연봉·임직원·매출 맞대결" },
+      { href: "/directory", icon: "🏆", label: "기업 랭킹 · 디렉토리", desc: "지역·업종·연봉·매출 알짜 기업 순위" },
       { href: "/stats/market-area", icon: "📍", label: "전국 상권 분석", desc: "행정동별 밀집도 및 지도 분석" },
       { href: "/insights", icon: "📊", label: "데이터 인사이트", desc: "국민연금 고용·매출 랭킹 리포트" },
       { href: "/stats/new-biz", icon: "📈", label: "업종별 기업 분포", desc: "실등록 업종 순위 및 대표 기업" },
@@ -103,6 +106,27 @@ export default function Header() {
                   className={`nav-link ${pathname === "/" ? "active" : ""}`}
                 >
                   기업 조회
+                </Link>
+                <Link
+                  href="/directory"
+                  prefetch={false}
+                  className={`nav-link ${pathname.startsWith("/directory") ? "active" : ""}`}
+                >
+                  기업 랭킹
+                </Link>
+                <Link
+                  href="/compare"
+                  prefetch={false}
+                  className={`nav-link ${pathname.startsWith("/compare") ? "active" : ""}`}
+                >
+                  1:1 비교
+                </Link>
+                <Link
+                  href="/bulk-check"
+                  prefetch={false}
+                  className={`nav-link ${pathname.startsWith("/bulk-check") ? "active" : ""}`}
+                >
+                  일괄조회
                 </Link>
                 <Link
                   href="/stats/market-area"

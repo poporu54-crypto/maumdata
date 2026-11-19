@@ -48,6 +48,13 @@ import QuickContractModal from "./components/QuickContractModal";
 import NearbyDiningMapSection from "@/components/NearbyDiningMapSection";
 import JsonLd from "@/components/JsonLd";
 import { buildBusinessDetailJsonLd } from "@/lib/structuredData";
+import {
+  resolveRegionHubSlug,
+  getRegionHubBySlug,
+  resolveIndustryHubSlug,
+  getIndustryHubBySlug,
+  resolveMarketBoard,
+} from "@/lib/directoryConfig";
 
 export const dynamic = "force-dynamic";
 
@@ -903,6 +910,194 @@ export default async function BusinessDetailPage({ params }: { params: any }) {
                     </div>
                   </div>
                 )}
+
+                {/* 소속 권역 · 업종 · 리더보드 비교 연결망 */}
+                {business && (() => {
+                  const regionHub = getRegionHubBySlug(resolveRegionHubSlug(business.b_adr));
+                  const industryHub = getIndustryHubBySlug(
+                    resolveIndustryHubSlug(business.b_sector, business.main_biz, business.b_nm)
+                  );
+                  const marketBoard = resolveMarketBoard(business.listing_status);
+
+                  return (
+                    <section
+                      aria-label="소속 권역 및 동종 산업 기업 리더보드"
+                      className="card"
+                      style={{
+                        marginTop: "28px",
+                        padding: "22px 24px",
+                        border: "1px solid var(--color-border)",
+                        backgroundColor: "var(--bg-color-card)",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          flexWrap: "wrap",
+                          gap: "8px",
+                          marginBottom: "12px",
+                        }}
+                      >
+                        <h3 style={{ fontSize: "1rem", fontWeight: 800, color: "var(--color-text-main)", margin: 0 }}>
+                          🏆 {business.b_nm} 소속 권역 · 동종 산업 순위 비교하기
+                        </h3>
+                        <Link
+                          href="/directory"
+                          prefetch={false}
+                          style={{
+                            fontSize: "0.82rem",
+                            fontWeight: 700,
+                            color: "var(--color-primary)",
+                            textDecoration: "none",
+                          }}
+                        >
+                          전체 랭킹 디렉토리 ➔
+                        </Link>
+                      </div>
+
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                        <Link
+                          href={`/compare?a=${cleanBNo}&nameA=${encodeURIComponent(business.b_nm || "")}`}
+                          prefetch={false}
+                          style={{
+                            padding: "7px 14px",
+                            borderRadius: "999px",
+                            border: "1px solid var(--color-primary)",
+                            backgroundColor: "var(--color-primary)",
+                            color: "#ffffff",
+                            fontSize: "0.82rem",
+                            fontWeight: 800,
+                            textDecoration: "none",
+                          }}
+                        >
+                          ⚖️ 이 기업과 타 기업 1:1 연봉·실적 비교
+                        </Link>
+                        {regionHub && (
+                          <Link
+                            href={`/directory/region/${regionHub.slug}`}
+                            prefetch={false}
+                            style={{
+                              padding: "7px 13px",
+                              borderRadius: "999px",
+                              border: "1px solid var(--color-border)",
+                              backgroundColor: "var(--bg-color-main)",
+                              color: "var(--color-text-main)",
+                              fontSize: "0.82rem",
+                              fontWeight: 700,
+                              textDecoration: "none",
+                            }}
+                          >
+                            {regionHub.emoji} {regionHub.shortTitle} 주요 기업 순위
+                          </Link>
+                        )}
+                        {industryHub && (
+                          <Link
+                            href={`/directory/industry/${industryHub.slug}`}
+                            prefetch={false}
+                            style={{
+                              padding: "7px 13px",
+                              borderRadius: "999px",
+                              border: "1px solid var(--color-border)",
+                              backgroundColor: "var(--bg-color-main)",
+                              color: "var(--color-text-main)",
+                              fontSize: "0.82rem",
+                              fontWeight: 700,
+                              textDecoration: "none",
+                            }}
+                          >
+                            {industryHub.emoji} {industryHub.shortTitle} 기업 랭킹
+                          </Link>
+                        )}
+                        {marketBoard === "KOSPI" && (
+                          <Link
+                            href="/directory/ranking/kospi-leaders"
+                            prefetch={false}
+                            style={{
+                              padding: "7px 13px",
+                              borderRadius: "999px",
+                              border: "1px solid rgba(37, 99, 235, 0.3)",
+                              backgroundColor: "rgba(37, 99, 235, 0.08)",
+                              color: "#2563eb",
+                              fontSize: "0.82rem",
+                              fontWeight: 700,
+                              textDecoration: "none",
+                            }}
+                          >
+                            🏛️ 코스피(KOSPI) 상장사 리더보드
+                          </Link>
+                        )}
+                        {marketBoard === "KOSDAQ" && (
+                          <Link
+                            href="/directory/ranking/kosdaq-leaders"
+                            prefetch={false}
+                            style={{
+                              padding: "7px 13px",
+                              borderRadius: "999px",
+                              border: "1px solid rgba(16, 185, 129, 0.3)",
+                              backgroundColor: "rgba(16, 185, 129, 0.08)",
+                              color: "#059669",
+                              fontSize: "0.82rem",
+                              fontWeight: 700,
+                              textDecoration: "none",
+                            }}
+                          >
+                            ⚡ 코스닥(KOSDAQ) 상장사 리더보드
+                          </Link>
+                        )}
+                        <Link
+                          href="/directory/ranking/top-salary"
+                          prefetch={false}
+                          style={{
+                            padding: "7px 13px",
+                            borderRadius: "999px",
+                            border: "1px solid var(--color-border)",
+                            backgroundColor: "var(--bg-color-main)",
+                            color: "var(--color-text-sub)",
+                            fontSize: "0.82rem",
+                            fontWeight: 600,
+                            textDecoration: "none",
+                          }}
+                        >
+                          💰 국민연금 평균연봉 상위 기업
+                        </Link>
+                        <Link
+                          href="/directory/ranking/hiring-surge"
+                          prefetch={false}
+                          style={{
+                            padding: "7px 13px",
+                            borderRadius: "999px",
+                            border: "1px solid var(--color-border)",
+                            backgroundColor: "var(--bg-color-main)",
+                            color: "var(--color-text-sub)",
+                            fontSize: "0.82rem",
+                            fontWeight: 600,
+                            textDecoration: "none",
+                          }}
+                        >
+                          🚀 신규채용 급증 기업
+                        </Link>
+                        <Link
+                          href={`/partners?type=claim_profile&b_no=${cleanBNo}&company=${encodeURIComponent(business.b_nm || "")}`}
+                          prefetch={false}
+                          style={{
+                            padding: "7px 13px",
+                            borderRadius: "999px",
+                            border: "1px solid var(--color-border)",
+                            backgroundColor: "var(--bg-color-main)",
+                            color: "var(--color-text-sub)",
+                            fontSize: "0.82rem",
+                            fontWeight: 600,
+                            textDecoration: "none",
+                          }}
+                        >
+                          🛡️ 공식 기업 프로필 인증 신청
+                        </Link>
+                      </div>
+                    </section>
+                  );
+                })()}
 
                 {/* 연관 사업자 추천 */}
                 <div style={{ marginTop: "16px" }}>

@@ -66,6 +66,69 @@ export default async function MainPage() {
         {/* 토스 스타일 대형 스마트 검색창 */}
         <SearchForm />
 
+        {/* 실무자 · 취준생 킬러 도구 2종 바로가기 */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+            gap: "12px",
+            marginTop: "-20px",
+            marginBottom: "28px",
+          }}
+        >
+          <Link
+            href="/bulk-check"
+            prefetch={false}
+            className="card related-card"
+            style={{
+              padding: "16px 18px",
+              border: "1px solid var(--color-border)",
+              backgroundColor: "var(--bg-color-card)",
+              textDecoration: "none",
+              color: "inherit",
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+            }}
+          >
+            <span style={{ fontSize: "1.6rem", flexShrink: 0 }}>⚡</span>
+            <div>
+              <div style={{ fontSize: "0.94rem", fontWeight: 850, color: "var(--color-text-main)" }}>
+                사업자번호 100건 휴·폐업 일괄조회
+              </div>
+              <div style={{ fontSize: "0.77rem", color: "var(--color-text-desc)", marginTop: "2px" }}>
+                세금계산서 발행 전 계속·폐업·간이과세 1초 검증 &amp; 엑셀 저장
+              </div>
+            </div>
+          </Link>
+
+          <Link
+            href="/compare"
+            prefetch={false}
+            className="card related-card"
+            style={{
+              padding: "16px 18px",
+              border: "1px solid var(--color-border)",
+              backgroundColor: "var(--bg-color-card)",
+              textDecoration: "none",
+              color: "inherit",
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+            }}
+          >
+            <span style={{ fontSize: "1.6rem", flexShrink: 0 }}>⚖️</span>
+            <div>
+              <div style={{ fontSize: "0.94rem", fontWeight: 850, color: "var(--color-text-main)" }}>
+                A사 vs B사 기업 1:1 스펙 비교기
+              </div>
+              <div style={{ fontSize: "0.77rem", color: "var(--color-text-desc)", marginTop: "2px" }}>
+                두 기업의 추정 평균연봉 · 입퇴사율 · 3개년 매출 맞대결
+              </div>
+            </div>
+          </Link>
+        </div>
+
         {/* 1초 실데이터 미리보기 쇼케이스 */}
         <InteractiveDemoShowcase companies={stats.demoShowcaseCompanies} />
 
@@ -131,6 +194,82 @@ export default async function MainPage() {
           )}
           <AdBanner />
         </div>
+
+        {/* 알짜 기업 실데이터 랭킹 & 권역·산업 디렉토리 바로가기 */}
+        <section
+          aria-label="실데이터 기업 랭킹 및 업무지구 디렉토리"
+          className="card"
+          style={{
+            padding: "24px",
+            border: "1px solid var(--color-border)",
+            backgroundColor: "var(--bg-color-card)",
+            marginBottom: "32px",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "8px",
+              marginBottom: "14px",
+            }}
+          >
+            <div>
+              <h2 style={{ fontSize: "1.1rem", fontWeight: 850, color: "var(--color-text-main)", margin: "0 0 4px 0" }}>
+                🏆 알짜 기업 랭킹 &amp; 업무지구 디렉토리
+              </h2>
+              <p style={{ fontSize: "0.82rem", color: "var(--color-text-desc)", margin: 0 }}>
+                국민연금 추정 평균연봉·신규채용 상위 기업과 강남·판교·여의도 등 핵심 권역별 기업을 바로 탐색하세요.
+              </p>
+            </div>
+            <Link
+              href="/directory"
+              prefetch={false}
+              style={{
+                fontSize: "0.84rem",
+                fontWeight: 800,
+                color: "var(--color-primary)",
+                textDecoration: "none",
+              }}
+            >
+              전체 37개 디렉토리 보기 ➔
+            </Link>
+          </div>
+
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+            {[
+              { href: "/directory/ranking/top-salary", label: "💰 평균연봉 상위 기업" },
+              { href: "/directory/ranking/hiring-surge", label: "🚀 신규채용 급증 기업" },
+              { href: "/directory/ranking/top-revenue", label: "📈 결산매출 상위 기업" },
+              { href: "/directory/ranking/kosdaq-leaders", label: "⚡ 코스닥 상장 리더보드" },
+              { href: "/directory/region/seoul-gangnam", label: "🏙️ 서울 강남·테헤란로" },
+              { href: "/directory/region/gyeonggi-pangyo", label: "💻 판교 테크노밸리" },
+              { href: "/directory/region/seoul-gasan-guro", label: "🖥️ 가산·구로 G밸리" },
+              { href: "/directory/industry/software-it", label: "💻 소프트웨어·IT" },
+              { href: "/directory/industry/semiconductor-electronics", label: "🔬 반도체·전자부품" },
+            ].map((chip) => (
+              <Link
+                key={chip.href}
+                href={chip.href}
+                prefetch={false}
+                style={{
+                  padding: "7px 13px",
+                  borderRadius: "999px",
+                  border: "1px solid var(--color-border)",
+                  backgroundColor: "var(--bg-color-main)",
+                  color: "var(--color-text-main)",
+                  fontSize: "0.81rem",
+                  fontWeight: 700,
+                  textDecoration: "none",
+                }}
+              >
+                {chip.label}
+              </Link>
+            ))}
+          </div>
+        </section>
 
         {/* 포털 요약 지표 카드 & 실시간 상세 대시보드 */}
         <StatsDashboard stats={stats} />

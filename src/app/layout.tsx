@@ -124,6 +124,9 @@ export default function RootLayout({
                     <div style={{ fontWeight: 600, color: "var(--color-text-sub)", marginBottom: "8px" }}>서비스</div>
                     <ul style={{ listStyle: "none", display: "flex", flexDirection: "column", gap: "6px" }}>
                       <li><Link href="/" prefetch={false} className="footer-link">사업자 조회</Link></li>
+                      <li><Link href="/bulk-check" prefetch={false} className="footer-link">거래처 휴·폐업 일괄조회</Link></li>
+                      <li><Link href="/compare" prefetch={false} className="footer-link">기업 1:1 스펙 비교</Link></li>
+                      <li><Link href="/directory" prefetch={false} className="footer-link">기업 랭킹 · 디렉토리</Link></li>
                       <li><Link href="/insights" prefetch={false} className="footer-link">데이터 인사이트</Link></li>
                       <li><Link href="/stats/market-area" prefetch={false} className="footer-link">국가 통계 및 상권 분석</Link></li>
                       <li><Link href="/form" prefetch={false} className="footer-link">무료 서식 센터</Link></li>
@@ -139,6 +142,7 @@ export default function RootLayout({
                   <div>
                     <div style={{ fontWeight: 600, color: "var(--color-text-sub)", marginBottom: "8px" }}>고객 지원</div>
                     <ul style={{ listStyle: "none", display: "flex", flexDirection: "column", gap: "6px" }}>
+                      <li><Link href="/partners" prefetch={false} className="footer-link">기업 공식 인증 · B2B 제휴</Link></li>
                       <li><FooterFeedbackButton /></li>
                       <li>
                         <a href="mailto:contact@maumdata.com" className="footer-link">

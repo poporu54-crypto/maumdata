@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/enrich-tier1?limit=8",
+      "schedule": "0 18 * * *"
+    }
+  ]
+}
