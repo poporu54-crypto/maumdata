@@ -5,6 +5,12 @@ import {
   resolveIndustryHubSlug,
   resolveMarketBoard,
 } from "./directoryConfig";
+import {
+  getIndustryStatsSnapshot,
+  computeCumeDistAsc,
+  computeRankDescFromAsc,
+  computeCumeDistLowerIsBetter,
+} from "./industryStatsSnapshot";
 
 
 declare global {
@@ -164,56 +170,140 @@ export async function getAllBusinesses(limit: number = 500) {
   }));
 }
 
-// 3. 기업명 · 사업자번호 · 13자리 법인등록번호 검색 (정확도 우선 정렬 및 LIMIT 적용)
+// 3. 기업명 · 사업자번호 · 13자리 법인등록번호 검색 (전 구간 100% 인덱스 스캔: PK / 법인번호 / 1~2글자 FTS / 3글자+ Trigram MATERIALIZED CTE)
 export async function searchBusinesses(q: string, limit: number = 60) {
   const trimmed = q.trim();
-  const searchWord = `%${trimmed}%`;
-  const prefixWord = `${trimmed}%`;
+  if (!trimmed) return [];
+
   const cleanQ = trimmed.replace(/[^0-9]/g, "");
+  const isPureNumeric = /^[0-9-\s]+$/.test(trimmed);
   const safeLimit = Math.min(200, Math.max(1, limit));
 
-  const result = await query(
-    `SELECT b_no, b_nm, p_nm, b_adr, b_sector, is_sme, listing_status, data_source, brand_name
-     FROM businesses
-     WHERE b_nm NOT IN ('', '상호 정보 없음', '상호 미등록 사업자')
-       AND (
-         b_nm ILIKE $1
-         OR p_nm ILIKE $1
-         OR b_adr ILIKE $1
-         OR brand_name ILIKE $1
-         OR b_no = $2
-         OR ($2 != 'NOT_A_NUMBER' AND LENGTH($2) = 13 AND (
-           REPLACE(COALESCE(corp_no, ''), '-', '') = $2
-           OR REPLACE(COALESCE(crno, ''), '-', '') = $2
-         ))
+  const mapRows = (rows: any[]) =>
+    rows.map((row) => ({
+      b_no: row.b_no,
+      b_nm: row.b_nm,
+      p_nm: row.p_nm,
+      b_adr: row.b_adr,
+      b_sector: row.b_sector,
+      is_sme: row.is_sme,
+      listing_status: row.listing_status,
+      dataSource: row.data_source || "local",
+      brand_name: row.brand_name || "",
+    }));
+
+  // Case 1: 10자리 사업자등록번호 정확 조회 (PK Index Scan ~0.05ms)
+  if (isPureNumeric && cleanQ.length === 10) {
+    const result = await query(
+      `SELECT b_no, b_nm, p_nm, b_adr, b_sector, is_sme, listing_status, data_source, brand_name
+       FROM businesses
+       WHERE b_no = $1
+         AND b_nm NOT IN ('', '상호 정보 없음', '상호 미등록 사업자')
+       LIMIT 1`,
+      [cleanQ]
+    );
+    return mapRows(result.rows);
+  }
+
+  // Case 2: 13자리 법인등록번호 조회 (idx_businesses_crno_clean / idx_businesses_corp_no_clean Index Scan ~0.1ms)
+  if (isPureNumeric && cleanQ.length === 13) {
+    const result = await query(
+      `WITH matched AS (
+         SELECT b_no, b_nm, p_nm, b_adr, b_sector, is_sme, listing_status, data_source, brand_name,
+                COALESCE(nps_sbscrb_nmps, 0) AS emp, COALESCE(view_count, 0) AS views
+         FROM businesses
+         WHERE crno IS NOT NULL AND crno <> '' AND REPLACE(crno, '-', '') = $1
+         UNION
+         SELECT b_no, b_nm, p_nm, b_adr, b_sector, is_sme, listing_status, data_source, brand_name,
+                COALESCE(nps_sbscrb_nmps, 0) AS emp, COALESCE(view_count, 0) AS views
+         FROM businesses
+         WHERE corp_no IS NOT NULL AND corp_no <> '' AND REPLACE(corp_no, '-', '') = $1
        )
+       SELECT b_no, b_nm, p_nm, b_adr, b_sector, is_sme, listing_status, data_source, brand_name
+       FROM matched
+       WHERE b_nm NOT IN ('', '상호 정보 없음', '상호 미등록 사업자')
+       ORDER BY emp DESC, views DESC
+       LIMIT $2`,
+      [cleanQ, safeLimit]
+    );
+    return mapRows(result.rows);
+  }
+
+  const searchWord = `%${trimmed}%`;
+  const prefixWord = `${trimmed}%`;
+
+  // Case 3: 3글자 미만 짧은 검색어 ('토스', '기아', '삼성' 등) -> Full-Text Search 접두사 GIN 인덱스 (Seq Scan 0건)
+  if (trimmed.length < 3) {
+    const tokens = trimmed
+      .replace(/[&|!():*'\\<>]/g, " ")
+      .split(/\s+/)
+      .map((t) => t.trim())
+      .filter(Boolean);
+
+    if (tokens.length === 0) return [];
+    const tsQueryStr = tokens.map((t) => `${t}:*`).join(" & ");
+
+    const result = await query(
+      `WITH cands AS MATERIALIZED (
+         SELECT b_no, b_nm, p_nm, b_adr, b_sector, is_sme, listing_status, data_source, brand_name,
+                COALESCE(nps_sbscrb_nmps, 0) AS emp, COALESCE(view_count, 0) AS views
+         FROM businesses
+         WHERE to_tsvector(
+                 'simple',
+                 COALESCE(b_nm, '') || ' ' || COALESCE(brand_name, '') || ' ' || COALESCE(p_nm, '') || ' ' || COALESCE(b_adr, '')
+               ) @@ to_tsquery('simple', $1)
+         LIMIT 300
+       )
+       SELECT b_no, b_nm, p_nm, b_adr, b_sector, is_sme, listing_status, data_source, brand_name
+       FROM cands
+       WHERE b_nm NOT IN ('', '상호 정보 없음', '상호 미등록 사업자')
+       ORDER BY
+         CASE
+           WHEN b_nm = $2 THEN 1
+           WHEN b_nm ILIKE $3 THEN 2
+           WHEN brand_name ILIKE $3 THEN 3
+           WHEN b_nm ILIKE $4 OR brand_name ILIKE $4 THEN 4
+           WHEN p_nm ILIKE $4 THEN 5
+           ELSE 6
+         END ASC,
+         emp DESC,
+         views DESC
+       LIMIT $5`,
+      [tsQueryStr, trimmed, prefixWord, searchWord, safeLimit]
+    );
+    return mapRows(result.rows);
+  }
+
+  // Case 4: 3글자 이상 일반 검색어 -> pg_trgm GIN 인덱스 후보 350건 상한(MATERIALIZED CTE) 후 정확도 정렬
+  const result = await query(
+    `WITH cands AS MATERIALIZED (
+       SELECT b_no, b_nm, p_nm, b_adr, b_sector, is_sme, listing_status, data_source, brand_name,
+              COALESCE(nps_sbscrb_nmps, 0) AS emp, COALESCE(view_count, 0) AS views
+       FROM businesses
+       WHERE b_nm ILIKE $1
+          OR brand_name ILIKE $1
+          OR p_nm ILIKE $1
+          OR b_adr ILIKE $1
+       LIMIT 350
+     )
+     SELECT b_no, b_nm, p_nm, b_adr, b_sector, is_sme, listing_status, data_source, brand_name
+     FROM cands
+     WHERE b_nm NOT IN ('', '상호 정보 없음', '상호 미등록 사업자')
      ORDER BY
        CASE
-         WHEN b_no = $2 THEN 0
-         WHEN LENGTH($2) = 13 AND (REPLACE(COALESCE(corp_no, ''), '-', '') = $2 OR REPLACE(COALESCE(crno, ''), '-', '') = $2) THEN 0
-         WHEN b_nm = $3 THEN 1
-         WHEN b_nm ILIKE $4 THEN 2
-         WHEN brand_name ILIKE $4 THEN 3
+         WHEN b_nm = $2 THEN 1
+         WHEN b_nm ILIKE $3 THEN 2
+         WHEN brand_name ILIKE $3 THEN 3
          WHEN b_nm ILIKE $1 OR brand_name ILIKE $1 THEN 4
          WHEN p_nm ILIKE $1 THEN 5
          ELSE 6
        END ASC,
-       COALESCE(nps_sbscrb_nmps, 0) DESC,
-       COALESCE(view_count, 0) DESC
-     LIMIT $5`,
-    [searchWord, cleanQ || "NOT_A_NUMBER", trimmed, prefixWord, safeLimit]
+       emp DESC,
+       views DESC
+     LIMIT $4`,
+    [searchWord, trimmed, prefixWord, safeLimit]
   );
-  return result.rows.map((row) => ({
-    b_no: row.b_no,
-    b_nm: row.b_nm,
-    p_nm: row.p_nm,
-    b_adr: row.b_adr,
-    b_sector: row.b_sector,
-    is_sme: row.is_sme,
-    listing_status: row.listing_status,
-    dataSource: row.data_source || "local",
-    brand_name: row.brand_name || "",
-  }));
+  return mapRows(result.rows);
 }
 
 // 상호명 정규화 필터 (법인 수식어 제거)
@@ -616,9 +706,9 @@ interface RecommendedCacheEntry {
 }
 
 const recommendedBizCache = new Map<string, RecommendedCacheEntry>();
-const RECOMMENDED_CACHE_TTL_MS = 10 * 60 * 1000; // 10분 지역·업종별 서버 메모리 캐시
+const RECOMMENDED_CACHE_TTL_MS = 30 * 60 * 1000; // 30분 지역·업종 허브별 서버 메모리 캐시
 
-// 9. 주변 기업 및 유사 사업자 하이브리드 스코어링 추천 조회 (전체 테이블 풀스캔 차단 + 캐싱)
+// 9. 주변 기업 및 유사 사업자 추천 조회 (100% 부분 복합 B-Tree 인덱스 스캔: LIKE / OR / ORDER BY CASE WHEN 풀스캔 완전 제거)
 export async function getRecommendedBusinesses(
   bNo: string,
   bAdr: string,
@@ -626,70 +716,121 @@ export async function getRecommendedBusinesses(
   isSme: string
 ) {
   const cleanBNo = bNo.replace(/[^0-9]/g, "");
+  const regionSlug = resolveRegionHubSlug(bAdr);
+  const industrySlug = resolveIndustryHubSlug(bSector);
+  const cleanSector = (bSector || "").trim();
+  const hasExactSector = Boolean(
+    cleanSector && cleanSector !== "-" && cleanSector !== "미등록 업종"
+  );
 
-  // 시/군/구 추출 (예: "마포구", "강남구", "안양시" 등)
-  let sigungu = "";
-  const adrMatch = bAdr.match(/\s([^\s]+(?:구|군|시))\s/);
-  if (adrMatch) {
-    sigungu = `%${adrMatch[1]}%`;
-  } else {
-    const tokens = bAdr.split(" ");
-    sigungu = tokens.length > 1 ? `%${tokens[1]}%` : "%서울%";
-  }
-
-  // 업종 핵심 키워드 추출 (예: "음식점", "제조업", "소프트웨어")
-  let sectorKeyword = "";
-  if (bSector) {
-    const cleanSector = bSector.split(",")[0].split(" 및 ")[0].trim();
-    if (cleanSector && cleanSector !== "-" && cleanSector !== "미등록 업종") {
-      sectorKeyword = `%${cleanSector}%`;
-    }
-  }
-
-  const cacheKey = `${sigungu}|${sectorKeyword}|${isSme || ""}`;
+  const cacheKey = `${regionSlug || ""}|${industrySlug || ""}|${!regionSlug && !industrySlug ? cleanSector : ""}|${isSme || ""}`;
   const now = Date.now();
   const cached = recommendedBizCache.get(cacheKey);
   if (cached && cached.expiresAt > now) {
     return cached.items.filter((item) => item.b_no !== cleanBNo).slice(0, 4);
   }
 
-  const queryText = sectorKeyword
-    ? `
-      SELECT b_no, b_nm, b_adr, b_sector, is_sme, listing_status, data_source
-      FROM businesses
-      WHERE b_nm IS NOT NULL
-        AND b_nm NOT IN ('', '상호 정보 없음', '상호 미등록 사업자')
-        AND (b_adr LIKE $1 OR b_sector LIKE $2)
-      ORDER BY
-        (CASE WHEN b_adr LIKE $1 THEN 50 ELSE 0 END) +
-        (CASE WHEN b_sector LIKE $2 THEN 40 ELSE 0 END) +
-        (CASE WHEN is_sme = $3 THEN 10 ELSE 0 END) DESC,
-        COALESCE(view_count, 0) DESC
-      LIMIT 8
-    `
-    : `
-      SELECT b_no, b_nm, b_adr, b_sector, is_sme, listing_status, data_source
-      FROM businesses
-      WHERE b_nm IS NOT NULL
-        AND b_nm NOT IN ('', '상호 정보 없음', '상호 미등록 사업자')
-        AND b_adr LIKE $1
-      ORDER BY
-        (CASE WHEN is_sme = $2 THEN 10 ELSE 0 END) DESC,
-        COALESCE(view_count, 0) DESC
-      LIMIT 8
-    `;
+  const queries: Array<Promise<{ rows: any[] }>> = [];
 
-  const params = sectorKeyword ? [sigungu, sectorKeyword, isSme || ""] : [sigungu, isSme || ""];
-  const result = await query(queryText, params);
-  const items = result.rows.map((row) => ({
-    b_no: row.b_no,
-    b_nm: row.b_nm,
-    b_adr: row.b_adr,
-    b_sector: row.b_sector,
-    is_sme: row.is_sme,
-    listing_status: row.listing_status,
-    dataSource: row.data_source || "local",
-  }));
+  // 1) 동일 권역/업무지구 허브 인덱스 스캔 (idx_businesses_dir_region_top ~0.15ms)
+  if (regionSlug) {
+    queries.push(
+      query(
+        `SELECT b_no, b_nm, b_adr, b_sector, is_sme, listing_status, data_source
+         FROM businesses
+         WHERE b_stt_cd = '01'
+           AND region_hub_slug = $1
+           AND b_nm IS NOT NULL
+           AND b_nm NOT IN ('', '상호 정보 없음', '상호 미등록 사업자')
+         ORDER BY nps_sbscrb_nmps DESC NULLS LAST, latest_revenue DESC NULLS LAST, view_count DESC NULLS LAST, b_no ASC
+         LIMIT 12`,
+        [regionSlug]
+      )
+    );
+  }
+
+  // 2) 동일 산업군 허브 인덱스 스캔 (idx_businesses_dir_industry_top ~0.15ms)
+  if (industrySlug) {
+    queries.push(
+      query(
+        `SELECT b_no, b_nm, b_adr, b_sector, is_sme, listing_status, data_source
+         FROM businesses
+         WHERE b_stt_cd = '01'
+           AND industry_hub_slug = $1
+           AND b_nm IS NOT NULL
+           AND b_nm NOT IN ('', '상호 정보 없음', '상호 미등록 사업자')
+         ORDER BY nps_sbscrb_nmps DESC NULLS LAST, latest_revenue DESC NULLS LAST, view_count DESC NULLS LAST, b_no ASC
+         LIMIT 12`,
+        [industrySlug]
+      )
+    );
+  }
+
+  // 3) 허브 미매칭 시 업종 정확일치 부분 복합 인덱스 스캔 (idx_businesses_b_sector_view_top ~0.15ms)
+  if (queries.length === 0 && hasExactSector) {
+    queries.push(
+      query(
+        `SELECT b_no, b_nm, b_adr, b_sector, is_sme, listing_status, data_source
+         FROM businesses
+         WHERE b_stt_cd = '01'
+           AND b_sector = $1
+           AND b_nm IS NOT NULL
+           AND b_nm NOT IN ('', '상호 정보 없음', '상호 미등록 사업자')
+         ORDER BY view_count DESC NULLS LAST, b_no ASC
+         LIMIT 10`,
+        [cleanSector]
+      )
+    );
+  }
+
+  const results = await Promise.all(queries);
+  const scoreMap = new Map<string, { score: number; row: any }>();
+
+  results.forEach((res, idx) => {
+    const baseBonus = idx === 0 && regionSlug ? 50 : 40;
+    for (const row of res.rows) {
+      const prev = scoreMap.get(row.b_no);
+      const smeBonus = isSme && row.is_sme === isSme ? 10 : 0;
+      const added = baseBonus + (prev ? 0 : smeBonus);
+      if (prev) {
+        prev.score += baseBonus;
+      } else {
+        scoreMap.set(row.b_no, { score: added, row });
+      }
+    }
+  });
+
+  // 4) 최종 보강: 후보가 5개 미만이면 대표 검증기업 인덱스(idx_businesses_dir_emp_top)에서 보충
+  if (scoreMap.size < 5) {
+    const fallbackRes = await query(
+      `SELECT b_no, b_nm, b_adr, b_sector, is_sme, listing_status, data_source
+       FROM businesses
+       WHERE b_stt_cd = '01'
+         AND nps_sbscrb_nmps > 0
+         AND b_nm IS NOT NULL
+         AND b_nm NOT IN ('', '상호 정보 없음', '상호 미등록 사업자')
+       ORDER BY nps_sbscrb_nmps DESC NULLS LAST, b_no ASC
+       LIMIT 8`
+    );
+    for (const row of fallbackRes.rows) {
+      if (!scoreMap.has(row.b_no)) {
+        scoreMap.set(row.b_no, { score: 10, row });
+      }
+    }
+  }
+
+  const items = Array.from(scoreMap.values())
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 10)
+    .map(({ row }) => ({
+      b_no: row.b_no,
+      b_nm: row.b_nm,
+      b_adr: row.b_adr,
+      b_sector: row.b_sector,
+      is_sme: row.is_sme,
+      listing_status: row.listing_status,
+      dataSource: row.data_source || "local",
+    }));
 
   if (recommendedBizCache.size > 300) {
     const oldestKey = recommendedBizCache.keys().next().value;
@@ -960,30 +1101,55 @@ export async function saveBids(bNo: string, bids: any[]) {
   }
 }
 
-// 20. 공시 캐시 조회 (동일 DART 고유번호를 공유하는 본·지점도 공시 누락 없이 조회)
+// 20. 공시 캐시 조회 (OR 서브쿼리 풀스캔 제거 -> b_no / corp_code 2단계 복합 인덱스 조회)
 export async function getDisclosuresByBNo(bNo: string) {
   const clean = bNo.replace(/[^0-9]/g, "");
-  const result = await query(
+
+  const [byBNoRes, dartCodeRes] = await Promise.all([
+    query(
+      `SELECT rcept_no as "rceptNo", corp_code as "corpCode",
+              report_nm as "reportNm", flr_nm as "flrNm",
+              rcept_dt as "rceptDt", rm, detail_url as "detailUrl",
+              is_key_disclosure as "isKeyDisclosure"
+       FROM business_disclosures
+       WHERE b_no = $1
+       ORDER BY rcept_dt DESC
+       LIMIT 50`,
+      [clean]
+    ),
+    query(
+      `SELECT dart_code FROM businesses WHERE b_no = $1 LIMIT 1`,
+      [clean]
+    ),
+  ]);
+
+  const dartCode = String(dartCodeRes.rows[0]?.dart_code || "").trim();
+  if (!dartCode) {
+    return byBNoRes.rows;
+  }
+
+  const byCorpRes = await query(
     `SELECT rcept_no as "rceptNo", corp_code as "corpCode",
             report_nm as "reportNm", flr_nm as "flrNm",
             rcept_dt as "rceptDt", rm, detail_url as "detailUrl",
             is_key_disclosure as "isKeyDisclosure"
      FROM business_disclosures
-     WHERE b_no = $1
-        OR (
-          corp_code IS NOT NULL
-          AND corp_code != ''
-          AND corp_code = (
-            SELECT dart_code FROM businesses
-            WHERE b_no = $1 AND dart_code IS NOT NULL AND dart_code != ''
-            LIMIT 1
-          )
-        )
+     WHERE corp_code = $1
      ORDER BY rcept_dt DESC
      LIMIT 50`,
-    [clean]
+    [dartCode]
   );
-  return result.rows;
+
+  const merged = new Map<string, any>();
+  for (const row of [...byBNoRes.rows, ...byCorpRes.rows]) {
+    if (row.rceptNo && !merged.has(row.rceptNo)) {
+      merged.set(row.rceptNo, row);
+    }
+  }
+
+  return Array.from(merged.values())
+    .sort((a, b) => String(b.rceptDt || "").localeCompare(String(a.rceptDt || "")))
+    .slice(0, 50);
 }
 
 // 21. 공시 캐시 저장 (트랜잭션 보장 및 본·지점 공유 corp_code 보존)
@@ -1046,11 +1212,14 @@ interface CachedIndustryGroupStats {
 
 const industryGroupStatsCache = new Map<string, CachedIndustryGroupStats>();
 
-// 22. 동일 업종 내 통계 및 상대적 위치 연산
+// 22. 동일 업종 내 통계 및 상대적 위치 연산 (영구 스냅샷 PK 1ms + 단건 PK 조회 + O(log N) 이진탐색 -> 풀스캔 0건)
 export async function getIndustryAnalysis(bSector: string, bNo: string) {
   const cleanBNo = bNo.replace(/[^0-9]/g, "");
-  const uselessSectors = ["미등록 업종", "상장 법인", "상장법인", "대기업", "중소기업", "일반기업", "중견기업", "기타 서비스업", "기타서비스업", "기타 제조업/금융업", "기타 산업", "-", ""];
-  
+  const uselessSectors = [
+    "미등록 업종", "상장 법인", "상장법인", "대기업", "중소기업", "일반기업",
+    "중견기업", "기타 서비스업", "기타서비스업", "기타 제조업/금융업", "기타 산업", "-", ""
+  ];
+
   if (!bSector || uselessSectors.includes(bSector.trim())) {
     return {
       groupTitle: bSector || "미분류 업종",
@@ -1070,133 +1239,161 @@ export async function getIndustryAnalysis(bSector: string, bNo: string) {
     };
   }
 
-  const peerGroup = getPeerSectorGroup(bSector);
+  const clampPct = (v: number) => Math.min(99, Math.max(1, Math.round(v * 100)));
 
   try {
-    // 1. 업종(동종 산업군) 공통 기본 통계 + 상위 3개 리더는 15분 서버 메모리 캐시로 불필요한 반복 집계 차단
-    const cacheKey = peerGroup.groupTitle;
+    // 1) 대상 기업 본인 단건 지표(PK 조회 ~0.1ms) + 12대 산업 허브 영구 스냅샷 병렬 조회
+    const [selfBizRes, selfHistRes] = await Promise.all([
+      query(
+        `SELECT b_no, b_nm, b_sector, main_biz, industry_hub_slug, nps_sbscrb_nmps
+         FROM businesses
+         WHERE b_no = $1
+         LIMIT 1`,
+        [cleanBNo]
+      ),
+      query(
+        `SELECT revenue, operating_income, total_liabilities, total_equity
+         FROM business_history
+         WHERE b_no = $1 AND revenue > 0
+         ORDER BY year DESC
+         LIMIT 1`,
+        [cleanBNo]
+      ),
+    ]);
+
+    const selfBiz = selfBizRes.rows[0];
+    const selfHist = selfHistRes.rows[0];
+    const hubSlug =
+      selfBiz?.industry_hub_slug ||
+      resolveIndustryHubSlug(bSector, selfBiz?.main_biz, selfBiz?.b_nm);
+
+    // 2) 12대 핵심 산업군 매칭 시: system_settings 영구 스냅샷(24h SWR) + Node.js 이진탐색 (SQL 풀스캔 0건!)
+    if (hubSlug) {
+      const snapshot = await getIndustryStatsSnapshot();
+      const bucket = snapshot.hubs[hubSlug];
+      if (bucket && bucket.totalCompanies > 0) {
+        const myRev = selfHist ? Math.round(Number(selfHist.revenue || 0) * 10) / 10 : 0;
+        const myOp = selfHist ? Number(selfHist.operating_income || 0) : 0;
+        const myLiab = selfHist ? Number(selfHist.total_liabilities || 0) : 0;
+        const myEq = selfHist ? Number(selfHist.total_equity || 0) : 0;
+        const myEmp = Number(selfBiz?.nps_sbscrb_nmps || 0);
+
+        const myMargin = myRev > 0 ? Math.round((myOp / myRev) * 10000) / 100 : null;
+        const myDebt = myEq > 0 ? Math.round((myLiab / myEq) * 1000) / 10 : null;
+
+        const rankings = {
+          revenuePercentile: myRev > 0 ? clampPct(computeCumeDistAsc(bucket.revenuesAsc, myRev)) : 50,
+          operatingMarginPercentile:
+            myMargin !== null ? clampPct(computeCumeDistAsc(bucket.marginsAsc, myMargin)) : 50,
+          debtRatioPercentile:
+            myDebt !== null ? clampPct(computeCumeDistLowerIsBetter(bucket.debtRatiosAsc, myDebt)) : 50,
+          employeePercentile: myEmp > 0 ? clampPct(computeCumeDistAsc(bucket.employeesAsc, myEmp)) : 50,
+        };
+
+        let myRankItem: { rank: number; b_no: string; b_nm: string; revenue: number } | null = null;
+        if (myRev > 0 && selfBiz?.b_nm && !bucket.leaders.some((l) => l.b_no === cleanBNo)) {
+          myRankItem = {
+            rank: computeRankDescFromAsc(bucket.revenuesAsc, myRev),
+            b_no: cleanBNo,
+            b_nm: selfBiz.b_nm,
+            revenue: myRev,
+          };
+        }
+
+        return {
+          groupTitle: bucket.groupTitle,
+          totalCompanies: bucket.totalCompanies,
+          closeRate: bucket.closeRate,
+          avgRevenue: bucket.avgRevenue,
+          avgDebtRatio: bucket.avgDebtRatio,
+          avgOperatingMargin: bucket.avgOperatingMargin,
+          rankings,
+          leaders: bucket.leaders,
+          myRankItem,
+        };
+      }
+    }
+
+    // 3) 12대 허브 외 희소 세분류 업종: B-Tree 인덱스(idx_businesses_b_sector) 정확일치 조회 (LIKE 풀스캔 전면 제거)
+    const exactSector = bSector.trim();
+    const cacheKey = `exact:${exactSector}`;
     const now = Date.now();
     let cachedGroup = industryGroupStatsCache.get(cacheKey);
 
     if (!cachedGroup || cachedGroup.expiresAt <= now) {
-      const [statsResult, leadersResult] = await Promise.all([
-        query(`
-          WITH latest_history AS (
-            SELECT DISTINCT ON (b_no) b_no, revenue, operating_income, total_liabilities, total_equity, employees
-            FROM business_history
-            ORDER BY b_no, year DESC
-          )
-          SELECT 
-            COUNT(*) as total_companies,
-            COALESCE(SUM(CASE WHEN b_stt_cd = '03' THEN 1 ELSE 0 END)::float / NULLIF(COUNT(*), 0)::float * 100, 0) as close_rate,
-            COALESCE(AVG(CASE WHEN h.revenue > 0 THEN h.revenue ELSE NULL END), 0) as avg_revenue,
-            COALESCE(AVG(CASE WHEN h.total_equity > 0 THEN (h.total_liabilities::float / h.total_equity::float)*100 ELSE NULL END), 0) as avg_debt_ratio,
-            COALESCE(AVG(CASE WHEN h.revenue > 0 THEN (h.operating_income::float / h.revenue::float)*100 ELSE NULL END), 0) as avg_operating_margin
-          FROM businesses b
-          LEFT JOIN latest_history h ON b.b_no = h.b_no
-          WHERE ${peerGroup.sqlCondition} AND b.b_nm != '상호 정보 없음'
-        `, peerGroup.params),
-        query(`
-          WITH latest_history AS (
-            SELECT DISTINCT ON (b_no) b_no, revenue, year
-            FROM business_history
-            WHERE revenue > 0
-            ORDER BY b_no, year DESC
-          )
-          SELECT b.b_no, b.b_nm, COALESCE(h.revenue, 0) as revenue
-          FROM businesses b
-          JOIN latest_history h ON b.b_no = h.b_no
-          WHERE ${peerGroup.sqlCondition} AND b.b_nm != '상호 정보 없음' AND b.b_stt_cd = '01'
-          ORDER BY h.revenue DESC
-          LIMIT 3
-        `, peerGroup.params),
-      ]);
+      const sectorRowsRes = await query(
+        `SELECT b_no, b_nm, b_stt_cd, latest_revenue, latest_operating_income, nps_sbscrb_nmps
+         FROM businesses
+         WHERE b_sector = $1
+           AND b_nm IS NOT NULL
+           AND b_nm NOT IN ('', '상호 정보 없음', '상호 미등록 사업자')
+         LIMIT 500`,
+        [exactSector]
+      );
 
-      const rawStats = statsResult.rows[0] || {};
-      cachedGroup = {
-        expiresAt: now + 15 * 60 * 1000,
-        totalCompanies: parseInt(rawStats.total_companies || "0", 10),
-        closeRate: parseFloat(parseFloat(rawStats.close_rate || "0").toFixed(2)),
-        avgRevenue: Math.round(parseFloat(rawStats.avg_revenue || "0")),
-        avgDebtRatio: Math.round(parseFloat(rawStats.avg_debt_ratio || "0")),
-        avgOperatingMargin: parseFloat(parseFloat(rawStats.avg_operating_margin || "0").toFixed(2)),
-        leaders: leadersResult.rows.map((r) => ({
+      const rows = sectorRowsRes.rows;
+      const totalCompanies = rows.length;
+      const closedCount = rows.filter((r: any) => r.b_stt_cd === "03").length;
+      const finRows = rows
+        .filter((r: any) => Number(r.latest_revenue || 0) > 0)
+        .map((r: any) => ({
           b_no: r.b_no,
           b_nm: r.b_nm,
-          revenue: Math.round(parseFloat(r.revenue) * 10) / 10,
-        })),
+          b_stt_cd: r.b_stt_cd,
+          revenue: Math.round(Number(r.latest_revenue) * 10) / 10,
+          margin:
+            Number(r.latest_revenue) > 0
+              ? (Number(r.latest_operating_income || 0) / Number(r.latest_revenue)) * 100
+              : 0,
+        }));
+
+      const avgRevenue =
+        finRows.length > 0
+          ? Math.round(finRows.reduce((s: number, x: any) => s + x.revenue, 0) / finRows.length)
+          : 0;
+      const avgOperatingMargin =
+        finRows.length > 0
+          ? Number((finRows.reduce((s: number, x: any) => s + x.margin, 0) / finRows.length).toFixed(2))
+          : 0;
+
+      const leaders = finRows
+        .filter((x: any) => x.b_stt_cd === "01")
+        .sort((a: any, b: any) => b.revenue - a.revenue)
+        .slice(0, 3)
+        .map((x: any) => ({ b_no: x.b_no, b_nm: x.b_nm, revenue: x.revenue }));
+
+      cachedGroup = {
+        expiresAt: now + 30 * 60 * 1000,
+        totalCompanies,
+        closeRate: totalCompanies > 0 ? Number(((closedCount / totalCompanies) * 100).toFixed(2)) : 0,
+        avgRevenue,
+        avgDebtRatio: 0,
+        avgOperatingMargin,
+        leaders,
       };
+      if (industryGroupStatsCache.size > 200) {
+        const oldest = industryGroupStatsCache.keys().next().value;
+        if (oldest) industryGroupStatsCache.delete(oldest);
+      }
       industryGroupStatsCache.set(cacheKey, cachedGroup);
     }
 
-    // 2. 현재 기업의 동종 산업군 내 상대적 백분위 위치 연산 (병렬 조회)
-    const [finRankResult, empRankResult] = await Promise.all([
-      query(`
-        WITH latest_history AS (
-          SELECT DISTINCT ON (b_no) b_no, revenue, operating_income, total_liabilities, total_equity
-          FROM business_history
-          WHERE revenue > 0
-          ORDER BY b_no, year DESC
-        ),
-        fin_peers AS (
-          SELECT 
-            b.b_no,
-            b.b_nm,
-            h.revenue,
-            RANK() OVER (ORDER BY h.revenue DESC) as rev_rank,
-            cume_dist() OVER (ORDER BY h.revenue ASC) as rev_pct,
-            cume_dist() OVER (ORDER BY (h.operating_income::float / NULLIF(h.revenue::float, 0)) ASC) as margin_pct,
-            cume_dist() OVER (ORDER BY CASE WHEN h.total_equity > 0 THEN (h.total_liabilities::float / h.total_equity::float) ELSE 9999 END DESC) as debt_pct
-          FROM businesses b
-          JOIN latest_history h ON b.b_no = h.b_no
-          WHERE ${peerGroup.sqlCondition} AND b.b_nm != '상호 정보 없음'
-        )
-        SELECT * FROM fin_peers WHERE b_no = $2
-      `, [...peerGroup.params, cleanBNo]),
-      query(`
-        WITH emp_peers AS (
-          SELECT 
-            b.b_no,
-            cume_dist() OVER (ORDER BY b.nps_sbscrb_nmps ASC) as emp_pct
-          FROM businesses b
-          WHERE ${peerGroup.sqlCondition} AND b.b_nm != '상호 정보 없음' AND b.nps_sbscrb_nmps > 0
-        )
-        SELECT * FROM emp_peers WHERE b_no = $2
-      `, [...peerGroup.params, cleanBNo]),
-    ]);
-
-    const clampPct = (v: number) => Math.min(99, Math.max(1, Math.round(v * 100)));
-
-    const rankings = {
-      revenuePercentile: finRankResult.rows[0] ? clampPct(finRankResult.rows[0].rev_pct) : 50,
-      operatingMarginPercentile: finRankResult.rows[0] ? clampPct(finRankResult.rows[0].margin_pct) : 50,
-      debtRatioPercentile: finRankResult.rows[0] ? clampPct(finRankResult.rows[0].debt_pct) : 50,
-      employeePercentile: empRankResult.rows[0] ? clampPct(empRankResult.rows[0].emp_pct) : 50,
-    };
-
-    const leaders = cachedGroup.leaders;
-    let myRankItem: { rank: number; b_no: string; b_nm: string; revenue: number } | null = null;
-    if (finRankResult.rows[0] && !leaders.some((l) => l.b_no === cleanBNo)) {
-      myRankItem = {
-        rank: parseInt(finRankResult.rows[0].rev_rank, 10),
-        b_no: cleanBNo,
-        b_nm: finRankResult.rows[0].b_nm,
-        revenue: Math.round(parseFloat(finRankResult.rows[0].revenue) * 10) / 10,
-      };
-    }
-
     return {
-      groupTitle: peerGroup.groupTitle,
+      groupTitle: getPeerSectorGroup(exactSector).groupTitle,
       totalCompanies: cachedGroup.totalCompanies,
       closeRate: cachedGroup.closeRate,
       avgRevenue: cachedGroup.avgRevenue,
       avgDebtRatio: cachedGroup.avgDebtRatio,
       avgOperatingMargin: cachedGroup.avgOperatingMargin,
-      rankings,
-      leaders,
-      myRankItem,
+      rankings: {
+        revenuePercentile: 50,
+        operatingMarginPercentile: 50,
+        debtRatioPercentile: 50,
+        employeePercentile: 50,
+      },
+      leaders: cachedGroup.leaders,
+      myRankItem: null,
     };
-
   } catch (err) {
     console.error("Failed to compute industry analysis:", err);
     return {

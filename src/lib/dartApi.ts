@@ -28,8 +28,14 @@ export async function getRecentDisclosures(corpCode: string, limit = 8): Promise
               d.detail_url as "detailUrl",
               b.dart_code as "corpCode",
               b.b_nm as "corpName"
-       FROM business_disclosures d
-       JOIN businesses b ON d.b_no = b.b_no
+       FROM businesses b
+       CROSS JOIN LATERAL (
+         SELECT rcept_no, report_nm, flr_nm, rcept_dt, rm, detail_url
+         FROM business_disclosures
+         WHERE b_no = b.b_no
+         ORDER BY rcept_dt DESC
+         LIMIT $2
+       ) d
        WHERE b.dart_code = $1
        ORDER BY d.rcept_dt DESC
        LIMIT $2`,
@@ -67,9 +73,15 @@ export async function getRecentKeyDisclosures(corpCode: string, limit = 8): Prom
               d.detail_url as "detailUrl",
               b.dart_code as "corpCode",
               b.b_nm as "corpName"
-       FROM business_disclosures d
-       JOIN businesses b ON d.b_no = b.b_no
-       WHERE b.dart_code = $1 AND d.is_key_disclosure = true
+       FROM businesses b
+       CROSS JOIN LATERAL (
+         SELECT rcept_no, report_nm, flr_nm, rcept_dt, rm, detail_url
+         FROM business_disclosures
+         WHERE b_no = b.b_no AND is_key_disclosure = true
+         ORDER BY rcept_dt DESC
+         LIMIT $2
+       ) d
+       WHERE b.dart_code = $1
        ORDER BY d.rcept_dt DESC
        LIMIT $2`,
       [corpCode, limit]
