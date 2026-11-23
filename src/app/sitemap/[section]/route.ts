@@ -7,7 +7,17 @@ import {
   getTier1CompanySitemapEntries,
 } from "@/lib/seoFeeds";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 86400;
+export const dynamicParams = false;
+
+export function generateStaticParams() {
+  return [
+    { section: "core.xml" },
+    { section: "directory.xml" },
+    { section: "forms.xml" },
+    { section: "companies.xml" },
+  ];
+}
 
 export async function GET(
   _request: Request,
@@ -34,7 +44,7 @@ export async function GET(
     status: 200,
     headers: {
       "Content-Type": "application/xml; charset=utf-8",
-      "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400",
+      "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=604800",
     },
   });
 }

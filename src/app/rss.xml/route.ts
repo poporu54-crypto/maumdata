@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { buildRssXml, getRssFeedItems } from "@/lib/seoFeeds";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 86400;
 
 export async function GET() {
   const items = await getRssFeedItems();
@@ -11,7 +11,7 @@ export async function GET() {
     status: 200,
     headers: {
       "Content-Type": "application/rss+xml; charset=utf-8",
-      "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400",
+      "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=604800",
     },
   });
 }

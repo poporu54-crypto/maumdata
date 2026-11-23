@@ -11,6 +11,86 @@ export const SITE_URL = "https://www.maumdata.com";
  */
 const MIN_VALID_TIMESTAMP_MS = Date.UTC(2020, 0, 1, 0, 0, 0);
 
+/**
+ * 사이트맵 · RSS 영구 스냅샷(`system_settings`) 24시간 SWR 설정
+ * - 온라인 봇 요청 시 PK 단건 조회(`~1ms`)로 즉시 응답하며, 24시간 경과 시에만 비블로킹 백그라운드 갱신 수행
+ */
+const SEO_SNAPSHOT_STALE_MS = 24 * 60 * 60 * 1000; // 24시간
+const SEO_MEMORY_TTL_MS = 60 * 60 * 1000; // 프로세스 메모리 1시간
+
+const SEO_SNAP_KEYS = {
+  sitemapIndex: "seo_feed_v1:sitemap_index",
+  sitemapCore: "seo_feed_v1:sitemap_core",
+  sitemapDirectory: "seo_feed_v1:sitemap_directory",
+  sitemapForms: "seo_feed_v1:sitemap_forms",
+  sitemapCompanies: "seo_feed_v1:sitemap_companies",
+  rss: "seo_feed_v1:rss",
+} as const;
+
+const memSeoCache = new Map<string, { data: unknown; expiresAt: number }>();
+const seoRefreshInFlight = new Set<string>();
+
+async function saveSeoSnapshot<T>(key: string, data: T): Promise<void> {
+  try {
+    await query(
+      `INSERT INTO public.system_settings (key, value, updated_at)
+       VALUES ($1, $2::jsonb, NOW())
+       ON CONFLICT (key) DO UPDATE SET
+         value = EXCLUDED.value,
+         updated_at = NOW()`,
+      [key, JSON.stringify(data)]
+    );
+  } catch (err) {
+    console.warn("[seoFeeds] Failed to save snapshot:", key, err);
+  }
+}
+
+async function getOrRefreshSeoSnapshot<T>(
+  key: string,
+  computeFn: () => Promise<T>,
+  hydrateFn?: (raw: unknown) => T
+): Promise<T> {
+  const now = Date.now();
+  const memHit = memSeoCache.get(key);
+  if (memHit && memHit.expiresAt > now) {
+    return memHit.data as T;
+  }
+
+  try {
+    const snapRes = await query(
+      `SELECT value, updated_at FROM public.system_settings WHERE key = $1 LIMIT 1`,
+      [key]
+    );
+    const row = snapRes.rows[0];
+    if (row && row.value !== undefined && row.value !== null) {
+      const hydrated = hydrateFn ? hydrateFn(row.value) : (row.value as T);
+      memSeoCache.set(key, { data: hydrated, expiresAt: now + SEO_MEMORY_TTL_MS });
+
+      const updatedMs = row.updated_at ? new Date(row.updated_at).getTime() : 0;
+      if (now - updatedMs > SEO_SNAPSHOT_STALE_MS && !seoRefreshInFlight.has(key)) {
+        seoRefreshInFlight.add(key);
+        void computeFn()
+          .then(async (fresh) => {
+            await saveSeoSnapshot(key, fresh);
+            memSeoCache.set(key, { data: fresh, expiresAt: Date.now() + SEO_MEMORY_TTL_MS });
+          })
+          .catch((e) => console.warn("[seoFeeds] SWR refresh failed:", key, e))
+          .finally(() => {
+            seoRefreshInFlight.delete(key);
+          });
+      }
+      return hydrated;
+    }
+  } catch (err) {
+    console.warn("[seoFeeds] Snapshot lookup fallback:", key, err);
+  }
+
+  const fresh = await computeFn();
+  await saveSeoSnapshot(key, fresh);
+  memSeoCache.set(key, { data: fresh, expiresAt: Date.now() + SEO_MEMORY_TTL_MS });
+  return fresh;
+}
+
 export interface SitemapEntry {
   loc: string;
   lastmod?: string;
@@ -164,19 +244,16 @@ const CANONICAL_FORM_TAGS = [
 ];
 
 /**
- * Sitemap Index(/sitemap.xml)용 하위 사이트맵 목록 및 각 섹션별 실제 최신 수정일 조회
+ * Sitemap Index(/sitemap.xml)용 하위 사이트맵 목록 및 각 섹션별 실제 최신 수정일 계산
  */
-export async function getSitemapIndexEntries(): Promise<SitemapEntry[]> {
+async function computeSitemapIndexEntries(): Promise<SitemapEntry[]> {
   let coreLastmod: string | undefined;
   let formsLastmod: string | undefined;
   let companiesLastmod: string | undefined;
 
   try {
     const res = await query(`
-      WITH fin AS (
-        SELECT DISTINCT b_no FROM business_history WHERE revenue > 0
-      ),
-      disc AS (
+      WITH disc AS (
         SELECT DISTINCT b_no FROM business_disclosures
       )
       SELECT
@@ -190,7 +267,6 @@ export async function getSitemapIndexEntries(): Promise<SitemapEntry[]> {
             )
           )
           FROM businesses b
-          LEFT JOIN fin ON b.b_no = fin.b_no
           LEFT JOIN disc ON b.b_no = disc.b_no
           WHERE b.b_stt_cd = '01'
             AND b.b_nm IS NOT NULL
@@ -199,7 +275,7 @@ export async function getSitemapIndexEntries(): Promise<SitemapEntry[]> {
               COALESCE(b.nps_sbscrb_nmps, 0) > 0
               OR b.market_board IN ('KOSPI', 'KOSDAQ')
               OR b.listing_status IN ('유가', '코스닥', '코넥스', '상장')
-              OR fin.b_no IS NOT NULL
+              OR COALESCE(b.latest_revenue, 0) > 0
               OR disc.b_no IS NOT NULL
             )
         ) AS max_biz_dt
@@ -223,10 +299,14 @@ export async function getSitemapIndexEntries(): Promise<SitemapEntry[]> {
   ];
 }
 
+export async function getSitemapIndexEntries(): Promise<SitemapEntry[]> {
+  return getOrRefreshSeoSnapshot(SEO_SNAP_KEYS.sitemapIndex, computeSitemapIndexEntries);
+}
+
 /**
  * 1-1) /sitemap/directory.xml: 실데이터 기업 랭킹 · 전국 업무지구 · 핵심 산업군 디렉토리 허브
  */
-export async function getDirectorySitemapEntries(): Promise<SitemapEntry[]> {
+async function computeDirectorySitemapEntries(): Promise<SitemapEntry[]> {
   let bizLastmod: string | undefined;
   try {
     const res = await query(`
@@ -266,10 +346,14 @@ export async function getDirectorySitemapEntries(): Promise<SitemapEntry[]> {
   return entries;
 }
 
+export async function getDirectorySitemapEntries(): Promise<SitemapEntry[]> {
+  return getOrRefreshSeoSnapshot(SEO_SNAP_KEYS.sitemapDirectory, computeDirectorySitemapEntries);
+}
+
 /**
  * 1) /sitemap/core.xml: 핵심 서비스 허브, 전자계약 보관함, 통계/인사이트, 전국 20대 상권 행정동 리포트
  */
-export async function getCoreSitemapEntries(): Promise<SitemapEntry[]> {
+async function computeCoreSitemapEntries(): Promise<SitemapEntry[]> {
   let statsLastmod: string | undefined;
   let formsLastmod: string | undefined;
 
@@ -323,10 +407,14 @@ export async function getCoreSitemapEntries(): Promise<SitemapEntry[]> {
   return entries;
 }
 
+export async function getCoreSitemapEntries(): Promise<SitemapEntry[]> {
+  return getOrRefreshSeoSnapshot(SEO_SNAP_KEYS.sitemapCore, computeCoreSitemapEntries);
+}
+
 /**
  * 2) /sitemap/forms.xml: 로컬+DB 고유 서식 전체(316종) + 실제 서식이 1건 이상 존재하는 정규화 태그 허브
  */
-export async function getFormsSitemapEntries(): Promise<SitemapEntry[]> {
+async function computeFormsSitemapEntries(): Promise<SitemapEntry[]> {
   interface MergedTpl {
     id: string;
     title: string;
@@ -408,17 +496,18 @@ export async function getFormsSitemapEntries(): Promise<SitemapEntry[]> {
   return entries;
 }
 
+export async function getFormsSitemapEntries(): Promise<SitemapEntry[]> {
+  return getOrRefreshSeoSnapshot(SEO_SNAP_KEYS.sitemapForms, computeFormsSitemapEntries);
+}
+
 /**
  * 3) /sitemap/companies.xml: 실데이터(국민연금 가입자 > 0, 매출 재무제표, DART 공시, 상장 여부)가
- * 검증된 계속사업자 Tier 1 알짜 기업(~4,909개)만 엄선하여 수록
+ * 검증된 계속사업자 Tier 1 알짜 기업만 엄선하여 수록
  */
-export async function getTier1CompanySitemapEntries(): Promise<SitemapEntry[]> {
+async function computeTier1CompanySitemapEntries(): Promise<SitemapEntry[]> {
   try {
     const res = await query(`
-      WITH fin AS (
-        SELECT DISTINCT b_no FROM business_history WHERE revenue > 0
-      ),
-      disc AS (
+      WITH disc AS (
         SELECT DISTINCT b_no FROM business_disclosures
       )
       SELECT
@@ -429,7 +518,6 @@ export async function getTier1CompanySitemapEntries(): Promise<SitemapEntry[]> {
           CASE WHEN b.dart_last_sync_at >= '2020-01-01'::timestamptz THEN b.dart_last_sync_at ELSE NULL END
         ) AS last_sync_at
       FROM businesses b
-      LEFT JOIN fin ON b.b_no = fin.b_no
       LEFT JOIN disc ON b.b_no = disc.b_no
       WHERE b.b_stt_cd = '01'
         AND b.b_nm IS NOT NULL
@@ -438,7 +526,7 @@ export async function getTier1CompanySitemapEntries(): Promise<SitemapEntry[]> {
           COALESCE(b.nps_sbscrb_nmps, 0) > 0
           OR b.market_board IN ('KOSPI', 'KOSDAQ')
           OR b.listing_status IN ('유가', '코스닥', '코넥스', '상장')
-          OR fin.b_no IS NOT NULL
+          OR COALESCE(b.latest_revenue, 0) > 0
           OR disc.b_no IS NOT NULL
         )
       ORDER BY b.nps_sbscrb_nmps DESC NULLS LAST, b.b_no ASC
@@ -461,10 +549,14 @@ export async function getTier1CompanySitemapEntries(): Promise<SitemapEntry[]> {
   }
 }
 
+export async function getTier1CompanySitemapEntries(): Promise<SitemapEntry[]> {
+  return getOrRefreshSeoSnapshot(SEO_SNAP_KEYS.sitemapCompanies, computeTier1CompanySitemapEntries);
+}
+
 /**
  * 4) /rss.xml: 신규 출시 기능(실제 Git 출시일 고정) + 최근 추가 DB 표준 서식 + 최근 실제 동기화된 알짜 기업 리포트
  */
-export async function getRssFeedItems(): Promise<RssFeedItem[]> {
+async function computeRssFeedItems(): Promise<RssFeedItem[]> {
   const items: RssFeedItem[] = [
     {
       title: "[신규출시] 마음데이타 비대면 전자계약 및 클라우드 영구 계약 보관함 오픈",
@@ -536,10 +628,7 @@ export async function getRssFeedItems(): Promise<RssFeedItem[]> {
   // 최근 실제 공공데이터 동기화가 수행된 Tier 1 알짜 기업 25건
   try {
     const bizRes = await query(`
-      WITH fin AS (
-        SELECT DISTINCT b_no FROM business_history WHERE revenue > 0
-      ),
-      disc AS (
+      WITH disc AS (
         SELECT DISTINCT b_no FROM business_disclosures
       ),
       ranked AS (
@@ -555,15 +644,15 @@ export async function getRssFeedItems(): Promise<RssFeedItem[]> {
             CASE WHEN b.dart_last_sync_at >= '2020-01-01'::timestamptz THEN b.dart_last_sync_at ELSE NULL END
           ) AS last_sync_at
         FROM businesses b
-        LEFT JOIN fin ON b.b_no = fin.b_no
         LEFT JOIN disc ON b.b_no = disc.b_no
         WHERE b.b_stt_cd = '01'
           AND b.b_nm IS NOT NULL
           AND b.b_nm NOT IN ('', '상호 정보 없음', '상호 미등록 사업자')
           AND (
             COALESCE(b.nps_sbscrb_nmps, 0) > 0
+            OR b.market_board IN ('KOSPI', 'KOSDAQ')
             OR b.listing_status IN ('유가', '코스닥', '코넥스', '상장')
-            OR fin.b_no IS NOT NULL
+            OR COALESCE(b.latest_revenue, 0) > 0
             OR disc.b_no IS NOT NULL
           )
       )
@@ -603,6 +692,59 @@ export async function getRssFeedItems(): Promise<RssFeedItem[]> {
 
   items.sort((a, b) => b.pubDate.getTime() - a.pubDate.getTime());
   return items;
+}
+
+export async function getRssFeedItems(): Promise<RssFeedItem[]> {
+  return getOrRefreshSeoSnapshot(
+    SEO_SNAP_KEYS.rss,
+    computeRssFeedItems,
+    (raw) => {
+      if (!Array.isArray(raw)) return [];
+      return raw
+        .map((item: any) => ({
+          title: String(item.title || ""),
+          link: String(item.link || ""),
+          guid: String(item.guid || ""),
+          description: String(item.description || ""),
+          category: String(item.category || ""),
+          pubDate: new Date(item.pubDate),
+        }))
+        .filter((item) => !Number.isNaN(item.pubDate.getTime()));
+    }
+  );
+}
+
+/**
+ * CLI 시딩 및 24시간 주기 스냅샷 전체 강제 갱신 헬퍼
+ */
+export async function rebuildAllSeoFeedSnapshots() {
+  const [sitemapIndex, sitemapCore, sitemapDirectory, sitemapForms, sitemapCompanies, rss] =
+    await Promise.all([
+      computeSitemapIndexEntries(),
+      computeCoreSitemapEntries(),
+      computeDirectorySitemapEntries(),
+      computeFormsSitemapEntries(),
+      computeTier1CompanySitemapEntries(),
+      computeRssFeedItems(),
+    ]);
+
+  await Promise.all([
+    saveSeoSnapshot(SEO_SNAP_KEYS.sitemapIndex, sitemapIndex),
+    saveSeoSnapshot(SEO_SNAP_KEYS.sitemapCore, sitemapCore),
+    saveSeoSnapshot(SEO_SNAP_KEYS.sitemapDirectory, sitemapDirectory),
+    saveSeoSnapshot(SEO_SNAP_KEYS.sitemapForms, sitemapForms),
+    saveSeoSnapshot(SEO_SNAP_KEYS.sitemapCompanies, sitemapCompanies),
+    saveSeoSnapshot(SEO_SNAP_KEYS.rss, rss),
+  ]);
+
+  return {
+    sitemapIndex: sitemapIndex.length,
+    sitemapCore: sitemapCore.length,
+    sitemapDirectory: sitemapDirectory.length,
+    sitemapForms: sitemapForms.length,
+    sitemapCompanies: sitemapCompanies.length,
+    rss: rss.length,
+  };
 }
 
 /**
