@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import {
-  getLocalContractIds,
+  getLocalContractRefs,
   removeContractFromLocal,
   getLoggedInUser,
   setLoggedInUser,
@@ -48,8 +48,8 @@ export default function ContractsDashboardPage() {
   const fetchMyVault = useCallback(async (user: ContractUser | null) => {
     setLoading(true);
     try {
-      const localIds = getLocalContractIds();
-      if (!user && localIds.length === 0) {
+      const localRefs = getLocalContractRefs();
+      if (!user && localRefs.length === 0) {
         setContracts([]);
         return;
       }
@@ -58,7 +58,7 @@ export default function ContractsDashboardPage() {
         method: "POST",
         headers: getContractAuthHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({
-          contractIds: localIds,
+          localContracts: localRefs,
         }),
       });
       const data = await res.json();
@@ -72,7 +72,7 @@ export default function ContractsDashboardPage() {
     }
   }, []);
 
-  // 초기 세션 검증 및 소셜 로그인 서명 토큰 교환 처리
+  // 초기 세션 검증 및 소셜 로그인(HttpOnly 쿠키 또는 앱 단기 토큰) 동기화
   useEffect(() => {
     let isCancelled = false;
 
@@ -81,10 +81,24 @@ export default function ContractsDashboardPage() {
 
       if (typeof window !== "undefined") {
         const params = new URLSearchParams(window.location.search);
+        const oauthLogin = params.get("oauth_login");
         const oauthSession = params.get("oauth_session");
         const authError = params.get("auth_error") || params.get("auth_notice");
 
-        if (oauthSession) {
+        if (oauthLogin === "1") {
+          window.history.replaceState({}, "", "/contracts");
+          try {
+            const chkRes = await fetch("/api/auth/session", { cache: "no-store" });
+            const chkData = await chkRes.json();
+            if (chkRes.ok && chkData.authenticated && chkData.user?.id) {
+              setLoggedInUser(chkData.user);
+              activeUser = chkData.user;
+              showAppToast(`${chkData.user.name}님 환영합니다! 영구 계약 보관함이 연결되었습니다.`);
+            }
+          } catch (err) {
+            console.error("Failed to verify oauth cookie session", err);
+          }
+        } else if (oauthSession) {
           window.history.replaceState({}, "", "/contracts");
           try {
             const exRes = await fetch("/api/auth/session", {

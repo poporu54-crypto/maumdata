@@ -3,7 +3,13 @@
  */
 
 const STORAGE_KEY = "maumdata_recent_contracts_v1";
+const TOKENS_STORAGE_KEY = "maumdata_recent_contract_tokens_v2";
 const USER_STORAGE_KEY = "maumdata_contract_user_v1";
+
+export interface LocalContractRef {
+  id: string;
+  signToken: string;
+}
 
 export interface ContractUser {
   id: string;
@@ -52,7 +58,7 @@ export function getContractAuthHeaders(extra?: Record<string, string>): Record<s
   return headers;
 }
 
-export function saveContractToLocal(contractId: string): void {
+export function saveContractToLocal(contractId: string, signToken?: string): void {
   if (typeof window === "undefined" || !contractId) return;
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -60,6 +66,14 @@ export function saveContractToLocal(contractId: string): void {
     const filtered = list.filter((id) => id !== contractId);
     filtered.unshift(contractId);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered.slice(0, 50)));
+
+    if (signToken && typeof signToken === "string" && signToken.trim().length > 0) {
+      const rawRefs = localStorage.getItem(TOKENS_STORAGE_KEY);
+      const refs: LocalContractRef[] = rawRefs ? JSON.parse(rawRefs) : [];
+      const nextRefs = refs.filter((r) => r && r.id !== contractId);
+      nextRefs.unshift({ id: contractId, signToken: signToken.trim() });
+      localStorage.setItem(TOKENS_STORAGE_KEY, JSON.stringify(nextRefs.slice(0, 50)));
+    }
   } catch (e) {
     console.warn("Failed to save contract to local storage", e);
   }
@@ -75,14 +89,39 @@ export function getLocalContractIds(): string[] {
   }
 }
 
+export function getLocalContractRefs(): LocalContractRef[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(TOKENS_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter(
+        (item): item is LocalContractRef =>
+          Boolean(item && typeof item.id === "string" && typeof item.signToken === "string")
+      )
+      .slice(0, 50);
+  } catch {
+    return [];
+  }
+}
+
 export function removeContractFromLocal(contractId: string): void {
   if (typeof window === "undefined" || !contractId) return;
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return;
-    const list: string[] = JSON.parse(raw);
-    const filtered = list.filter((id) => id !== contractId);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
+    if (raw) {
+      const list: string[] = JSON.parse(raw);
+      const filtered = list.filter((id) => id !== contractId);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
+    }
+    const rawRefs = localStorage.getItem(TOKENS_STORAGE_KEY);
+    if (rawRefs) {
+      const refs: LocalContractRef[] = JSON.parse(rawRefs);
+      const nextRefs = refs.filter((r) => r && r.id !== contractId);
+      localStorage.setItem(TOKENS_STORAGE_KEY, JSON.stringify(nextRefs));
+    }
   } catch {
     // ignore
   }

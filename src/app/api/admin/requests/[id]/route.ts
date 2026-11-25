@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getEditRequestById, updateEditRequestStatus, query } from "@/lib/db";
-import { isAdminRequest, sanitizeHttpUrl } from "@/lib/sessionAuth";
+import { isAdminRequest, isTrustedAdminOrigin, sanitizeHttpUrl } from "@/lib/sessionAuth";
 
 function normalizeHomepageInput(raw: string | null | undefined): string | null {
   if (!raw || typeof raw !== "string") return null;
@@ -26,7 +26,7 @@ export async function POST(
       );
     }
 
-    if (!isAdminRequest(req)) {
+    if (!isTrustedAdminOrigin(req) || !isAdminRequest(req)) {
       return NextResponse.json(
         { error: "권한이 없습니다. 관리자 로그인이 필요합니다." },
         { status: 401 }

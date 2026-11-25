@@ -27,13 +27,19 @@ export async function GET(request: NextRequest) {
 
   const user = getAuthenticatedContractUser(request);
   if (!user) {
-    return NextResponse.json({ authenticated: false, user: null });
+    return NextResponse.json(
+      { authenticated: false, user: null },
+      { headers: { "Cache-Control": "private, no-store, max-age=0" } }
+    );
   }
   const token = createSignedUserSessionToken(user);
-  return NextResponse.json({
-    authenticated: true,
-    user: { ...user, sessionToken: token },
-  });
+  return NextResponse.json(
+    {
+      authenticated: true,
+      user: { ...user, sessionToken: token },
+    },
+    { headers: { "Cache-Control": "private, no-store, max-age=0" } }
+  );
 }
 
 export async function POST(request: NextRequest) {

@@ -171,7 +171,9 @@ function mapRankedCompanyRow(row: any): RankedCompanyItem {
 let cachedRealStats: RealPortalStats | null = null;
 let cachedRealStatsTime = 0;
 let inFlightRealStatsPromise: Promise<RealPortalStats> | null = null;
-const REAL_STATS_CACHE_TTL_MS = 10 * 60 * 1000; // 10분 서버 인메모리 캐시 (만료 시 SWR 백그라운드 갱신)
+const REAL_STATS_CACHE_TTL_MS = 10 * 60 * 1000; // 10분 프로세스 메모리 캐시
+const PORTAL_STATS_SNAP_KEY = "portal_real_stats_v1";
+const PORTAL_STATS_STALE_MS = 6 * 60 * 60 * 1000; // 6시간 영구 스냅샷 비블로킹 SWR
 
 async function computeRealPortalStats(): Promise<RealPortalStats> {
   const [
@@ -188,7 +190,7 @@ async function computeRealPortalStats(): Promise<RealPortalStats> {
     foundingYearRes,
     demoRes,
   ] = await Promise.all([
-    // 1. 포털 전체 실데이터 요약
+    // 1. 포털 전체 실데이터 요약 (latest_revenue + pg_class.reltuples 활용으로 하위 테이블 풀스캔 차단)
     query(`
       SELECT
         COUNT(*) FILTER (
@@ -221,8 +223,8 @@ async function computeRealPortalStats(): Promise<RealPortalStats> {
         COALESCE(SUM(loss_sbscrb_nmps) FILTER (
           WHERE b_stt_cd = '01' AND COALESCE(nps_sbscrb_nmps, 0) > 0 AND b_nm IS NOT NULL AND b_nm NOT IN ('', '상호 정보 없음', '상호 미등록 사업자')
         ), 0)::int AS monthly_losses,
-        (SELECT COUNT(DISTINCT b_no)::int FROM business_history WHERE revenue > 0) AS financial_company_count,
-        (SELECT COUNT(*)::int FROM business_disclosures) AS total_disclosures_count,
+        COUNT(*) FILTER (WHERE COALESCE(latest_revenue, 0) > 0)::int AS financial_company_count,
+        COALESCE((SELECT reltuples::int FROM pg_class WHERE relname = 'business_disclosures' LIMIT 1), 0) AS total_disclosures_count,
         TO_CHAR(
           MAX(
             GREATEST(
@@ -348,37 +350,27 @@ async function computeRealPortalStats(): Promise<RealPortalStats> {
       LIMIT 12
     `),
 
-    // 8. DART 재무제표 결산 매출액 상위 TOP 12 계속사업자
+    // 8. DART 재무제표 결산 매출액 상위 TOP 12 계속사업자 (idx_businesses_dir_rev_top 인덱스 직결)
     query(`
-      WITH latest_fin AS (
-        SELECT DISTINCT ON (b_no) b_no, year AS fin_year, revenue, operating_income
-        FROM business_history
-        WHERE revenue > 0
-        ORDER BY b_no, year DESC
-      )
       SELECT
-        b.b_no, b.b_nm, b.b_sector, b.b_adr, b.tax_type, b.start_dt,
-        COALESCE(b.nps_sbscrb_nmps, 0)::int AS employees,
-        COALESCE(b.new_acqs_nmps, 0)::int AS new_hires,
-        COALESCE(b.loss_sbscrb_nmps, 0)::int AS losses,
-        f.fin_year, f.revenue, f.operating_income
-      FROM latest_fin f
-      JOIN businesses b ON b.b_no = f.b_no
-      WHERE b.b_stt_cd = '01'
-        AND b.b_nm IS NOT NULL
-        AND b.b_nm NOT IN ('', '상호 정보 없음', '상호 미등록 사업자')
-      ORDER BY f.revenue DESC
+        b_no, b_nm, b_sector, b_adr, tax_type, start_dt,
+        COALESCE(nps_sbscrb_nmps, 0)::int AS employees,
+        COALESCE(new_acqs_nmps, 0)::int AS new_hires,
+        COALESCE(loss_sbscrb_nmps, 0)::int AS losses,
+        latest_fin_year AS fin_year,
+        latest_revenue AS revenue,
+        latest_operating_income AS operating_income
+      FROM businesses
+      WHERE b_stt_cd = '01'
+        AND latest_revenue > 0
+        AND b_nm IS NOT NULL
+        AND b_nm NOT IN ('', '상호 정보 없음', '상호 미등록 사업자')
+      ORDER BY latest_revenue DESC NULLS LAST, b_no ASC
       LIMIT 12
     `),
 
-    // 9. 마음데이타 DB 검증 기업 세부 업종별 분포 TOP 15 + 업종 대표 기업
+    // 9. 마음데이타 DB 검증 기업 세부 업종별 분포 TOP 15 + 업종 대표 기업 (latest_revenue 직접 참조)
     query(`
-      WITH latest_fin AS (
-        SELECT DISTINCT ON (b_no) b_no, revenue
-        FROM business_history
-        WHERE revenue > 0
-        ORDER BY b_no, year DESC
-      )
       SELECT
         b.b_sector AS sector,
         COUNT(*)::int AS biz_cnt,
@@ -387,7 +379,7 @@ async function computeRealPortalStats(): Promise<RealPortalStats> {
           b.b_no
           ORDER BY
             CASE WHEN b.b_nm ~ '(기업인수목적|유동화|제[일이기삼사오육칠팔구십0-9]+차)' THEN 1 ELSE 0 END ASC,
-            COALESCE(f.revenue, 0) DESC,
+            COALESCE(b.latest_revenue, 0) DESC,
             COALESCE(b.nps_sbscrb_nmps, 0) DESC,
             COALESCE(b.view_count, 0) DESC
         ))[1] AS top_b_no,
@@ -395,12 +387,11 @@ async function computeRealPortalStats(): Promise<RealPortalStats> {
           b.b_nm
           ORDER BY
             CASE WHEN b.b_nm ~ '(기업인수목적|유동화|제[일이기삼사오육칠팔구십0-9]+차)' THEN 1 ELSE 0 END ASC,
-            COALESCE(f.revenue, 0) DESC,
+            COALESCE(b.latest_revenue, 0) DESC,
             COALESCE(b.nps_sbscrb_nmps, 0) DESC,
             COALESCE(b.view_count, 0) DESC
         ))[1] AS top_b_nm
       FROM businesses b
-      LEFT JOIN latest_fin f ON f.b_no = b.b_no
       WHERE b.b_stt_cd = '01'
         AND b.b_nm IS NOT NULL
         AND b.b_nm NOT IN ('', '상호 정보 없음', '상호 미등록 사업자')
@@ -411,20 +402,14 @@ async function computeRealPortalStats(): Promise<RealPortalStats> {
       LIMIT 15
     `),
 
-    // 10. 전국 17개 광역시·도 정규화 분포 + 시·도 대표 기업
+    // 10. 전국 17개 광역시·도 정규화 분포 + 시·도 대표 기업 (latest_revenue 직접 참조)
     query(`
-      WITH latest_fin AS (
-        SELECT DISTINCT ON (b_no) b_no, revenue
-        FROM business_history
-        WHERE revenue > 0
-        ORDER BY b_no, year DESC
-      ),
-      norm AS (
+      WITH norm AS (
         SELECT
           b.b_no,
           b.b_nm,
           b.view_count,
-          COALESCE(f.revenue, 0) AS revenue,
+          COALESCE(b.latest_revenue, 0) AS revenue,
           COALESCE(b.nps_sbscrb_nmps, 0) AS emp,
           COALESCE(b.new_acqs_nmps, 0) AS new_emp,
           CASE
@@ -448,7 +433,6 @@ async function computeRealPortalStats(): Promise<RealPortalStats> {
             ELSE NULL
           END AS region
         FROM businesses b
-        LEFT JOIN latest_fin f ON f.b_no = b.b_no
         WHERE b.b_stt_cd = '01'
           AND b.b_nm IS NOT NULL
           AND b.b_nm NOT IN ('', '상호 정보 없음', '상호 미등록 사업자')
@@ -480,14 +464,8 @@ async function computeRealPortalStats(): Promise<RealPortalStats> {
       ORDER BY yr ASC
     `),
 
-    // 12. 메인 홈 1초 인터랙티브 미리보기용 실제 검증 기업 4선 조회
+    // 12. 메인 홈 1초 인터랙티브 미리보기용 실제 검증 기업 4선 조회 (PK 4건 + latest_revenue 직결)
     query(`
-      WITH latest_fin AS (
-        SELECT DISTINCT ON (b_no) b_no, year AS fin_year, revenue, operating_income
-        FROM business_history
-        WHERE revenue > 0
-        ORDER BY b_no, year DESC
-      )
       SELECT
         b.b_no,
         b.b_nm,
@@ -499,12 +477,11 @@ async function computeRealPortalStats(): Promise<RealPortalStats> {
         COALESCE(b.nps_sbscrb_nmps, 0)::int AS employees,
         COALESCE(b.new_acqs_nmps, 0)::int AS new_hires,
         COALESCE(b.loss_sbscrb_nmps, 0)::int AS losses,
-        f.fin_year,
-        f.revenue,
-        f.operating_income,
+        b.latest_fin_year AS fin_year,
+        b.latest_revenue AS revenue,
+        b.latest_operating_income AS operating_income,
         (SELECT COUNT(*)::int FROM business_disclosures d WHERE d.b_no = b.b_no) AS disc_count
       FROM businesses b
-      LEFT JOIN latest_fin f ON f.b_no = b.b_no
       WHERE b.b_no IN ('1198102316', '1208801280', '1108114794', '1248100998')
     `),
   ]);
@@ -680,10 +657,29 @@ async function computeRealPortalStats(): Promise<RealPortalStats> {
   return result;
 }
 
+export async function rebuildAndSavePortalStatsSnapshot(): Promise<RealPortalStats> {
+  const fresh = await computeRealPortalStats();
+  try {
+    await query(
+      `INSERT INTO public.system_settings (key, value, updated_at)
+       VALUES ($1, $2::jsonb, NOW())
+       ON CONFLICT (key) DO UPDATE SET
+         value = EXCLUDED.value,
+         updated_at = NOW()`,
+      [PORTAL_STATS_SNAP_KEY, JSON.stringify(fresh)]
+    );
+  } catch (err) {
+    console.warn("[statApi] Failed to save portal stats snapshot:", err);
+  }
+  cachedRealStats = fresh;
+  cachedRealStatsTime = Date.now();
+  return fresh;
+}
+
 /**
- * 마음데이타 Neon PostgreSQL에 실제 동기화된 기업·국민연금·DART 데이터를
- * 일체의 추정 공식이나 가짜 폴백 없이 100% 실시간 SQL로 집계하여 반환합니다.
- * (동시 요청 In-flight 병합 및 Stale-While-Revalidate 백그라운드 갱신 적용)
+ * 마음데이타 Neon PostgreSQL에 실제 동기화된 기업·국민연금·DART 집계 통계 로더:
+ * 1) 프로세스 메모리 캐시(10분) -> 2) `system_settings` PK 영구 스냅샷(`~1ms`) + 6시간 비블로킹 SWR
+ * 콜드 람다·빌드 워커에서 12개 전체 집계 쿼리가 반복 실행되는 현상을 원천 차단합니다.
  */
 export async function getRealPortalStats(): Promise<RealPortalStats> {
   const now = Date.now();
@@ -691,54 +687,67 @@ export async function getRealPortalStats(): Promise<RealPortalStats> {
     return cachedRealStats;
   }
 
+  try {
+    const snapRes = await query(
+      `SELECT value, updated_at FROM public.system_settings WHERE key = $1 LIMIT 1`,
+      [PORTAL_STATS_SNAP_KEY]
+    );
+    const row = snapRes.rows[0];
+    if (row && row.value && row.value.summary) {
+      const payload = row.value as RealPortalStats;
+      cachedRealStats = payload;
+      cachedRealStatsTime = now;
+
+      const updatedMs = row.updated_at ? new Date(row.updated_at).getTime() : 0;
+      if (now - updatedMs > PORTAL_STATS_STALE_MS && !inFlightRealStatsPromise) {
+        inFlightRealStatsPromise = rebuildAndSavePortalStatsSnapshot()
+          .catch((err) => {
+            console.error("[statApi] Background snapshot SWR refresh failed:", err);
+            return payload;
+          })
+          .finally(() => {
+            inFlightRealStatsPromise = null;
+          });
+      }
+      return payload;
+    }
+  } catch (err) {
+    console.warn("[statApi] Snapshot lookup fallback:", err);
+  }
+
   if (!inFlightRealStatsPromise) {
-    inFlightRealStatsPromise = computeRealPortalStats().finally(() => {
+    inFlightRealStatsPromise = rebuildAndSavePortalStatsSnapshot().finally(() => {
       inFlightRealStatsPromise = null;
     });
   }
-
-  if (cachedRealStats) {
-    inFlightRealStatsPromise.catch((err) => {
-      console.error("[statApi] Background stats refresh failed:", err);
-    });
-    return cachedRealStats;
-  }
-
   return inFlightRealStatsPromise;
 }
 
 let cachedKosisSurvey: OfficialKosisSurvey | null = null;
 let cachedKosisTime = 0;
 let inFlightKosisPromise: Promise<OfficialKosisSurvey | null> | null = null;
-const KOSIS_CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 확정 공식 통계이므로 6시간 캐시
+const KOSIS_CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 프로세스 메모리 6시간 캐시
+const KOSIS_SNAP_KEY = "kosis_official_survey_v1";
+const KOSIS_SNAP_STALE_MS = 7 * 24 * 60 * 60 * 1000; // 확정 공식 통계이므로 DB 영구 스냅샷 7일 SWR
 
-/**
- * 공공데이터포털 통계청 전국사업체조사(19대 산업 대분류) 공식 확정 통계를 조회합니다.
- * - 실제 공식 발표 기준일("2023년 12월 31일 기준")을 정직하게 고정 표기합니다.
- * - 외부 API가 실패하거나 비정상일 경우 가짜 폴백 데이터를 절대로 반환하지 않고 null을 반환합니다.
- */
-export async function getOfficialKosisSurvey(): Promise<OfficialKosisSurvey | null> {
-  const now = Date.now();
-  if (cachedKosisSurvey && now - cachedKosisTime < KOSIS_CACHE_TTL_MS) {
-    return cachedKosisSurvey;
-  }
-
+async function fetchAndSaveKosisSnapshot(): Promise<OfficialKosisSurvey | null> {
   if (!SERVICE_KEY) {
     return null;
   }
 
-  if (!inFlightKosisPromise) {
-    inFlightKosisPromise = (async () => {
-      try {
-        const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 4500);
-        const surveyUrl = `${SURVEY_API_URL}?serviceKey=${SERVICE_KEY}&page=1&perPage=2000`;
-        const res = await fetch(surveyUrl, {
-          method: "GET",
-          headers: { Accept: "application/json" },
-          signal: controller.signal,
-        });
-        clearTimeout(timer);
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 4500);
+    const surveyUrl = `${SURVEY_API_URL}?serviceKey=${SERVICE_KEY}&page=1&perPage=2000`;
+    // 원본 응답이 약 5MB로 Next.js 2MB Data Cache 한도를 초과하므로 cache: "no-store" 유지하고
+    // 19대 산업 파싱 요약(~2KB)만 system_settings 영구 스냅샷에 보관합니다.
+    const res = await fetch(surveyUrl, {
+      method: "GET",
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
 
     if (!res.ok) {
       return null;
@@ -789,20 +798,71 @@ export async function getOfficialKosisSurvey(): Promise<OfficialKosisSurvey | nu
       industries,
     };
 
-        cachedKosisSurvey = survey;
-        cachedKosisTime = Date.now();
-        return survey;
-      } catch (err) {
-        console.error("[statApi] Official KOSIS survey API unavailable (no fallback used):", err);
-        return cachedKosisSurvey;
-      } finally {
-        inFlightKosisPromise = null;
-      }
-    })();
+    try {
+      await query(
+        `INSERT INTO public.system_settings (key, value, updated_at)
+         VALUES ($1, $2::jsonb, NOW())
+         ON CONFLICT (key) DO UPDATE SET
+           value = EXCLUDED.value,
+           updated_at = NOW()`,
+        [KOSIS_SNAP_KEY, JSON.stringify(survey)]
+      );
+    } catch (saveErr) {
+      console.warn("[statApi] Failed to save KOSIS snapshot:", saveErr);
+    }
+
+    cachedKosisSurvey = survey;
+    cachedKosisTime = Date.now();
+    return survey;
+  } catch (err) {
+    console.error("[statApi] Official KOSIS survey API unavailable (no fallback used):", err);
+    return cachedKosisSurvey;
+  }
+}
+
+/**
+ * 공공데이터포털 통계청 전국사업체조사(19대 산업 대분류) 공식 확정 통계를 조회합니다.
+ * - 1) 메모리 캐시(6h) -> 2) system_settings PK 영구 스냅샷(~2KB, 7일 SWR) -> 3) 최초 1회 API 수집
+ * - 실제 공식 발표 기준일("2023년 12월 31일 기준")을 정직하게 고정 표기합니다.
+ * - 외부 API가 실패하거나 비정상일 경우 가짜 폴백 데이터를 절대로 반환하지 않고 null을 반환합니다.
+ */
+export async function getOfficialKosisSurvey(): Promise<OfficialKosisSurvey | null> {
+  const now = Date.now();
+  if (cachedKosisSurvey && now - cachedKosisTime < KOSIS_CACHE_TTL_MS) {
+    return cachedKosisSurvey;
   }
 
-  if (cachedKosisSurvey) {
-    return cachedKosisSurvey;
+  try {
+    const snapRes = await query(
+      `SELECT value, updated_at FROM public.system_settings WHERE key = $1 LIMIT 1`,
+      [KOSIS_SNAP_KEY]
+    );
+    const row = snapRes.rows[0];
+    if (row?.value?.industries && Array.isArray(row.value.industries) && row.value.industries.length > 0) {
+      const payload = row.value as OfficialKosisSurvey;
+      cachedKosisSurvey = payload;
+      cachedKosisTime = now;
+
+      const updatedMs = row.updated_at ? new Date(row.updated_at).getTime() : 0;
+      if (now - updatedMs > KOSIS_SNAP_STALE_MS && !inFlightKosisPromise) {
+        inFlightKosisPromise = fetchAndSaveKosisSnapshot().finally(() => {
+          inFlightKosisPromise = null;
+        });
+      }
+      return payload;
+    }
+  } catch (err) {
+    console.warn("[statApi] KOSIS snapshot lookup fallback:", err);
+  }
+
+  if (!SERVICE_KEY) {
+    return null;
+  }
+
+  if (!inFlightKosisPromise) {
+    inFlightKosisPromise = fetchAndSaveKosisSnapshot().finally(() => {
+      inFlightKosisPromise = null;
+    });
   }
 
   return inFlightKosisPromise;

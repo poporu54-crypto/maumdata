@@ -20,7 +20,16 @@ function getSigningSecret(namespace: "admin" | "user" | "oauth"): string {
     process.env.GOOGLE_CLIENT_SECRET ||
     process.env.KAKAO_CLIENT_SECRET ||
     process.env.DATABASE_URL ||
-    "maumdata_local_dev_fallback_secret_only";
+    "";
+  if (!base) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("Missing required signing secret environment variable in production");
+    }
+    return crypto
+      .createHash("sha256")
+      .update(`maumdata::${namespace}::dev-only::local`)
+      .digest("hex");
+  }
   return crypto
     .createHash("sha256")
     .update(`maumdata::${namespace}::v2::${base}`)
@@ -224,15 +233,50 @@ export function getSafeBaseOrigin(req: NextRequest): string {
   if (configured && (configured.startsWith("https://") || configured.startsWith("http://"))) {
     return configured;
   }
-  const host = (req.headers.get("host") || "www.maumdata.com").trim();
+  const host = (req.headers.get("host") || "www.maumdata.com").trim().toLowerCase();
   const isLocal = host.startsWith("localhost:") || host.startsWith("127.0.0.1:");
-  if (isLocal) {
+  if (isLocal && process.env.NODE_ENV !== "production") {
     return `http://${host}`;
   }
-  if (host === "maumdata.com" || host === "www.maumdata.com" || host.endsWith(".vercel.app")) {
+  const ownVercelHost = (process.env.VERCEL_URL || "").trim().toLowerCase();
+  if (
+    host === "maumdata.com" ||
+    host === "www.maumdata.com" ||
+    (ownVercelHost && host === ownVercelHost)
+  ) {
     return `https://${host}`;
   }
   return "https://www.maumdata.com";
+}
+
+export function isTrustedAdminOrigin(req: NextRequest): boolean {
+  const origin = req.headers.get("origin")?.trim() || "";
+  const referer = req.headers.get("referer")?.trim() || "";
+  const secFetchSite = (req.headers.get("sec-fetch-site") || "").trim().toLowerCase();
+  if (secFetchSite === "cross-site") return false;
+
+  const checkHost = (rawUrl: string): boolean => {
+    try {
+      const h = new URL(rawUrl).hostname.toLowerCase();
+      const ownVercel = (process.env.VERCEL_URL || "").trim().toLowerCase();
+      if (h === "maumdata.com" || h === "www.maumdata.com" || h.endsWith(".maumdata.com")) {
+        return true;
+      }
+      if (ownVercel && h === ownVercel) return true;
+      if (process.env.NODE_ENV !== "production" && (h === "localhost" || h === "127.0.0.1")) {
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  };
+
+  if (origin) return checkHost(origin);
+  if (referer) return checkHost(referer);
+  // x-admin-key CLI 호출은 허용, 쿠키 전용 브라우저 요청은 same-origin/none만 허용
+  if (req.headers.get("x-admin-key")) return true;
+  return secFetchSite === "same-origin" || secFetchSite === "same-site" || secFetchSite === "";
 }
 
 export function createSignedOAuthState(params: {

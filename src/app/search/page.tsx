@@ -4,6 +4,7 @@ import Link from "next/link";
 import SearchForm from "@/components/SearchForm";
 import { searchCorpOutline, getCorpBasicOutline, CorpBasicOutline } from "@/lib/corpApi";
 import { searchBusinesses, getPopularQuickLinks } from "@/lib/db";
+import { isBotOrPrefetchRequest } from "@/app/biz/[b_no]/utils/dataLoader";
 
 export const dynamic = "force-dynamic";
 
@@ -172,7 +173,9 @@ async function SearchResultList({ searchQuery }: { searchQuery: string }) {
     }
 
     let publicMatches: CorpBasicOutline[] = [];
-    if (localMatches.length < 10) {
+    const isBotOrPrefetch = await isBotOrPrefetchRequest();
+    // 봇/크롤러/프리패치 요청 시 금융위 외부 공공 API 소모 원천 차단 (실사용자 + 로컬 3건 미만일 때만 보충)
+    if (!isBotOrPrefetch && localMatches.length < 3) {
       try {
         if (isNumericSearch && cleanDigits.length === 13) {
           const outlineByCrno = await getCorpBasicOutline("", cleanDigits);
@@ -186,8 +189,6 @@ async function SearchResultList({ searchQuery }: { searchQuery: string }) {
       } catch (err) {
         console.error("Failed to fetch public api for search:", err);
       }
-    } else {
-      console.log(`[Search Cache Hit] Found ${localMatches.length} local matches for "${searchQuery}". Skipped public API query.`);
     }
 
     const mergeMap = new Map<string, UnifiedSearchResult>();

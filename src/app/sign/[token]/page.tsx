@@ -115,11 +115,13 @@ export default function SignContractPage({ params }: { params: Promise<{ token: 
       const user = getLoggedInUser();
       setCurrentUser(user);
 
-      const query = new URLSearchParams();
-      if (pinValue) query.set("pin", pinValue);
+      const reqHeaders = getContractAuthHeaders(
+        pinValue ? { "X-Contract-Pin": pinValue } : undefined
+      );
 
-      const res = await fetch(`/api/contracts/${token}?${query.toString()}`, {
-        headers: getContractAuthHeaders(),
+      const res = await fetch(`/api/contracts/${token}`, {
+        headers: reqHeaders,
+        cache: "no-store",
       });
       const data = await res.json();
       if (!res.ok || !data.success) {
@@ -137,7 +139,7 @@ export default function SignContractPage({ params }: { params: Promise<{ token: 
       if (pinValue) setVerifiedPin(pinValue);
       setContract(data.contract);
       setTemplateMeta(data.template || null);
-      saveContractToLocal(data.contract.id);
+      saveContractToLocal(data.contract.id, token);
 
       if (data.contract.status === "COMPLETED") {
         setCompleted(true);
@@ -150,13 +152,39 @@ export default function SignContractPage({ params }: { params: Promise<{ token: 
     }
   };
 
-  // OAuth 복귀 시 서명 토큰 교환 및 자동 보관함 바인딩 지원
+  // OAuth 복귀 시(HttpOnly 쿠키 또는 앱 단기 토큰) 자동 보관함 바인딩 지원
   useEffect(() => {
     const init = async () => {
       if (typeof window !== "undefined") {
         const searchParams = new URLSearchParams(window.location.search);
+        const oauthLogin = searchParams.get("oauth_login");
         const oauthSession = searchParams.get("oauth_session");
-        if (oauthSession) {
+
+        if (oauthLogin === "1") {
+          window.history.replaceState({}, "", window.location.pathname);
+          try {
+            const chkRes = await fetch("/api/auth/session", { cache: "no-store" });
+            const chkData = await chkRes.json();
+            if (chkRes.ok && chkData.authenticated && chkData.user?.id) {
+              setLoggedInUser(chkData.user);
+              setCurrentUser(chkData.user);
+              await fetch(`/api/contracts/${token}`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  ...(chkData.user.sessionToken
+                    ? { Authorization: `Bearer ${chkData.user.sessionToken}` }
+                    : {}),
+                },
+                body: JSON.stringify({ action: "bind_user" }),
+              }).catch(() => {});
+              setBoundToVault(true);
+              showAppToast(`${chkData.user.name}님의 영구 계약 보관함에 자동 연결되었습니다!`);
+            }
+          } catch {
+            // ignore
+          }
+        } else if (oauthSession) {
           window.history.replaceState({}, "", window.location.pathname);
           try {
             const exRes = await fetch("/api/auth/session", {

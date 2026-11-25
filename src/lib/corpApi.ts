@@ -252,7 +252,7 @@ export async function searchCorpOutline(corpNm: string): Promise<CorpBasicOutlin
       headers: {
         "Accept": "application/json",
       },
-      cache: "no-store",
+      next: { revalidate: 3600 },
       signal: controller.signal,
     });
     clearTimeout(timeoutId);

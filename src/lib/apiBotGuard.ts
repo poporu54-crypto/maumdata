@@ -30,8 +30,11 @@ function isTrustedFirstPartyHost(hostname: string): boolean {
   const host = hostname.trim().toLowerCase();
   if (!host) return false;
   if (FIRST_PARTY_HOST_RE.test(host)) return true;
-  if (host.endsWith(".vercel.app")) return true;
-  if (host === "localhost" || host === "127.0.0.1") return true;
+  const ownVercelHost = (process.env.VERCEL_URL || "").trim().toLowerCase();
+  if (ownVercelHost && host === ownVercelHost) return true;
+  if (process.env.NODE_ENV !== "production" && (host === "localhost" || host === "127.0.0.1")) {
+    return true;
+  }
   return false;
 }
 

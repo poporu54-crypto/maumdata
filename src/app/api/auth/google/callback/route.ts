@@ -70,29 +70,35 @@ export async function GET(request: NextRequest) {
       name,
     });
 
-    const signedSessionToken = createSignedUserSessionToken({
+    const userPayload = {
       id: saved.id,
       email: saved.email,
       name: saved.name || name,
       company: saved.company || "",
-      provider: "google",
-    });
-
-    const encodedSession = encodeURIComponent(signedSessionToken);
+      provider: "google" as const,
+    };
+    const signedSessionToken = createSignedUserSessionToken(userPayload);
     const separator = stateInfo.returnTo.includes("?") ? "&" : "?";
-    const webTargetUrl = `${baseOrigin}${stateInfo.returnTo}${separator}oauth_session=${encodedSession}`;
 
+    // 모바일 네이티브 앱 딥링크 전용: 60초 단기 교환 토큰만 전달 (장기 세션 토큰 URL 노출 차단)
     if (stateInfo.source === "ios") {
-      return NextResponse.redirect(`maumdata://oauth?oauth_session=${encodedSession}`);
+      const shortExchangeToken = encodeURIComponent(createSignedUserSessionToken(userPayload, 60));
+      return NextResponse.redirect(`maumdata://oauth?oauth_session=${shortExchangeToken}`);
     }
 
     if (stateInfo.source === "app") {
-      const appIntentUrl = `intent://oauth?oauth_session=${encodedSession}#Intent;scheme=maumdata;package=com.maumdata.dataapp;S.browser_fallback_url=${encodeURIComponent(
-        webTargetUrl
+      const shortExchangeToken = encodeURIComponent(createSignedUserSessionToken(userPayload, 60));
+      const fallbackUrl = `${baseOrigin}${stateInfo.returnTo}${separator}oauth_login=1`;
+      const appIntentUrl = `intent://oauth?oauth_session=${shortExchangeToken}#Intent;scheme=maumdata;package=com.maumdata.dataapp;S.browser_fallback_url=${encodeURIComponent(
+        fallbackUrl
       )};end`;
-      return NextResponse.redirect(appIntentUrl);
+      const res = NextResponse.redirect(appIntentUrl);
+      setUserSessionCookie(res, signedSessionToken);
+      return res;
     }
 
+    // 일반 웹 로그인: HttpOnly 쿠키로만 세션 전달 (URL 쿼리스트링 토큰 유출 원천 차단)
+    const webTargetUrl = `${baseOrigin}${stateInfo.returnTo}${separator}oauth_login=1`;
     const res = NextResponse.redirect(webTargetUrl);
     setUserSessionCookie(res, signedSessionToken);
     return res;

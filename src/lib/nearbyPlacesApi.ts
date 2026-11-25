@@ -133,6 +133,8 @@ function extractSubCategoryLabel(categoryName: string, spotType: "restaurant" | 
   return spotType === "cafe" ? "카페 · 미팅라운지" : "일반음식점";
 }
 
+const KAKAO_REVALIDATE_SEC = 604800; // 7일 캐시 (동일 주소 카카오 로컬 API 반복 호출 7배 절감)
+
 async function fetchNearbyDiningUncached(
   normalizedQuery: string,
   radiusMeters: number
@@ -151,7 +153,7 @@ async function fetchNearbyDiningUncached(
       `https://dapi.kakao.com/v2/local/search/address.json?query=${encodeURIComponent(normalizedQuery)}&size=1`,
       {
         headers: { Authorization: `KakaoAK ${apiKey}` },
-        next: { revalidate: 86400 },
+        next: { revalidate: KAKAO_REVALIDATE_SEC },
       }
     );
 
@@ -169,7 +171,7 @@ async function fetchNearbyDiningUncached(
         `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(normalizedQuery)}&size=1`,
         {
           headers: { Authorization: `KakaoAK ${apiKey}` },
-          next: { revalidate: 86400 },
+          next: { revalidate: KAKAO_REVALIDATE_SEC },
         }
       );
       if (kwRes.ok) {
@@ -197,14 +199,14 @@ async function fetchNearbyDiningUncached(
         `https://dapi.kakao.com/v2/local/search/category.json?category_group_code=FD6&x=${centerLng}&y=${centerLat}&radius=${radiusMeters}&size=12&sort=accuracy`,
         {
           headers: { Authorization: `KakaoAK ${apiKey}` },
-          next: { revalidate: 86400 },
+          next: { revalidate: KAKAO_REVALIDATE_SEC },
         }
       ),
       fetch(
         `https://dapi.kakao.com/v2/local/search/category.json?category_group_code=CE7&x=${centerLng}&y=${centerLat}&radius=${radiusMeters}&size=8&sort=accuracy`,
         {
           headers: { Authorization: `KakaoAK ${apiKey}` },
-          next: { revalidate: 86400 },
+          next: { revalidate: KAKAO_REVALIDATE_SEC },
         }
       ),
     ]);
@@ -280,7 +282,7 @@ export async function getCachedNearbyDiningByAddress(
   const cachedFn = unstable_cache(
     () => fetchNearbyDiningUncached(normalized, radiusMeters),
     ["maumdata-nearby-dining:v1", normalized, String(radiusMeters)],
-    { revalidate: 86400 }
+    { revalidate: KAKAO_REVALIDATE_SEC }
   );
 
   return cachedFn();

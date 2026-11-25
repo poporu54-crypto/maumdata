@@ -1,6 +1,10 @@
 import { NextResponse, NextRequest } from "next/server";
 import { getContractsByUserId, getContractsByIds, deleteContractForUser } from "@/lib/db";
-import { getAuthenticatedContractUser, SessionUserPayload } from "@/lib/sessionAuth";
+import {
+  getAuthenticatedContractUser,
+  safeStringEqual,
+  SessionUserPayload,
+} from "@/lib/sessionAuth";
 import { guardApiRequest } from "@/lib/apiBotGuard";
 
 export const dynamic = "force-dynamic";
@@ -52,10 +56,13 @@ export async function GET(request: NextRequest) {
     }
 
     const contracts = await getContractsByUserId(authUser.id, authUser.email);
-    return NextResponse.json({
-      success: true,
-      contracts: contracts.map((c) => mapContractRow(c, authUser)),
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        contracts: contracts.map((c) => mapContractRow(c, authUser)),
+      },
+      { headers: { "Cache-Control": "private, no-store, max-age=0" } }
+    );
   } catch (err) {
     console.error("Failed to query my contracts:", err);
     return NextResponse.json(
@@ -76,7 +83,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json().catch(() => ({}));
-    const { action, contractId, contractIds } = body || {};
+    const { action, contractId, localContracts } = body || {};
     const authUser = getAuthenticatedContractUser(request);
 
     // 1. 클라우드 보관함에서 계약서 숨김/삭제 요청 (반드시 서버 인증 세션 필수)
@@ -91,10 +98,13 @@ export async function POST(request: NextRequest) {
         );
       }
       await deleteContractForUser(contractId, authUser.id, authUser.email);
-      return NextResponse.json({ success: true });
+      return NextResponse.json(
+        { success: true },
+        { headers: { "Cache-Control": "private, no-store, max-age=0" } }
+      );
     }
 
-    // 2. 서버 검증된 로그인 계정 계약서 + 현재 기기 로컬 계약서 ID 통합 조회
+    // 2. 서버 검증된 로그인 계정 계약서 + 소유 토큰(id + signToken) 쌍이 모두 일치하는 로컬 계약서만 조회 (IDOR 원천 차단)
     const mergedMap = new Map<string, any>();
 
     if (authUser) {
@@ -104,14 +114,26 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    if (Array.isArray(contractIds) && contractIds.length > 0) {
-      const safeIds = contractIds
-        .slice(0, 50)
-        .filter((id): id is string => typeof id === "string" && /^cnt_\d+_[0-9a-f]+$/i.test(id));
+    if (Array.isArray(localContracts) && localContracts.length > 0) {
+      const tokenById = new Map<string, string>();
+      for (const item of localContracts.slice(0, 50)) {
+        const id = typeof item?.id === "string" ? item.id.trim() : "";
+        const signToken = typeof item?.signToken === "string" ? item.signToken.trim() : "";
+        if (/^cnt_\d+_[0-9a-f]+$/i.test(id) && /^sig_[0-9a-f]{20,}$/i.test(signToken)) {
+          tokenById.set(id, signToken);
+        }
+      }
+      const safeIds = Array.from(tokenById.keys());
       if (safeIds.length > 0) {
-        const localContracts = await getContractsByIds(safeIds);
-        for (const c of localContracts) {
-          if (!mergedMap.has(c.id)) {
+        const matchedContracts = await getContractsByIds(safeIds);
+        for (const c of matchedContracts) {
+          const expectedToken = tokenById.get(c.id);
+          if (
+            expectedToken &&
+            typeof c.sign_token === "string" &&
+            safeStringEqual(c.sign_token, expectedToken) &&
+            !mergedMap.has(c.id)
+          ) {
             mergedMap.set(c.id, mapContractRow(c, authUser));
           }
         }
@@ -122,10 +144,13 @@ export async function POST(request: NextRequest) {
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
 
-    return NextResponse.json({
-      success: true,
-      contracts: sorted,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        contracts: sorted,
+      },
+      { headers: { "Cache-Control": "private, no-store, max-age=0" } }
+    );
   } catch (err) {
     console.error("Failed to batch query contracts:", err);
     return NextResponse.json(

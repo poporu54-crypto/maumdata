@@ -104,7 +104,7 @@ export interface BusinessData {
 }
 
 const BOT_OR_PREVIEW_UA_REGEX =
-  /bot|crawl|spider|slurp|yeti|kakaotalk-scrap|facebookexternalhit|preview|lighthouse|headlesschrome|whatsapp|telegrambot|discordbot|slackbot/i;
+  /bot|crawl|spider|slurp|yeti|kakaotalk-scrap|facebookexternalhit|preview|lighthouse|headlesschrome|whatsapp|telegrambot|discordbot|slackbot|gptbot|oai-searchbot|claudebot|perplexity|amazonbot|applebot|bytespider|petalbot|semrush|ahrefs|mj12|curl\/|wget\/|python-|httpx|axios\/|go-http-client/i;
 
 /**
  * 현재 요청이 브라우저/Next.js 라우터의 백그라운드 프리패치 요청 또는 봇/크롤러/미리보기 요청인지 판별합니다.

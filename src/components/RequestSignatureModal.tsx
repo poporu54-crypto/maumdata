@@ -171,7 +171,7 @@ export default function RequestSignatureModal({
         signToken: data.signToken,
         accessPin: data.accessPin || "",
       });
-      saveContractToLocal(data.contractId);
+      saveContractToLocal(data.contractId, data.signToken);
       vibrateDevice(50);
       showAppToast("전용 계약서 주소와 임시 비밀번호가 생성되었습니다!");
     } catch (err: any) {

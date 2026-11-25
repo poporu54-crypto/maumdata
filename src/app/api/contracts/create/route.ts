@@ -50,10 +50,19 @@ export async function POST(request: NextRequest) {
       formData,
     } = body || {};
 
-    if (!templateId || !title || !formData || typeof formData !== "object") {
+    if (!templateId || !title || !formData || typeof formData !== "object" || Array.isArray(formData)) {
       return NextResponse.json(
         { error: "필수 계약 정보가 누락되었습니다." },
         { status: 400 }
+      );
+    }
+
+    // JSONB / R2 스토리지 폭탄(DoS) 차단: 본문 데이터 최대 150KB 제한
+    const serializedFormSize = Buffer.byteLength(JSON.stringify(formData), "utf8");
+    if (serializedFormSize > 150_000) {
+      return NextResponse.json(
+        { error: "계약서 본문 데이터 용량이 허용 범위(150KB)를 초과했습니다." },
+        { status: 413 }
       );
     }
 

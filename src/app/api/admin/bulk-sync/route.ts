@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { query, getAdminStats, getNoNameBusinesses, addInvalidBusiness } from "@/lib/db";
 import { getNtsCompanyStatus } from "@/lib/ntsApi";
 import { getFtcMailOrderInfo } from "@/lib/ftcApi";
-import { isAdminRequest } from "@/lib/sessionAuth";
+import { isAdminRequest, isTrustedAdminOrigin } from "@/lib/sessionAuth";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +10,7 @@ const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 export async function POST(req: NextRequest) {
   try {
-    if (!isAdminRequest(req)) {
+    if (!isTrustedAdminOrigin(req) || !isAdminRequest(req)) {
       return NextResponse.json(
         { error: "권한이 없습니다. 관리자 로그인이 필요합니다." },
         { status: 401 }

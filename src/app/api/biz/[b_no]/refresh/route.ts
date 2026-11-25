@@ -164,10 +164,10 @@ export async function POST(
       }
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error(`[On-Demand Refresh] Error:`, error);
     return NextResponse.json(
-      { error: "실시간 정보 갱신 중 서버 오류가 발생했습니다.", details: error.message },
+      { error: "실시간 정보 갱신 중 서버 오류가 발생했습니다." },
       { status: 500 }
     );
   }
