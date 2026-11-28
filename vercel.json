@@ -1,8 +1,12 @@
 {
   "crons": [
     {
-      "path": "/api/cron/enrich-tier1?limit=8",
+      "path": "/api/cron/enrich-tier1?limit=3",
       "schedule": "0 18 * * *"
+    },
+    {
+      "path": "/api/cron/discover-businesses?corpLimit=6&ftcLimit=10",
+      "schedule": "0 19 * * *"
     }
   ]
 }

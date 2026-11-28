@@ -23,10 +23,10 @@ export async function GET(req: NextRequest) {
 
   try {
     const { searchParams } = new URL(req.url);
-    const requestedLimit = Number(searchParams.get("limit") || "8");
+    const requestedLimit = Number(searchParams.get("limit") || "3");
     const safeLimit = Number.isFinite(requestedLimit)
-      ? Math.min(20, Math.max(1, Math.floor(requestedLimit)))
-      : 8;
+      ? Math.min(10, Math.max(1, Math.floor(requestedLimit)))
+      : 3;
     // HTTP 크론은 60초 타임아웃 보호를 위해 기본 스냅샷 전체 재빌드를 생략(개별 허브 6시간 SWR이 자동 갱신)
     const refreshSnapshots = searchParams.get("snapshots") === "1";
 

@@ -1,8 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { guardApiRequest } from "@/lib/apiBotGuard";
 import { validateBizrNo } from "@/lib/bizValidation";
 import { getNtsBatchCompanyStatus, type NtsCompanyStatus } from "@/lib/ntsApi";
 import { query } from "@/lib/db";
+import { ingestNewBusinessesFromBulkCheck } from "@/lib/newBizDiscoverer";
 
 export const dynamic = "force-dynamic";
 
@@ -190,12 +191,13 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // DB에 이미 존재하는 기업의 납세상태·과세유형 최신화 (비블로킹 UNNEST 배치 갱신)
+    // DB에 이미 존재하는 기업의 납세상태·과세유형 최신화 + DB 미등록 정상 계속사업자(최대 5건) 백그라운드 자동 축적
     const toSyncBNos: string[] = [];
     const toSyncStt: string[] = [];
     const toSyncSttCd: string[] = [];
     const toSyncTax: string[] = [];
     const toSyncTaxCd: string[] = [];
+    const newActiveCandidates: Array<{ bNo: string; nts: NtsCompanyStatus }> = [];
 
     for (const [bNo, nts] of ntsMap.entries()) {
       if (dbMap.has(bNo) && nts.b_stt_cd) {
@@ -204,28 +206,40 @@ export async function POST(req: NextRequest) {
         toSyncSttCd.push(nts.b_stt_cd || "");
         toSyncTax.push(nts.tax_type || "");
         toSyncTaxCd.push(nts.tax_type_cd || "");
+      } else if (!dbMap.has(bNo) && nts.b_stt_cd === "01" && newActiveCandidates.length < 5) {
+        newActiveCandidates.push({ bNo, nts });
       }
     }
 
-    if (toSyncBNos.length > 0) {
-      void query(
-        `UPDATE public.businesses AS b
-         SET
-           b_stt = u.b_stt,
-           b_stt_cd = u.b_stt_cd,
-           tax_type = u.tax_type,
-           tax_type_cd = u.tax_type_cd,
-           nts_last_sync_at = NOW()
-         FROM UNNEST(
-           $1::varchar[],
-           $2::varchar[],
-           $3::varchar[],
-           $4::varchar[],
-           $5::varchar[]
-         ) AS u(b_no, b_stt, b_stt_cd, tax_type, tax_type_cd)
-         WHERE b.b_no = u.b_no`,
-        [toSyncBNos, toSyncStt, toSyncSttCd, toSyncTax, toSyncTaxCd]
-      ).catch((e) => console.warn("[bulk-status] Background NTS sync update failed:", e));
+    if (toSyncBNos.length > 0 || newActiveCandidates.length > 0) {
+      after(async () => {
+        if (toSyncBNos.length > 0) {
+          await query(
+            `UPDATE public.businesses AS b
+             SET
+               b_stt = u.b_stt,
+               b_stt_cd = u.b_stt_cd,
+               tax_type = u.tax_type,
+               tax_type_cd = u.tax_type_cd,
+               nts_last_sync_at = NOW()
+             FROM UNNEST(
+               $1::varchar[],
+               $2::varchar[],
+               $3::varchar[],
+               $4::varchar[],
+               $5::varchar[]
+             ) AS u(b_no, b_stt, b_stt_cd, tax_type, tax_type_cd)
+             WHERE b.b_no = u.b_no`,
+            [toSyncBNos, toSyncStt, toSyncSttCd, toSyncTax, toSyncTaxCd]
+          ).catch((e) => console.warn("[bulk-status] Background NTS sync update failed:", e));
+        }
+
+        if (newActiveCandidates.length > 0) {
+          await ingestNewBusinessesFromBulkCheck(newActiveCandidates).catch((e) =>
+            console.warn("[bulk-status] Background new business ingest failed:", e)
+          );
+        }
+      });
     }
 
     let safeCount = 0;

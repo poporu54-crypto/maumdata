@@ -714,6 +714,12 @@ export async function getRssFeedItems(): Promise<RssFeedItem[]> {
   );
 }
 
+export async function refreshRssFeedSnapshot(): Promise<number> {
+  const rss = await computeRssFeedItems();
+  await saveSeoSnapshot(SEO_SNAP_KEYS.rss, rss);
+  return rss.length;
+}
+
 /**
  * CLI 시딩 및 24시간 주기 스냅샷 전체 강제 갱신 헬퍼
  */

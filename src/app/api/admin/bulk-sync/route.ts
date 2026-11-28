@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
       `SELECT b_no
        FROM businesses
        WHERE b_nm = '상호 정보 없음'
-       ORDER BY view_count DESC NULLS LAST, updated_at ASC NULLS FIRST
+       ORDER BY view_count DESC NULLS LAST, nts_last_sync_at ASC NULLS FIRST
        LIMIT $1`,
       [batchLimit]
     );
